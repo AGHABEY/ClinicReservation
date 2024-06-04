@@ -1,0 +1,40 @@
+﻿using ClinicReservation.Data;
+using ClinicReservation.Models;
+using Microsoft.AspNetCore.Mvc;
+using Microsoft.EntityFrameworkCore;
+
+namespace ClinicReservation.Controllers
+{
+    public class ExaminationTypeController : Controller
+    {
+        private readonly AppDbContext _context;
+
+        public ExaminationTypeController(AppDbContext context)
+        {
+            _context = context;
+        }
+        public IActionResult Index()
+        {
+            var exTypes = _context.ExaminationTypes.ToList();
+            return View(exTypes);
+        }
+
+        public IActionResult Add()
+        {
+            return View();
+        }
+
+        [HttpPost]
+        public IActionResult Add(ExaminationType model) 
+        {
+            if (ModelState.IsValid)
+            {
+                _context.ExaminationTypes.Add(model);
+                _context.SaveChanges();
+                return RedirectToAction("Index");
+            }
+            ModelState.AddModelError("", "Vacib xanaları doldurun");
+            return View(model);
+        }
+    }
+}
