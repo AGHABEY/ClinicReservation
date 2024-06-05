@@ -27,11 +27,11 @@
                 <td>
                     @if (item.Status.Name == "Waiting")
                     {
-                        <button class="btn btn-warning">@item.Status.Name</button>
+                        <a asp-action="Confirm" asp-route-id="@item.Id" onclick="confirm('Əminsiz ?')" class="btn btn-warning">@item.Status.Name</a>
                     }
                     else if (item.Status.Name == "Confirm")
                     {
-                        <button class="btn btn-success">@item.Status.Name</button>
+                        <p class="btn btn-success">@item.Status.Name</p>
                     }
                     else
                     {
@@ -39,8 +39,7 @@
                     }
                 </td>
                 <td>
-                @*     <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-primary">Edit</a>
-                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-info">Details</a> *@
+                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-info">Details</a>
                 </td>
             </tr>
         }

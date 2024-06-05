@@ -1,0 +1,53 @@
+﻿@model Reserve
+
+@{
+    ViewData["Title"] = "Reserve Details";
+}
+
+<div class="container mt-4">
+    <h2>Reserve Details</h2>
+
+    <dl class="row">
+        <dt class="col-sm-3">Name:</dt>
+        <dd class="col-sm-9">@Model.Name</dd>
+
+        <dt class="col-sm-3">Surname:</dt>
+        <dd class="col-sm-9">@Model.Surname</dd>
+
+        <dt class="col-sm-3">PIN Code:</dt>
+        <dd class="col-sm-9">@Model.PinCode</dd>
+
+        <dt class="col-sm-3">Phone:</dt>
+        <dd class="col-sm-9">@Model.Phone</dd>
+
+        <dt class="col-sm-3">Birthday:</dt>
+        <dd class="col-sm-9">@Model.Birthday.ToShortDateString()</dd>
+
+        <dt class="col-sm-3">Added Date:</dt>
+        <dd class="col-sm-9">@Model.AddedDate?.ToShortDateString()</dd>
+
+        <dt class="col-sm-3">Confirm Date:</dt>
+        <dd class="col-sm-9">@Model.ConfirmDate?.ToShortDateString()</dd>
+
+        <dt class="col-sm-3">Status:</dt>
+        <dd class="col-sm-9">@(Model.Status != null ? Model.Status.Name : "Not Set")</dd>
+
+        @* Display Examination Types (if available) *@
+        @if (Model.ReserveExaminationTypes != null && Model.ReserveExaminationTypes.Any())
+        {
+            <dt class="col-sm-3">Examination Types:</dt>
+            <dd class="col-sm-9">
+                <ul>
+                    @foreach (var examType in Model.ReserveExaminationTypes)
+                    {
+                        <li>@examType.ExaminationType.Name</li>
+                    }
+                </ul>
+            </dd>
+        }
+    </dl>
+
+    <div class="mt-3">
+        <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+    </div>
+</div>

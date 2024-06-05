@@ -36,5 +36,25 @@ namespace ClinicReservation.Controllers
             ModelState.AddModelError("", "Vacib xanaları doldurun");
             return View(model);
         }
+
+
+        public IActionResult Edit(int id)
+        {
+            var et = _context.ExaminationTypes.FirstOrDefault(x => x.Id == id);
+            return View(et);
+        }
+
+        [HttpPost]
+        public IActionResult Edit(ExaminationType model)
+        {
+            if (ModelState.IsValid)
+            {
+                _context.ExaminationTypes.Update(model);
+                _context.SaveChanges();
+                return RedirectToAction("Index");
+            }
+            ModelState.AddModelError("", "Vacib xanaları doldurun");
+            return View(model);
+        }
     }
 }

@@ -50,5 +50,25 @@ namespace ClinicReservation.Controllers
             ModelState.AddModelError("", "Vacib xanaları doldurun");
             return View(reserve);
         }
+
+        public IActionResult Confirm(int id)
+        {
+            var res = _context.Reserves.FirstOrDefault(rs => rs.Id == id);
+            if (res == null)
+            {
+                return NoContent();
+            }
+            res.ConfirmDate = DateTime.Now;
+            res.Status = _context.ReserveStatuses.FirstOrDefault(rs => rs.Name.Contains("Confirm"));
+            _context.Reserves.Update(res);
+            _context.SaveChanges();
+            return RedirectToAction("Index");
+        }
+
+        public IActionResult Details(int id) 
+        { 
+            var res = _context.Reserves.Include(rs=>rs.Status).Include(rs=>rs.ReserveExaminationTypes).ThenInclude(rs=>rs.ExaminationType).FirstOrDefault(rs => rs.Id == id);
+            return View(res);
+        }
     }
 }
