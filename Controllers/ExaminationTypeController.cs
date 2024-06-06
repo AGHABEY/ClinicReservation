@@ -1,10 +1,12 @@
 ﻿using ClinicReservation.Data;
 using ClinicReservation.Models;
+using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;
 
 namespace ClinicReservation.Controllers
 {
+    [Authorize]
     public class ExaminationTypeController : Controller
     {
         private readonly AppDbContext _context;
