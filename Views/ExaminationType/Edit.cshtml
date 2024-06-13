@@ -6,7 +6,7 @@
 
 <h1>Add</h1>
 
-<form asp-action="Add" method="post">
+<form asp-action="Edit" method="post">
     <div asp-validation-summary="All" class="text-danger"></div>
     <div class="row">
         <div class="col-md-4">
@@ -33,7 +33,7 @@
 
         <input type="hidden" asp-for="@Model.Id" />
         <div class="col-md-12">
-            <button type="submit" class="btn btn-primary">Əlavə et</button>
+            <button type="submit" class="btn btn-primary">Düzəliş et</button>
         </div>
     </div>
 </form>
