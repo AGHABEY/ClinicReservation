@@ -1,0 +1,82 @@
+@model Patient
+@{
+    ViewData["Title"] = "Xəstə Məlumatları";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<div>
+    <h4>Xəstə</h4>
+    <hr />
+    <dl class="row">
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.FullName)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.FullName)
+        </dd>
+
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.BirthDate)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.BirthDate)
+        </dd>
+
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.PhoneNumber)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.PhoneNumber)
+        </dd>
+        <dt class="col-sm-2">
+            @Html.DisplayNameFor(model => model.Address)
+        </dt>
+        <dd class="col-sm-10">
+            @Html.DisplayFor(model => model.Address)
+        </dd>
+    </dl>
+</div>
+
+@if (Model.Appointments != null && Model.Appointments.Any())
+{
+    <h4>Görüşlər</h4>
+    <table class="table">
+        <thead>
+            <tr>
+                <th>Tarix və Vaxt</th>
+                <th>Həkim</th>
+                <th>Qeydlər</th>
+                <th></th>
+            </tr>
+        </thead>
+        <tbody>
+        @foreach (var appointment in Model.Appointments)
+        {
+            <tr>
+                <td>
+                    @appointment.AppointmentDate.ToString("dd.MM.yyyy HH:mm")
+                </td>
+                <td>
+                    @appointment.Doctor?.Name
+                </td>
+                <td>
+                    @appointment.Notes
+                </td>
+                <td>
+                    <a asp-controller="Appointments" asp-action="Details" asp-route-id="@appointment.Id">Ətraflı</a>
+                </td>
+            </tr>
+        }
+        </tbody>
+    </table>
+}
+else
+{
+    <p>Bu xəstəyə aid görüşlər yoxdur.</p>
+}
+
+<div class="mt-3">
+    <a asp-action="Edit" asp-route-id="@Model.Id" class="btn btn-primary">Redaktə Et</a>
+    <a asp-action="Index" class="btn btn-secondary">Geri Qayıt</a>
+</div>

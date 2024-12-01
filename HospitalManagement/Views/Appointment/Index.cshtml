@@ -1,0 +1,38 @@
+@model IEnumerable<Appointment>
+@{
+    ViewData["Title"] = "Görüşlər";
+}
+
+<h1>@ViewData["Title"]</h1>
+
+<p>
+    <a asp-action="Create" class="btn btn-primary">Yeni Görüş Əlavə Et</a>
+</p>
+
+<table class="table">
+    <thead>
+    <tr>
+        <th>@Html.DisplayNameFor(model => model.First().AppointmentDate)</th>
+        <th>@Html.DisplayName("Həkim")</th>
+        <th>@Html.DisplayName("Xəstə")</th>
+        <th>@Html.DisplayNameFor(model => model.First().Notes)</th>
+        <th></th>
+    </tr>
+    </thead>
+    <tbody>
+    @foreach (var item in Model)
+    {
+        <tr>
+            <td>@item.AppointmentDate.ToString("dd.MM.yyyy HH:mm")</td>
+            <td>@item.Doctor?.Name</td>
+            <td>@item.Patient?.FullName</td>
+            <td>@Html.DisplayFor(modelItem => item.Notes)</td>
+            <td>
+                <a asp-action="Details" asp-route-id="@item.Id">Ətraflı</a> |
+                <a asp-action="Edit" asp-route-id="@item.Id">Redaktə Et</a> |
+                <a asp-action="Delete" asp-route-id="@item.Id">Sil</a>
+            </td>
+        </tr>
+    }
+    </tbody>
+</table>
