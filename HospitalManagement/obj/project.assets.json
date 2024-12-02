@@ -4734,19 +4734,20 @@
     ]
   },
   "packageFolders": {
-    "/Users/rafetaghabeyli/.nuget/packages/": {}
+    "/Users/user/.nuget/packages/": {}
   },
   "project": {
     "version": "1.0.0",
     "restore": {
-      "projectUniqueName": "/Users/rafetaghabeyli/RiderProjects/HospitalManagement/HospitalManagement/HospitalManagement.csproj",
+      "projectUniqueName": "/Users/user/ClinicReservation/HospitalManagement/HospitalManagement.csproj",
       "projectName": "HospitalManagement",
-      "projectPath": "/Users/rafetaghabeyli/RiderProjects/HospitalManagement/HospitalManagement/HospitalManagement.csproj",
-      "packagesPath": "/Users/rafetaghabeyli/.nuget/packages/",
-      "outputPath": "/Users/rafetaghabeyli/RiderProjects/HospitalManagement/HospitalManagement/obj/",
+      "projectPath": "/Users/user/ClinicReservation/HospitalManagement/HospitalManagement.csproj",
+      "packagesPath": "/Users/user/.nuget/packages/",
+      "outputPath": "/Users/user/ClinicReservation/HospitalManagement/obj/",
       "projectStyle": "PackageReference",
+      "UsingMicrosoftNETSdk": false,
       "configFilePaths": [
-        "/Users/rafetaghabeyli/.nuget/NuGet/NuGet.Config"
+        "/Users/user/.nuget/NuGet/NuGet.Config"
       ],
       "originalTargetFrameworks": [
         "net8.0"
@@ -4804,7 +4805,7 @@
             "privateAssets": "all"
           }
         },
-        "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.204/PortableRuntimeIdentifierGraph.json"
+        "runtimeIdentifierGraphPath": "/usr/local/share/dotnet/sdk/8.0.101/PortableRuntimeIdentifierGraph.json"
       }
     }
   }

@@ -66,8 +66,8 @@ public class AppointmentController:Controller
         var appointment = await _context.Appointments.FindAsync(id);
         if (appointment == null)
             return NotFound();
-        ViewData["DoctorId"] = new SelectList(_context.Doctors, "Id", "Name", appointment.DoctorId);
-        ViewData["PatientId"] = new SelectList(_context.Patients, "Id", "FullName", appointment.PatientId);
+        ViewBag.DoctorId = new SelectList(_context.Doctors, "Id", "Name", appointment.DoctorId);
+        ViewBag.PatientId = new SelectList(_context.Patients, "Id", "FullName", appointment.PatientId);    
         return View(appointment);
     }
 
@@ -91,8 +91,8 @@ public class AppointmentController:Controller
                     throw;
             } return RedirectToAction(nameof(Index)); 
         }
-        ViewData["DoctorId"] = new SelectList(_context.Doctors, "Id", "FullName", appointment.DoctorId);
-        ViewData["PatientId"] = new SelectList(_context.Patients, "Id", "FullName", appointment.PatientId);
+        ViewBag.DoctorId = new SelectList(_context.Doctors, "Id", "Name", appointment.DoctorId);
+        ViewBag.PatientId = new SelectList(_context.Patients, "Id", "FullName", appointment.PatientId);    
         return View(appointment);
         }
     
