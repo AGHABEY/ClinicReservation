@@ -1,62 +1,63 @@
-﻿@model UserListViewModel
+@model UserListViewModel
 @{
-    ViewData["Title"] = "UserList";
-    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "İstifadəçilər";
 }
 
-<div class="container">
-    <div class="row">
-        <div class="col-lg-12">
-            <a class="btn btn-primary mb-3" asp-controller="Account" asp-action="CreateUser">Add User</a>
-        </div>
-        <hr />
-
-        <div class="col-lg-12 mt-3">
-            <table class="table">
-                <thead>
-                    <tr>
-                        <th scope="col">#</th>
-                        <th scope="col">UserName</th>
-                        <th scope="col">Role</th>
-                        <th scope="col"></th>
-                    </tr>
-                </thead>
-                <tbody>
-                    @{
-                        int i = 0;
-                        foreach (var item in Model.Users)
-                        {
-                            i++;
-                            <tr>
-                                <th scope="row">@i</th>
-                                <td>@item.UserName</td>
-                                <td>
-                                    @{
-                                        var role = "";
-                                        var userRole = Model.UserRoles.FirstOrDefault(u => u.UserId == item.Id);
-
-                                        if (userRole != null)
-                                        {
-                                            role = Model.Roles.FirstOrDefault(r => r.Id == userRole.RoleId).Name;
-                                        }
-                                    }
-
-                                    @role
-                                </td>
-
-                                <td>
-
-                                    <a class="btn btn-success" asp-controller="Account" asp-action="UpdateUser" asp-route-id="@item.Id">Update</a>
-                                   @* <a class="btn btn-danger" asp-controller="Account" asp-action="DeleteUser" asp-route-id="@item.Id" onclick="return confirm('Are you sure?')">Delete</a>
-                                   *@
-
-                                </td>
-                            </tr>
-                        }
-                    }
-                </tbody>
-            </table>
-
-        </div>
+<div class="page-head">
+    <div>
+        <h2>İstifadəçilər</h2>
+        <p>Sistem istifadəçiləri və rolları (@Model.Users.Count)</p>
     </div>
+    <div style="display:flex; gap:10px;">
+        <a class="btn btn-light" asp-action="CreateRole"><i class="bi bi-shield-plus"></i> Yeni rol</a>
+        <a class="btn btn-primary" asp-action="CreateUser"><i class="bi bi-person-plus"></i> Yeni istifadəçi</a>
+    </div>
+</div>
+
+<div class="table-wrap">
+    <table class="data">
+        <thead>
+            <tr>
+                <th>#</th>
+                <th>İstifadəçi adı</th>
+                <th>Rol</th>
+                <th style="text-align:right;">Əməliyyatlar</th>
+            </tr>
+        </thead>
+        <tbody>
+            @{ int i = 0; }
+            @foreach (var item in Model.Users)
+            {
+                i++;
+                var userRole = Model.UserRoles.FirstOrDefault(u => u.UserId == item.Id);
+                var role = userRole != null ? Model.Roles.FirstOrDefault(r => r.Id == userRole.RoleId)?.Name : null;
+                <tr>
+                    <td class="text-muted">@i</td>
+                    <td>
+                        <div style="display:flex; align-items:center; gap:10px;">
+                            <span class="user-chip" style="padding:0; border:none;">
+                                <span class="avatar">@(item.UserName?.Substring(0,1).ToUpper())</span>
+                            </span>
+                            <span style="font-weight:600;">@item.UserName</span>
+                        </div>
+                    </td>
+                    <td>
+                        @if (!string.IsNullOrEmpty(role))
+                        {
+                            <span class="badge-soft badge-confirmed">@role</span>
+                        }
+                        else
+                        {
+                            <span class="badge-soft badge-default">Rol yoxdur</span>
+                        }
+                    </td>
+                    <td style="text-align:right;">
+                        <a class="btn btn-ghost btn-sm" asp-action="UpdateUser" asp-route-id="@item.Id">
+                            <i class="bi bi-pencil"></i> Düzəliş
+                        </a>
+                    </td>
+                </tr>
+            }
+        </tbody>
+    </table>
 </div>

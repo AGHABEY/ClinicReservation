@@ -1,38 +1,40 @@
-﻿@model ExaminationType
+@model ExaminationType
 @{
-    ViewData["Title"] = "Add";
-    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Yeni müayinə";
 }
 
-<h1>Add</h1>
+<div class="page-head">
+    <div>
+        <h2>Yeni müayinə növü</h2>
+        <p>Müayinənin adını, təsvirini və qiymətini daxil edin</p>
+    </div>
+    <a class="btn btn-light" asp-action="Index"><i class="bi bi-arrow-left"></i> Siyahıya qayıt</a>
+</div>
 
-<form asp-action="Add" method="post">
-    <div asp-validation-summary="All" class="text-danger"></div>
-    <div class="row">
-        <div class="col-md-4">
-            <div class="form-group">
-                <label asp-for="Name">Name:</label>
-                <input asp-for="Name" class="form-control" />
-                <span asp-validation-for="Name" class="text-danger"></span>
+<div class="card" style="max-width:720px;">
+    <div class="card-pad">
+        <form asp-action="Add" method="post">
+            <div asp-validation-summary="All" class="alert alert-danger" style="display:@(ViewData.ModelState.IsValid ? "none" : "block")"></div>
+            <div class="form-grid">
+                <div class="field">
+                    <label asp-for="Name">Ad</label>
+                    <input asp-for="Name" class="form-control" placeholder="Qan analizi" />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Price">Qiymət (₼)</label>
+                    <input asp-for="Price" class="form-control" placeholder="25.00" />
+                    <span asp-validation-for="Price" class="text-danger"></span>
+                </div>
             </div>
-        </div>
-        <div class="col-md-4">
-            <div class="form-group">
-                <label asp-for="Description">Surname:</label>
-                <input asp-for="Description" class="form-control" />
+            <div class="field mt-3">
+                <label asp-for="Description">Təsvir</label>
+                <input asp-for="Description" class="form-control" placeholder="Qısa təsvir (istəyə bağlı)" />
                 <span asp-validation-for="Description" class="text-danger"></span>
             </div>
-        </div>
-        <div class="col-md-4">
-            <div class="form-group">
-                <label asp-for="Price">Price:</label>
-                <input asp-for="Price" class="form-control" />
-                <span asp-validation-for="Price" class="text-danger"></span>
+            <div class="mt-3">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Əlavə et</button>
             </div>
-        </div>
-        <div class="col-md-12">
-            <button type="submit" class="btn btn-primary">Əlavə et</button>
-        </div>
+        </form>
     </div>
-</form>
-
+</div>

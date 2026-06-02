@@ -1,78 +1,99 @@
-﻿@model AccountViewModel
+@model AccountViewModel
 @{
     Layout = null;
 }
-
 <!DOCTYPE html>
-<html lang="en">
-
+<html lang="az">
 <head>
-
     <meta charset="utf-8">
-    <meta http-equiv="X-UA-Compatible" content="IE=edge">
-    <meta name="viewport" content="width=device-width, initial-scale=1, shrink-to-fit=no">
-    <meta name="description" content="">
-    <meta name="author" content="">
-
-    <title>SB Admin 2 - Register</title>
-
-    <!-- Custom fonts for this template-->
-    <link href="~/Areas/vendor/fontawesome-free/css/all.min.css" rel="stylesheet" type="text/css">
-    <link href="https://fonts.googleapis.com/css?family=Nunito:200,200i,300,300i,400,400i,600,600i,700,700i,800,800i,900,900i"
-          rel="stylesheet">
-
-    <!-- Custom styles for this template-->
-    <link href="~/Areas/css/sb-admin-2.min.css" rel="stylesheet">
-
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Giriş · MedClinic</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="~/css/site.css">
+    <style>
+        body {
+            display: grid;
+            place-items: center;
+            min-height: 100vh;
+            background: linear-gradient(135deg, #0d9488 0%, #0f766e 45%, #115e59 100%);
+            padding: 20px;
+        }
+        .login-card {
+            display: grid;
+            grid-template-columns: 1fr 1fr;
+            max-width: 880px;
+            width: 100%;
+            background: #fff;
+            border-radius: 24px;
+            overflow: hidden;
+            box-shadow: 0 30px 70px rgba(0,0,0,.3);
+        }
+        .login-aside {
+            background: linear-gradient(135deg, #14b8a6, #0d9488);
+            color: #fff;
+            padding: 48px 40px;
+            display: flex;
+            flex-direction: column;
+            justify-content: center;
+        }
+        .login-aside .big-icon { font-size: 3.5rem; margin-bottom: 18px; }
+        .login-aside h2 { font-size: 1.7rem; font-weight: 700; margin: 0 0 12px; }
+        .login-aside p { opacity: .9; line-height: 1.6; font-size: .95rem; }
+        .login-aside ul { list-style: none; padding: 0; margin: 26px 0 0; }
+        .login-aside li { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font-size: .92rem; }
+        .login-aside li i { background: rgba(255,255,255,.2); width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; }
+        .login-body { padding: 48px 44px; }
+        .login-body h1 { font-size: 1.6rem; font-weight: 700; margin: 0 0 6px; }
+        .login-body .sub { color: var(--muted); font-size: .92rem; margin-bottom: 28px; }
+        .input-icon { position: relative; }
+        .input-icon i { position: absolute; left: 14px; top: 50%; transform: translateY(-50%); color: #94a3b8; }
+        .input-icon .form-control { padding-left: 42px; }
+        .hint { background: var(--brand-soft); border: 1px dashed var(--brand-light); color: var(--brand-dark); padding: 11px 14px; border-radius: 11px; font-size: .82rem; margin-top: 20px; text-align: center; }
+        @@media (max-width: 760px) { .login-card { grid-template-columns: 1fr; } .login-aside { display: none; } }
+    </style>
 </head>
+<body>
+    <div class="login-card">
+        <div class="login-aside">
+            <div class="big-icon"><i class="bi bi-heart-pulse-fill"></i></div>
+            <h2>MedClinic</h2>
+            <p>Klinika rezervasiya və müayinə idarəetmə sistemi. Növbələri, müayinələri və istifadəçiləri bir paneldən idarə edin.</p>
+            <ul>
+                <li><i class="bi bi-calendar2-check"></i> Rezervasiyaların idarəsi</li>
+                <li><i class="bi bi-clipboard2-pulse"></i> Müayinə növləri və qiymətlər</li>
+                <li><i class="bi bi-shield-lock"></i> Təhlükəsiz giriş</li>
+            </ul>
+        </div>
+        <div class="login-body">
+            <h1>Xoş gəlmisiniz 👋</h1>
+            <p class="sub">Davam etmək üçün hesabınıza daxil olun</p>
 
-<body class="bg-gradient-primary">
-
-    <div class="container">
-
-        <div class="card o-hidden border-0 shadow-lg my-5">
-            <div class="card-body p-0">
-                <!-- Nested Row within Card Body -->
-                <div class="row">
-                    <div class="col-lg-5 d-none d-lg-block bg-register-image"></div>
-                    <div class="col-lg-7">
-                        <div class="p-5">
-                            <div class="text-center">
-                                <h1 class="h4 text-gray-900 mb-4">Create an Account!</h1>
-                            </div>
-                            <form asp-area="Admin" asp-controller="Account" asp-action="Login" method="post">
-                                <div asp-validation-summary="All" class="text-danger"></div>
-                                <div class="form-group row">
-                                    <div class="col-sm-6 mb-3 mb-sm-0">
-                                        <input class="form-control form-control-user"
-                                               asp-for="@Model.UserName" placeholder="Email">
-                                    </div>
-                                    <div class="col-sm-6">
-                                        <input type="password" class="form-control form-control-user"
-                                               asp-for="@Model.Password" placeholder="Password">
-                                    </div>
-                                </div>
-                                <button type="submit" class="btn btn-primary btn-user btn-block">
-                                    Login
-                                </button>
-                            </form>
-                        </div>
+            <form asp-controller="Account" asp-action="Login" method="post">
+                <div asp-validation-summary="All" class="text-danger mb-3"></div>
+                <div class="field">
+                    <label asp-for="UserName">İstifadəçi adı</label>
+                    <div class="input-icon">
+                        <i class="bi bi-person"></i>
+                        <input class="form-control" asp-for="UserName" placeholder="admin" autofocus>
                     </div>
                 </div>
+                <div class="field">
+                    <label asp-for="Password">Şifrə</label>
+                    <div class="input-icon">
+                        <i class="bi bi-lock"></i>
+                        <input type="password" class="form-control" asp-for="Password" placeholder="••••••••">
+                    </div>
+                </div>
+                <button type="submit" class="btn btn-primary w-100 mt-3" style="justify-content:center;">
+                    <i class="bi bi-box-arrow-in-right"></i> Daxil ol
+                </button>
+            </form>
+
+            <div class="hint">
+                <i class="bi bi-info-circle"></i> Demo: <strong>admin</strong> / <strong>admin123</strong>
             </div>
         </div>
     </div>
-
-    <!-- Bootstrap core JavaScript-->
-    <script src="~/Areas/vendor/jquery/jquery.min.js"></script>
-    <script src="~/Areas/vendor/bootstrap/js/bootstrap.bundle.min.js"></script>
-
-    <!-- Core plugin JavaScript-->
-    <script src="~/Areas/vendor/jquery-easing/jquery.easing.min.js"></script>
-
-    <!-- Custom scripts for all pages-->
-    <script src="~/Areas/js/sb-admin-2.min.js"></script>
-
 </body>
-
 </html>
