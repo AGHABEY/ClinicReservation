@@ -70,6 +70,10 @@ namespace ClinicReservation.Controllers
         public IActionResult Details(int id) 
         { 
             var res = _context.Reserves.Include(rs=>rs.Status).Include(rs=>rs.ReserveExaminationTypes).ThenInclude(rs=>rs.ExaminationType).FirstOrDefault(rs => rs.Id == id);
+            if (res == null)
+            {
+                return NotFound();
+            }
             return View(res);
         }
     }

@@ -1,47 +1,80 @@
-﻿@model List<Reserve>
-
+@model List<Reserve>
 @{
-    ViewData["Title"] = "Reservations";
-    Layout = "~/Views/Shared/_Layout.cshtml";
+    ViewData["Title"] = "Rezervasiyalar";
+    string Badge(string? s) => s switch
+    {
+        "Waiting" => "badge-waiting",
+        "Confirmed" => "badge-confirmed",
+        _ => "badge-default"
+    };
+    string StatusText(string? s) => s switch
+    {
+        "Waiting" => "Gözləyir",
+        "Confirmed" => "Təsdiqləndi",
+        _ => s ?? "—"
+    };
 }
 
-<h1>Reservations</h1>
+<div class="page-head">
+    <div>
+        <h2>Rezervasiyalar</h2>
+        <p>Bütün növbələrin siyahısı (@Model.Count)</p>
+    </div>
+    <a class="btn btn-primary" asp-action="Add"><i class="bi bi-plus-lg"></i> Yeni rezervasiya</a>
+</div>
 
-<table class="table table-striped table-bordered">
-    <thead>
-        <tr>
-            <th>Name</th>
-            <th>Surname</th>
-            <th>Phone</th>
-            <th>Status</th>
-            <th>Actions</th>
-        </tr>
-    </thead>
-    <tbody>
-        @foreach (var item in Model)
-        {
-            <tr>
-                <td>@Html.DisplayFor(modelItem => item.Name)</td>
-                <td>@Html.DisplayFor(modelItem => item.Surname)</td>
-                <td>@Html.DisplayFor(modelItem => item.Phone)</td>
-                <td>
-                    @if (item.Status.Name == "Waiting")
-                    {
-                        <a asp-action="Confirm" asp-route-id="@item.Id" onclick="confirm('Əminsiz ?')" class="btn btn-warning">@item.Status.Name</a>
-                    }
-                    else if (item.Status.Name == "Confirm")
-                    {
-                        <p class="btn btn-success">@item.Status.Name</p>
-                    }
-                    else
-                    {
-                        @item.Status.Name
-                    }
-                </td>
-                <td>
-                    <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-info">Details</a>
-                </td>
-            </tr>
-        }
-    </tbody>
-</table>
+@if (Model.Any())
+{
+    <div class="table-wrap">
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>Ad</th>
+                    <th>Soyad</th>
+                    <th>Telefon</th>
+                    <th>Status</th>
+                    <th style="text-align:right;">Əməliyyatlar</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var item in Model)
+                {
+                    <tr>
+                        <td style="font-weight:600;">@item.Name</td>
+                        <td>@item.Surname</td>
+                        <td class="text-muted">@item.Phone</td>
+                        <td>
+                            @if (item.Status?.Name == "Waiting")
+                            {
+                                <a asp-action="Confirm" asp-route-id="@item.Id"
+                                   onclick="return confirm('Bu rezervasiya təsdiqlənsin?')"
+                                   class="badge-soft badge-waiting" style="text-decoration:none;">
+                                    Gözləyir
+                                </a>
+                            }
+                            else
+                            {
+                                <span class="badge-soft @Badge(item.Status?.Name)">@StatusText(item.Status?.Name)</span>
+                            }
+                        </td>
+                        <td style="text-align:right;">
+                            <a asp-action="Details" asp-route-id="@item.Id" class="btn btn-ghost btn-sm">
+                                <i class="bi bi-eye"></i> Detallar
+                            </a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="empty-state">
+            <i class="bi bi-calendar2-x"></i>
+            <p>Hələ heç bir rezervasiya əlavə edilməyib</p>
+            <a class="btn btn-primary mt-3" asp-action="Add"><i class="bi bi-plus-lg"></i> İlk rezervasiyanı əlavə et</a>
+        </div>
+    </div>
+}
