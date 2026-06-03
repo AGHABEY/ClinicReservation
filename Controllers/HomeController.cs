@@ -22,6 +22,21 @@ namespace ClinicReservation.Controllers
 
         public IActionResult Index()
         {
+            var today = DateTime.Today;
+            var tomorrow = today.AddDays(1);
+
+            // Per-reservation total vs paid (so overpayments don't offset other debts)
+            var balances = _context.Reserves
+                .Select(r => new
+                {
+                    Total = r.ReserveExaminationTypes!.Sum(x => (decimal?)x.ExaminationType.Price) ?? 0,
+                    Paid = r.Payments!.Sum(p => (decimal?)p.Amount) ?? 0
+                })
+                .ToList();
+
+            var totalCollected = balances.Sum(b => b.Paid);
+            var totalOutstanding = balances.Sum(b => b.Total - b.Paid > 0 ? b.Total - b.Paid : 0);
+
             var model = new DashboardViewModel
             {
                 TotalReservations = _context.Reserves.Count(),
@@ -29,6 +44,9 @@ namespace ClinicReservation.Controllers
                 ConfirmedReservations = _context.Reserves.Count(r => r.Status != null && r.Status.Name == "Confirmed"),
                 ExaminationTypeCount = _context.ExaminationTypes.Count(),
                 UserCount = _context.AppUsers.Count(),
+                TotalIncome = totalCollected,
+                TodayIncome = _context.Payments.Where(p => p.PaidAt >= today && p.PaidAt < tomorrow).Sum(p => (decimal?)p.Amount) ?? 0,
+                Outstanding = totalOutstanding,
                 RecentReservations = _context.Reserves
                     .Include(r => r.Status)
                     .OrderByDescending(r => r.Id)

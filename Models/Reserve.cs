@@ -20,6 +20,8 @@ namespace ClinicReservation.Models
 
         public List<ReserveExaminationType>? ReserveExaminationTypes { get; set; }
 
+        public List<Payment>? Payments { get; set; }
+
         public int? StatusId { get; set; }
         public ReserveStatus? Status { get; set; }
 

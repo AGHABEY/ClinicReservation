@@ -61,6 +61,27 @@
             <div class="label">İstifadəçi</div>
         </div>
     </div>
+    <div class="stat">
+        <div class="icon green"><i class="bi bi-cash-stack"></i></div>
+        <div>
+            <div class="value">@Model.TotalIncome.ToString("0.00") ₼</div>
+            <div class="label">Ümumi gəlir</div>
+        </div>
+    </div>
+    <div class="stat">
+        <div class="icon teal"><i class="bi bi-wallet2"></i></div>
+        <div>
+            <div class="value">@Model.TodayIncome.ToString("0.00") ₼</div>
+            <div class="label">Bu gün kassa</div>
+        </div>
+    </div>
+    <div class="stat">
+        <div class="icon amber"><i class="bi bi-hourglass-split"></i></div>
+        <div>
+            <div class="value">@Model.Outstanding.ToString("0.00") ₼</div>
+            <div class="label">Qalıq borc</div>
+        </div>
+    </div>
 </div>
 
 <div class="card">

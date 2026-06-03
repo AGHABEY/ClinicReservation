@@ -1,0 +1,138 @@
+@model PaymentViewModel
+@{
+    ViewData["Title"] = "Ödəniş";
+    var paidFull = Model.Balance <= 0;
+}
+
+<div class="page-head">
+    <div>
+        <h2>Ödəniş — @Model.Reserve?.Name @Model.Reserve?.Surname</h2>
+        <p>Rezervasiya #@Model.ReserveId</p>
+    </div>
+    <a class="btn btn-light" asp-action="Index"><i class="bi bi-arrow-left"></i> Kassaya qayıt</a>
+</div>
+
+@if (TempData["Success"] != null)
+{
+    <div class="alert alert-success"><i class="bi bi-check-circle"></i> @TempData["Success"]</div>
+}
+
+<div class="report-grid">
+    <div>
+        <!-- Summary -->
+        <div class="card mb-3">
+            <div class="card-pad">
+                <div class="stat-grid" style="margin-bottom:0; grid-template-columns:repeat(3,1fr);">
+                    <div>
+                        <div class="label text-muted" style="font-size:.8rem;">Cəmi</div>
+                        <div class="value" style="font-size:1.4rem;">@Model.Total.ToString("0.00") ₼</div>
+                    </div>
+                    <div>
+                        <div class="label text-muted" style="font-size:.8rem;">Ödənilib</div>
+                        <div class="value money pos" style="font-size:1.4rem;">@Model.Paid.ToString("0.00") ₼</div>
+                    </div>
+                    <div>
+                        <div class="label text-muted" style="font-size:.8rem;">Qalıq</div>
+                        <div class="value money @(Model.Balance > 0 ? "neg" : "")" style="font-size:1.4rem;">@Model.Balance.ToString("0.00") ₼</div>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <!-- Payment form -->
+        <div class="card">
+            <div class="card-pad">
+                <h3 style="margin:0 0 16px; font-size:1.05rem; font-weight:700;"><i class="bi bi-cash-coin text-muted"></i> Yeni ödəniş</h3>
+                @if (paidFull)
+                {
+                    <div class="alert alert-success" style="margin-bottom:0;"><i class="bi bi-check-circle"></i> Bu rezervasiya tam ödənilib.</div>
+                }
+                else
+                {
+                    <form asp-action="Pay" method="post">
+                        <div asp-validation-summary="All" class="alert alert-danger" style="display:@(ViewData.ModelState.IsValid ? "none" : "block")"></div>
+                        <input type="hidden" asp-for="ReserveId" />
+                        <div class="form-grid">
+                            <div class="field">
+                                <label asp-for="Amount">Məbləğ (₼)</label>
+                                <input asp-for="Amount" type="number" step="0.01" min="0" class="form-control" />
+                                <span asp-validation-for="Amount" class="text-danger"></span>
+                            </div>
+                            <div class="field">
+                                <label asp-for="Method">Ödəniş üsulu</label>
+                                <select asp-for="Method" class="form-select">
+                                    <option value="0">Nağd</option>
+                                    <option value="1">Kart</option>
+                                </select>
+                            </div>
+                        </div>
+                        <div class="field mt-3">
+                            <label asp-for="Note">Qeyd</label>
+                            <input asp-for="Note" class="form-control" placeholder="İstəyə bağlı" />
+                        </div>
+                        <div class="mt-3">
+                            <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Ödənişi qeyd et</button>
+                        </div>
+                    </form>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div>
+        <!-- Examinations -->
+        <div class="card mb-3">
+            <div class="card-pad">
+                <h3 style="margin:0 0 14px; font-size:1.05rem; font-weight:700;"><i class="bi bi-clipboard2-pulse text-muted"></i> Müayinələr</h3>
+                @if (Model.Reserve?.ReserveExaminationTypes != null && Model.Reserve.ReserveExaminationTypes.Any())
+                {
+                    <div style="display:flex; flex-direction:column; gap:8px;">
+                        @foreach (var ex in Model.Reserve.ReserveExaminationTypes)
+                        {
+                            <div style="display:flex; justify-content:space-between; padding:10px 12px; background:#f8fafc; border-radius:10px;">
+                                <span>@ex.ExaminationType.Name</span>
+                                <span class="money">@ex.ExaminationType.Price.ToString("0.00") ₼</span>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="text-muted" style="font-size:.9rem;">Müayinə yoxdur.</p>
+                }
+            </div>
+        </div>
+
+        <!-- Payment history -->
+        <div class="card">
+            <div class="card-pad">
+                <h3 style="margin:0 0 14px; font-size:1.05rem; font-weight:700;"><i class="bi bi-clock-history text-muted"></i> Ödəniş tarixçəsi</h3>
+                @if (Model.Payments.Any())
+                {
+                    <table class="data" style="margin:-8px 0;">
+                        <tbody>
+                            @foreach (var p in Model.Payments)
+                            {
+                                <tr>
+                                    <td>
+                                        <div style="font-weight:600;">@p.Amount.ToString("0.00") ₼</div>
+                                        <div class="text-muted" style="font-size:.78rem;">@p.PaidAt.ToString("dd.MM.yyyy HH:mm")</div>
+                                    </td>
+                                    <td style="text-align:right;">
+                                        <span class="badge-soft @(p.Method == PaymentMethod.Cash ? "badge-cash" : "badge-card")">
+                                            @(p.Method == PaymentMethod.Cash ? "Nağd" : "Kart")
+                                        </span>
+                                    </td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                }
+                else
+                {
+                    <p class="text-muted" style="font-size:.9rem;">Hələ ödəniş edilməyib.</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>

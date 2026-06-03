@@ -59,7 +59,10 @@ Tələblər: .NET 8 SDK + işləyən PostgreSQL.
 
 ## 🧩 Əsas funksiyalar
 
-- **Hesabatlar (Dashboard)** — ümumi statistikalar və son rezervasiyalar
+- **İdarə paneli (Dashboard)** — ümumi statistikalar, gəlir göstəriciləri və son rezervasiyalar
+- **Kassa** — rezervasiyalar üzrə ödənişlər (nağd/kart), qismən ödəniş, ödəniş tarixçəsi
+- **Hesabatlar** — tarix filtri ilə detallı maliyyə hesabatı: ümumi gəlir, nağd/kart
+  bölgüsü, günlük gəlir qrafiki, müayinə növləri üzrə bölgü və əməliyyat siyahısı
 - **Rezervasiyalar** — əlavə etmə (çoxlu müayinə seçimi), siyahı, detallar, təsdiq
 - **Müayinələr** — müayinə növləri üçün CRUD (ad, təsvir, qiymət)
 - **İstifadəçilər** — istifadəçi yaratma və rol təyinetmə

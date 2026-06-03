@@ -1,0 +1,165 @@
+@model ReportViewModel
+@{
+    ViewData["Title"] = "Hesabatlar";
+}
+
+<div class="page-head">
+    <div>
+        <h2>Maliyyə hesabatı</h2>
+        <p>@Model.From.ToString("dd.MM.yyyy") — @Model.To.ToString("dd.MM.yyyy")</p>
+    </div>
+</div>
+
+<!-- Date filter -->
+<div class="card mb-3">
+    <div class="card-pad">
+        <form method="get" class="filter-bar">
+            <div class="field" style="margin:0;">
+                <label>Başlanğıc</label>
+                <input type="date" name="from" value="@Model.From.ToString("yyyy-MM-dd")" class="form-control" />
+            </div>
+            <div class="field" style="margin:0;">
+                <label>Son</label>
+                <input type="date" name="to" value="@Model.To.ToString("yyyy-MM-dd")" class="form-control" />
+            </div>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i> Filtrlə</button>
+            <a class="btn btn-light" asp-action="Index"><i class="bi bi-arrow-clockwise"></i> Son 30 gün</a>
+        </form>
+    </div>
+</div>
+
+<!-- Summary -->
+<div class="stat-grid">
+    <div class="stat">
+        <div class="icon green"><i class="bi bi-graph-up-arrow"></i></div>
+        <div>
+            <div class="value">@Model.TotalIncome.ToString("0.00") ₼</div>
+            <div class="label">Ümumi gəlir</div>
+        </div>
+    </div>
+    <div class="stat">
+        <div class="icon teal"><i class="bi bi-cash-stack"></i></div>
+        <div>
+            <div class="value">@Model.CashTotal.ToString("0.00") ₼</div>
+            <div class="label">Nağd</div>
+        </div>
+    </div>
+    <div class="stat">
+        <div class="icon blue"><i class="bi bi-credit-card-2-front"></i></div>
+        <div>
+            <div class="value">@Model.CardTotal.ToString("0.00") ₼</div>
+            <div class="label">Kart</div>
+        </div>
+    </div>
+    <div class="stat">
+        <div class="icon violet"><i class="bi bi-receipt"></i></div>
+        <div>
+            <div class="value">@Model.PaymentCount</div>
+            <div class="label">Əməliyyat sayı</div>
+        </div>
+    </div>
+</div>
+
+<div class="report-grid">
+    <!-- Daily totals -->
+    <div class="card">
+        <div class="card-pad">
+            <h3 style="margin:0 0 16px; font-size:1.05rem; font-weight:700;"><i class="bi bi-calendar3 text-muted"></i> Günlük gəlir</h3>
+            @if (Model.DailyTotals.Any())
+            {
+                @foreach (var d in Model.DailyTotals)
+                {
+                    var pct = Model.MaxDaily > 0 ? (int)(d.Total / Model.MaxDaily * 100) : 0;
+                    <div class="bar-row">
+                        <span class="bar-label">@d.Date.ToString("dd.MM (ddd)")</span>
+                        <div class="bar-track"><div class="bar-fill" style="width:@pct%"></div></div>
+                        <span class="bar-val">@d.Total.ToString("0.00") ₼</span>
+                    </div>
+                }
+            }
+            else
+            {
+                <p class="text-muted" style="font-size:.9rem;">Bu dövrdə ödəniş yoxdur.</p>
+            }
+        </div>
+    </div>
+
+    <!-- By examination type -->
+    <div class="card">
+        <div class="card-pad">
+            <h3 style="margin:0 0 16px; font-size:1.05rem; font-weight:700;"><i class="bi bi-clipboard2-pulse text-muted"></i> Müayinə növləri üzrə (gözlənilən)</h3>
+            @if (Model.ExamTypeStats.Any())
+            {
+                <table class="data" style="margin:-8px 0;">
+                    <thead>
+                        <tr><th>Müayinə</th><th style="text-align:center;">Say</th><th style="text-align:right;">Məbləğ</th></tr>
+                    </thead>
+                    <tbody>
+                        @foreach (var e in Model.ExamTypeStats)
+                        {
+                            <tr>
+                                <td style="font-weight:600;">@e.Name</td>
+                                <td style="text-align:center;"><span class="badge-soft badge-default">@e.Count</span></td>
+                                <td style="text-align:right;" class="money">@e.Expected.ToString("0.00") ₼</td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            }
+            else
+            {
+                <p class="text-muted" style="font-size:.9rem;">Bu dövrdə rezervasiya yoxdur.</p>
+            }
+        </div>
+    </div>
+</div>
+
+<!-- Transactions -->
+<div class="card mt-3">
+    <div class="card-pad" style="border-bottom:1px solid var(--line);">
+        <h3 style="margin:0; font-size:1.05rem; font-weight:700;"><i class="bi bi-list-ul text-muted"></i> Əməliyyatlar (@Model.PaymentCount)</h3>
+    </div>
+    @if (Model.Payments.Any())
+    {
+        <table class="data">
+            <thead>
+                <tr>
+                    <th>Tarix</th>
+                    <th>Xəstə</th>
+                    <th>Üsul</th>
+                    <th>Qeyd</th>
+                    <th style="text-align:right;">Məbləğ</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var p in Model.Payments)
+                {
+                    <tr>
+                        <td class="text-muted">@p.PaidAt.ToString("dd.MM.yyyy HH:mm")</td>
+                        <td style="font-weight:600;">@p.Reserve?.Name @p.Reserve?.Surname</td>
+                        <td>
+                            <span class="badge-soft @(p.Method == PaymentMethod.Cash ? "badge-cash" : "badge-card")">
+                                @(p.Method == PaymentMethod.Cash ? "Nağd" : "Kart")
+                            </span>
+                        </td>
+                        <td class="text-muted">@(string.IsNullOrEmpty(p.Note) ? "—" : p.Note)</td>
+                        <td style="text-align:right;" class="money pos">@p.Amount.ToString("0.00") ₼</td>
+                    </tr>
+                }
+            </tbody>
+            <tfoot>
+                <tr style="border-top:2px solid var(--line);">
+                    <td colspan="4" style="text-align:right; font-weight:700;">Cəmi:</td>
+                    <td style="text-align:right;" class="money pos">@Model.TotalIncome.ToString("0.00") ₼</td>
+                </tr>
+            </tfoot>
+        </table>
+    }
+    else
+    {
+        <div class="empty-state">
+            <i class="bi bi-receipt"></i>
+            <p>Bu dövrdə əməliyyat yoxdur</p>
+        </div>
+    }
+</div>

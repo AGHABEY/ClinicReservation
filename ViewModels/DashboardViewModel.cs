@@ -10,6 +10,10 @@ namespace ClinicReservation.ViewModels
         public int ExaminationTypeCount { get; set; }
         public int UserCount { get; set; }
 
+        public decimal TotalIncome { get; set; }
+        public decimal TodayIncome { get; set; }
+        public decimal Outstanding { get; set; }
+
         public List<Reserve> RecentReservations { get; set; } = new();
     }
 }

@@ -45,6 +45,36 @@ namespace ClinicReservation.Migrations
                     b.ToTable("ExaminationTypes");
                 });
 
+            modelBuilder.Entity("ClinicReservation.Models.Payment", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("Amount")
+                        .HasColumnType("numeric");
+
+                    b.Property<int>("Method")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Note")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("PaidAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("ReserveId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReserveId");
+
+                    b.ToTable("Payments");
+                });
+
             modelBuilder.Entity("ClinicReservation.Models.Reserve", b =>
                 {
                     b.Property<int>("Id")
@@ -343,6 +373,17 @@ namespace ClinicReservation.Migrations
                     b.HasDiscriminator().HasValue("AppUser");
                 });
 
+            modelBuilder.Entity("ClinicReservation.Models.Payment", b =>
+                {
+                    b.HasOne("ClinicReservation.Models.Reserve", "Reserve")
+                        .WithMany("Payments")
+                        .HasForeignKey("ReserveId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Reserve");
+                });
+
             modelBuilder.Entity("ClinicReservation.Models.Reserve", b =>
                 {
                     b.HasOne("ClinicReservation.Models.ReserveStatus", "Status")
@@ -424,6 +465,8 @@ namespace ClinicReservation.Migrations
 
             modelBuilder.Entity("ClinicReservation.Models.Reserve", b =>
                 {
+                    b.Navigation("Payments");
+
                     b.Navigation("ReserveExaminationTypes");
                 });
 

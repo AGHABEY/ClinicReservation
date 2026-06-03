@@ -29,7 +29,17 @@
             <ul class="sidebar-nav">
                 <li>
                     <a class="@Active("Home")" asp-controller="Home" asp-action="Index">
-                        <i class="bi bi-grid-1x2-fill"></i> Hesabatlar
+                        <i class="bi bi-grid-1x2-fill"></i> İdarə paneli
+                    </a>
+                </li>
+                <li>
+                    <a class="@Active("Kassa")" asp-controller="Kassa" asp-action="Index">
+                        <i class="bi bi-cash-coin"></i> Kassa
+                    </a>
+                </li>
+                <li>
+                    <a class="@Active("Report")" asp-controller="Report" asp-action="Index">
+                        <i class="bi bi-bar-chart-line-fill"></i> Hesabatlar
                     </a>
                 </li>
             </ul>
