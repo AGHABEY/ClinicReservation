@@ -477,6 +477,36 @@ table.data tbody tr:hover { background: #f8fafc; }
 }
 
 .alert-danger { background: #fef2f2; color: #b91c1c; border-color: #fecaca; }
+.alert-success { background: #f0fdf4; color: #15803d; border-color: #bbf7d0; }
+
+/* Payment status badges */
+.badge-paid { background: #dcfce7; color: #15803d; }
+.badge-unpaid { background: #fee2e2; color: #b91c1c; }
+.badge-partial { background: #fef3c7; color: #b45309; }
+.badge-cash { background: #dcfce7; color: #15803d; }
+.badge-card { background: #dbeafe; color: #1d4ed8; }
+
+/* Money figures */
+.money { font-weight: 700; font-variant-numeric: tabular-nums; }
+.money.pos { color: #15803d; }
+.money.neg { color: #b91c1c; }
+
+/* Segmented filter */
+.seg { display: inline-flex; background: #fff; border: 1px solid var(--line); border-radius: 11px; padding: 4px; gap: 4px; }
+.seg a { padding: 7px 16px; border-radius: 8px; font-size: .85rem; font-weight: 600; color: var(--muted); text-decoration: none; }
+.seg a.on { background: var(--brand-soft); color: var(--brand-dark); }
+
+/* Bar chart */
+.bar-row { display: grid; grid-template-columns: 96px 1fr 110px; align-items: center; gap: 14px; padding: 8px 0; }
+.bar-row .bar-label { font-size: .82rem; color: var(--muted); }
+.bar-track { background: #f1f5f9; border-radius: 8px; height: 26px; overflow: hidden; }
+.bar-fill { height: 100%; background: linear-gradient(90deg, var(--brand), #2dd4bf); border-radius: 8px; min-width: 3px; transition: width .3s; }
+.bar-row .bar-val { text-align: right; font-weight: 600; font-size: .85rem; font-variant-numeric: tabular-nums; }
+
+/* Filter bar */
+.filter-bar { display: flex; align-items: flex-end; gap: 14px; flex-wrap: wrap; }
+.report-grid { display: grid; grid-template-columns: 1fr 1fr; gap: 18px; align-items: start; }
+@media (max-width: 992px) { .report-grid { grid-template-columns: 1fr; } }
 
 .empty-state {
     text-align: center;

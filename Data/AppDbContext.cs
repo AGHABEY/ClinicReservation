@@ -15,6 +15,7 @@ namespace ClinicReservation.Data
         public DbSet<ReserveExaminationType> ReserveExaminationTypes { get; set; }
         public DbSet<ReserveStatus> ReserveStatuses { get; set; }
         public DbSet<ExaminationType> ExaminationTypes { get; set; }
+        public DbSet<Payment> Payments { get; set; }
         public DbSet<AppUser> AppUsers { get; set; }
 
     }
