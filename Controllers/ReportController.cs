@@ -7,7 +7,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ClinicReservation.Controllers
 {
-    [Authorize]
+    [Authorize(Roles = AppRoles.Admin)]
     public class ReportController : Controller
     {
         private readonly AppDbContext _context;

@@ -1,6 +1,7 @@
 @model KassaListViewModel
 @{
     ViewData["Title"] = "Kassa";
+    var isAdmin = User.IsInRole(AppRoles.Admin);
     string statusBadge(string s) => s switch { "Paid" => "badge-paid", "Partial" => "badge-partial", _ => "badge-unpaid" };
     string statusText(string s) => s switch { "Paid" => "Ödənilib", "Partial" => "Qismən", _ => "Ödənilməyib" };
 }
@@ -12,29 +13,32 @@
     </div>
 </div>
 
-<div class="stat-grid">
-    <div class="stat">
-        <div class="icon teal"><i class="bi bi-wallet2"></i></div>
-        <div>
-            <div class="value">@Model.TotalExpected.ToString("0.00") ₼</div>
-            <div class="label">Gözlənilən gəlir</div>
+@if (User.IsInRole(AppRoles.Admin))
+{
+    <div class="stat-grid">
+        <div class="stat">
+            <div class="icon teal"><i class="bi bi-wallet2"></i></div>
+            <div>
+                <div class="value">@Model.TotalExpected.ToString("0.00") ₼</div>
+                <div class="label">Gözlənilən gəlir</div>
+            </div>
+        </div>
+        <div class="stat">
+            <div class="icon green"><i class="bi bi-cash-stack"></i></div>
+            <div>
+                <div class="value">@Model.TotalCollected.ToString("0.00") ₼</div>
+                <div class="label">Yığılan</div>
+            </div>
+        </div>
+        <div class="stat">
+            <div class="icon amber"><i class="bi bi-hourglass-split"></i></div>
+            <div>
+                <div class="value">@Model.TotalOutstanding.ToString("0.00") ₼</div>
+                <div class="label">Qalıq borc</div>
+            </div>
         </div>
     </div>
-    <div class="stat">
-        <div class="icon green"><i class="bi bi-cash-stack"></i></div>
-        <div>
-            <div class="value">@Model.TotalCollected.ToString("0.00") ₼</div>
-            <div class="label">Yığılan</div>
-        </div>
-    </div>
-    <div class="stat">
-        <div class="icon amber"><i class="bi bi-hourglass-split"></i></div>
-        <div>
-            <div class="value">@Model.TotalOutstanding.ToString("0.00") ₼</div>
-            <div class="label">Qalıq borc</div>
-        </div>
-    </div>
-</div>
+}
 
 <div class="flex-between mb-3">
     <div class="seg">
@@ -52,9 +56,12 @@
                 <tr>
                     <th>Xəstə</th>
                     <th>Telefon</th>
-                    <th style="text-align:right;">Cəmi</th>
-                    <th style="text-align:right;">Ödənilib</th>
-                    <th style="text-align:right;">Qalıq</th>
+                    @if (isAdmin)
+                    {
+                        <th style="text-align:right;">Cəmi</th>
+                        <th style="text-align:right;">Ödənilib</th>
+                        <th style="text-align:right;">Qalıq</th>
+                    }
                     <th>Status</th>
                     <th style="text-align:right;">Əməliyyat</th>
                 </tr>
@@ -65,9 +72,12 @@
                     <tr>
                         <td style="font-weight:600;">@item.Reserve.Name @item.Reserve.Surname</td>
                         <td class="text-muted">@item.Reserve.Phone</td>
-                        <td style="text-align:right;" class="money">@item.Total.ToString("0.00") ₼</td>
-                        <td style="text-align:right;" class="money pos">@item.Paid.ToString("0.00") ₼</td>
-                        <td style="text-align:right;" class="money @(item.Balance > 0 ? "neg" : "")">@item.Balance.ToString("0.00") ₼</td>
+                        @if (isAdmin)
+                        {
+                            <td style="text-align:right;" class="money">@item.Total.ToString("0.00") ₼</td>
+                            <td style="text-align:right;" class="money pos">@item.Paid.ToString("0.00") ₼</td>
+                            <td style="text-align:right;" class="money @(item.Balance > 0 ? "neg" : "")">@item.Balance.ToString("0.00") ₼</td>
+                        }
                         <td><span class="badge-soft @statusBadge(item.PaymentStatus)">@statusText(item.PaymentStatus)</span></td>
                         <td style="text-align:right;">
                             <a class="btn @(item.PaymentStatus == "Paid" ? "btn-light" : "btn-primary") btn-sm" asp-action="Pay" asp-route-id="@item.Reserve.Id">

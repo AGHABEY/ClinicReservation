@@ -1,6 +1,7 @@
 @{
     var controller = ViewContext.RouteData.Values["controller"]?.ToString();
     string Active(string c) => controller == c ? "active" : "";
+    var isAdmin = User.IsInRole(AppRoles.Admin);
     var userName = User.Identity?.Name ?? "User";
     var initial = string.IsNullOrEmpty(userName) ? "U" : userName.Substring(0, 1).ToUpper();
 }
@@ -37,11 +38,14 @@
                         <i class="bi bi-cash-coin"></i> Kassa
                     </a>
                 </li>
-                <li>
-                    <a class="@Active("Report")" asp-controller="Report" asp-action="Index">
-                        <i class="bi bi-bar-chart-line-fill"></i> Hesabatlar
-                    </a>
-                </li>
+                @if (isAdmin)
+                {
+                    <li>
+                        <a class="@Active("Report")" asp-controller="Report" asp-action="Index">
+                            <i class="bi bi-bar-chart-line-fill"></i> Hesabatlar
+                        </a>
+                    </li>
+                }
             </ul>
 
             <div class="nav-section">İdarəetmə</div>
@@ -51,16 +55,19 @@
                         <i class="bi bi-calendar2-check-fill"></i> Rezervasiyalar
                     </a>
                 </li>
-                <li>
-                    <a class="@Active("ExaminationType")" asp-controller="ExaminationType" asp-action="Index">
-                        <i class="bi bi-clipboard2-pulse-fill"></i> Müayinələr
-                    </a>
-                </li>
-                <li>
-                    <a class="@Active("Account")" asp-controller="Account" asp-action="Index">
-                        <i class="bi bi-people-fill"></i> İstifadəçilər
-                    </a>
-                </li>
+                @if (isAdmin)
+                {
+                    <li>
+                        <a class="@Active("ExaminationType")" asp-controller="ExaminationType" asp-action="Index">
+                            <i class="bi bi-clipboard2-pulse-fill"></i> Müayinələr
+                        </a>
+                    </li>
+                    <li>
+                        <a class="@Active("Account")" asp-controller="Account" asp-action="Index">
+                            <i class="bi bi-people-fill"></i> İstifadəçilər
+                        </a>
+                    </li>
+                }
             </ul>
         </aside>
         <div class="backdrop" id="backdrop"></div>
