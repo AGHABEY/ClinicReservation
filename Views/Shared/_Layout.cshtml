@@ -55,13 +55,13 @@
                         <i class="bi bi-calendar2-check-fill"></i> Rezervasiyalar
                     </a>
                 </li>
+                <li>
+                    <a class="@Active("ExaminationType")" asp-controller="ExaminationType" asp-action="Index">
+                        <i class="bi bi-clipboard2-pulse-fill"></i> Müayinələr
+                    </a>
+                </li>
                 @if (isAdmin)
                 {
-                    <li>
-                        <a class="@Active("ExaminationType")" asp-controller="ExaminationType" asp-action="Index">
-                            <i class="bi bi-clipboard2-pulse-fill"></i> Müayinələr
-                        </a>
-                    </li>
                     <li>
                         <a class="@Active("Account")" asp-controller="Account" asp-action="Index">
                             <i class="bi bi-people-fill"></i> İstifadəçilər
