@@ -25,6 +25,7 @@ namespace ClinicReservation.Controllers
             _context = context;
         }
 
+        [Authorize(Roles = AppRoles.Admin)]
         public IActionResult CreateUser()
         {
             AccountViewModel model = new AccountViewModel();
@@ -61,6 +62,20 @@ namespace ClinicReservation.Controllers
         }
 
         [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Logout()
+        {
+            await _signInManager.SignOutAsync();
+            return RedirectToAction("Login");
+        }
+
+        public IActionResult AccessDenied()
+        {
+            return View();
+        }
+
+        [Authorize(Roles = AppRoles.Admin)]
+        [HttpPost]
         public async Task<IActionResult> CreateUser(AccountViewModel model)
         {
             if (ModelState.IsValid)
@@ -87,6 +102,7 @@ namespace ClinicReservation.Controllers
             return View(model);
         }
 
+        [Authorize(Roles = AppRoles.Admin)]
         public async Task<IActionResult> Index()
         {
             UserListViewModel model = new UserListViewModel();
@@ -97,19 +113,22 @@ namespace ClinicReservation.Controllers
         }
 
 
+        [Authorize(Roles = AppRoles.Admin)]
         public IActionResult CreateRole()
         {
             AdminRoleViewModel model = new AdminRoleViewModel();
             return View(model);
         }
 
+        [Authorize(Roles = AppRoles.Admin)]
         [HttpPost]
         public async Task<IActionResult> CreateRole(AdminRoleViewModel model)
         {
             await _roleManager.CreateAsync(model.Role);
-            return RedirectToAction("Roles");
+            return RedirectToAction("Index");
         }
 
+        [Authorize(Roles = AppRoles.Admin)]
         public IActionResult UpdateUser(string id)
         {
             AccountViewModel model = new AccountViewModel();
@@ -118,6 +137,7 @@ namespace ClinicReservation.Controllers
             return View(model);
         }
 
+        [Authorize(Roles = AppRoles.Admin)]
         [HttpPost]
         public async Task<IActionResult> UpdateUser(AccountViewModel model)
         {

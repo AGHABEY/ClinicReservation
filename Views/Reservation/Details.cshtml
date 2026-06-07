@@ -1,53 +1,69 @@
-﻿@model Reserve
-
+@model Reserve
 @{
-    ViewData["Title"] = "Reserve Details";
+    ViewData["Title"] = "Rezervasiya detalları";
+    string Badge(string? s) => s switch
+    {
+        "Waiting" => "badge-waiting",
+        "Confirmed" => "badge-confirmed",
+        _ => "badge-default"
+    };
+    string StatusText(string? s) => s switch
+    {
+        "Waiting" => "Gözləyir",
+        "Confirmed" => "Təsdiqləndi",
+        _ => s ?? "—"
+    };
 }
 
-<div class="container mt-4">
-    <h2>Reserve Details</h2>
+<div class="page-head">
+    <div>
+        <h2>@Model.Name @Model.Surname</h2>
+        <p>Rezervasiya #@Model.Id</p>
+    </div>
+    <a class="btn btn-light" asp-action="Index"><i class="bi bi-arrow-left"></i> Siyahıya qayıt</a>
+</div>
 
-    <dl class="row">
-        <dt class="col-sm-3">Name:</dt>
-        <dd class="col-sm-9">@Model.Name</dd>
+<div style="display:grid; grid-template-columns: 2fr 1fr; gap:18px; align-items:start;">
+    <div class="card">
+        <div class="card-pad">
+            <h3 style="margin:0 0 8px; font-size:1.05rem; font-weight:700;"><i class="bi bi-person-vcard text-muted"></i> Xəstə məlumatları</h3>
+            <dl class="detail-list">
+                <div class="detail-row"><dt>Ad</dt><dd>@Model.Name</dd></div>
+                <div class="detail-row"><dt>Soyad</dt><dd>@Model.Surname</dd></div>
+                <div class="detail-row"><dt>FİN kod</dt><dd>@Model.PinCode</dd></div>
+                <div class="detail-row"><dt>Telefon</dt><dd>@Model.Phone</dd></div>
+                <div class="detail-row"><dt>Doğum tarixi</dt><dd>@Model.Birthday.ToString("dd.MM.yyyy")</dd></div>
+                <div class="detail-row"><dt>Əlavə olunma</dt><dd>@(Model.AddedDate?.ToString("dd.MM.yyyy HH:mm") ?? "—")</dd></div>
+                <div class="detail-row"><dt>Təsdiq tarixi</dt><dd>@(Model.ConfirmDate?.ToString("dd.MM.yyyy HH:mm") ?? "—")</dd></div>
+                <div class="detail-row">
+                    <dt>Status</dt>
+                    <dd><span class="badge-soft @Badge(Model.Status?.Name)">@StatusText(Model.Status?.Name)</span></dd>
+                </div>
+            </dl>
+        </div>
+    </div>
 
-        <dt class="col-sm-3">Surname:</dt>
-        <dd class="col-sm-9">@Model.Surname</dd>
-
-        <dt class="col-sm-3">PIN Code:</dt>
-        <dd class="col-sm-9">@Model.PinCode</dd>
-
-        <dt class="col-sm-3">Phone:</dt>
-        <dd class="col-sm-9">@Model.Phone</dd>
-
-        <dt class="col-sm-3">Birthday:</dt>
-        <dd class="col-sm-9">@Model.Birthday.ToShortDateString()</dd>
-
-        <dt class="col-sm-3">Added Date:</dt>
-        <dd class="col-sm-9">@Model.AddedDate?.ToShortDateString()</dd>
-
-        <dt class="col-sm-3">Confirm Date:</dt>
-        <dd class="col-sm-9">@Model.ConfirmDate?.ToShortDateString()</dd>
-
-        <dt class="col-sm-3">Status:</dt>
-        <dd class="col-sm-9">@(Model.Status != null ? Model.Status.Name : "Not Set")</dd>
-
-        @* Display Examination Types (if available) *@
-        @if (Model.ReserveExaminationTypes != null && Model.ReserveExaminationTypes.Any())
-        {
-            <dt class="col-sm-3">Examination Types:</dt>
-            <dd class="col-sm-9">
-                <ul>
+    <div class="card">
+        <div class="card-pad">
+            <h3 style="margin:0 0 14px; font-size:1.05rem; font-weight:700;"><i class="bi bi-clipboard2-pulse text-muted"></i> Müayinələr</h3>
+            @if (Model.ReserveExaminationTypes != null && Model.ReserveExaminationTypes.Any())
+            {
+                <div style="display:flex; flex-direction:column; gap:10px;">
                     @foreach (var examType in Model.ReserveExaminationTypes)
                     {
-                        <li>@examType.ExaminationType.Name</li>
+                        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; background:var(--brand-soft); border-radius:11px;">
+                            <span style="font-weight:600; color:var(--brand-dark);">
+                                <i class="bi bi-check-circle-fill"></i> @examType.ExaminationType.Name
+                            </span>
+                            <span class="text-muted" style="font-size:.85rem;">@examType.ExaminationType.Price ₼</span>
+                        </div>
                     }
-                </ul>
-            </dd>
-        }
-    </dl>
-
-    <div class="mt-3">
-        <a asp-action="Index" class="btn btn-secondary">Back to List</a>
+                </div>
+            }
+            else
+            {
+                <p class="text-muted" style="font-size:.9rem;">Müayinə təyin edilməyib.</p>
+            }
+        </div>
     </div>
 </div>

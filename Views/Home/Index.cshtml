@@ -1,16 +1,123 @@
-﻿@model Reserve
+@model DashboardViewModel
 @{
-    ViewData["Title"] = "Home Page";
+    ViewData["Title"] = "İdarə paneli";
+    string Badge(string? s) => s switch
+    {
+        "Waiting" => "badge-waiting",
+        "Confirmed" => "badge-confirmed",
+        _ => "badge-default"
+    };
+    string StatusText(string? s) => s switch
+    {
+        "Waiting" => "Gözləyir",
+        "Confirmed" => "Təsdiqləndi",
+        _ => s ?? "—"
+    };
 }
 
-
-<div class="text-center">
-    <h1 class="display-4">Welcome</h1>
-    <p>Learn about <a href="https://learn.microsoft.com/aspnet/core">building Web apps with ASP.NET Core</a>.</p>
+<div class="page-head">
+    <div>
+        <h2>İdarə paneli</h2>
+        <p>Klinikanın ümumi statistikası</p>
+    </div>
+    <a class="btn btn-primary" asp-controller="Reservation" asp-action="Add">
+        <i class="bi bi-plus-lg"></i> Yeni rezervasiya
+    </a>
 </div>
 
-@* <div class="form-group">
-    <label asp-for="Model.Name">Name:</label>
-    <input asp-for="Model.Name" class="form-control" />
-    <span asp-validation-for="Model.Name" class="text-danger"></span>
-</div> *@
+<div class="stat-grid">
+    <div class="stat">
+        <div class="icon teal"><i class="bi bi-calendar2-check-fill"></i></div>
+        <div>
+            <div class="value">@Model.TotalReservations</div>
+            <div class="label">Ümumi rezervasiya</div>
+        </div>
+    </div>
+    <div class="stat">
+        <div class="icon amber"><i class="bi bi-hourglass-split"></i></div>
+        <div>
+            <div class="value">@Model.WaitingReservations</div>
+            <div class="label">Gözləyən</div>
+        </div>
+    </div>
+    <div class="stat">
+        <div class="icon green"><i class="bi bi-check2-circle"></i></div>
+        <div>
+            <div class="value">@Model.ConfirmedReservations</div>
+            <div class="label">Təsdiqlənmiş</div>
+        </div>
+    </div>
+    <div class="stat">
+        <div class="icon blue"><i class="bi bi-clipboard2-pulse-fill"></i></div>
+        <div>
+            <div class="value">@Model.ExaminationTypeCount</div>
+            <div class="label">Müayinə növü</div>
+        </div>
+    </div>
+    <div class="stat">
+        <div class="icon violet"><i class="bi bi-people-fill"></i></div>
+        <div>
+            <div class="value">@Model.UserCount</div>
+            <div class="label">İstifadəçi</div>
+        </div>
+    </div>
+    @if (User.IsInRole(AppRoles.Admin))
+    {
+        <div class="stat">
+            <div class="icon green"><i class="bi bi-cash-stack"></i></div>
+            <div>
+                <div class="value">@Model.TotalIncome.ToString("0.00") ₼</div>
+                <div class="label">Ümumi gəlir</div>
+            </div>
+        </div>
+        <div class="stat">
+            <div class="icon teal"><i class="bi bi-wallet2"></i></div>
+            <div>
+                <div class="value">@Model.TodayIncome.ToString("0.00") ₼</div>
+                <div class="label">Bu gün kassa</div>
+            </div>
+        </div>
+        <div class="stat">
+            <div class="icon amber"><i class="bi bi-hourglass-split"></i></div>
+            <div>
+                <div class="value">@Model.Outstanding.ToString("0.00") ₼</div>
+                <div class="label">Qalıq borc</div>
+            </div>
+        </div>
+    }
+</div>
+
+<div class="card">
+    <div class="card-pad flex-between" style="border-bottom:1px solid var(--line);">
+        <h3 style="margin:0; font-size:1.05rem; font-weight:700;">Son rezervasiyalar</h3>
+        <a class="btn btn-light btn-sm" asp-controller="Reservation" asp-action="Index">Hamısına bax</a>
+    </div>
+    @if (Model.RecentReservations.Any())
+    {
+        <table class="data">
+            <thead>
+                <tr><th>Ad Soyad</th><th>Telefon</th><th>Status</th><th></th></tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model.RecentReservations)
+                {
+                    <tr>
+                        <td style="font-weight:600;">@r.Name @r.Surname</td>
+                        <td class="text-muted">@r.Phone</td>
+                        <td><span class="badge-soft @Badge(r.Status?.Name)">@StatusText(r.Status?.Name)</span></td>
+                        <td style="text-align:right;">
+                            <a class="btn btn-ghost btn-sm" asp-controller="Reservation" asp-action="Details" asp-route-id="@r.Id">Detallar</a>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    }
+    else
+    {
+        <div class="empty-state">
+            <i class="bi bi-calendar2-x"></i>
+            <p>Hələ rezervasiya yoxdur</p>
+        </div>
+    }
+</div>
