@@ -28,7 +28,7 @@ services:
         condition: service_healthy
     environment:
       ASPNETCORE_ENVIRONMENT: Production
-      ConnectionStrings__ClinicReservation: "Host=db;Port=5432;Database=ClinicReservation;Username=postgres;Password=postgres"
+      ConnectionStrings__ClinicReservation: "Host=clinic-db;Port=5432;Database=ClinicReservation;Username=postgres;Password=postgres"
     ports:
       # Host 8090 -> konteyner 8080. Override: .env-də WEB_PORT=... və ya
       # `WEB_PORT=9000 docker compose up`
