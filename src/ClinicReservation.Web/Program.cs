@@ -95,6 +95,7 @@ builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.QueueDesk>();
 builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.PatientLinks>();
 builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.Waitlist>();
 builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.NoShows>();
+builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.CalendarQueries>();
 builder.Services.Configure<ClinicReservation.Models.SchedulingOptions>(builder.Configuration.GetSection("Scheduling"));
 builder.Services.AddHostedService<ClinicReservation.Modules.Scheduling.NoShowWorker>();
 builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.WaitlistQueries>();

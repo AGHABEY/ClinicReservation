@@ -6,6 +6,8 @@ namespace ClinicReservation.Services
         string? UserId { get; }
         string? UserName { get; }
         string? IpAddress { get; }
+        /// <summary>Has this permission (Admin has all). Use cases check rules that go beyond the page's own permission.</summary>
+        bool Can(string permission);
     }
 
     /// <summary>For background jobs and tools: no user.</summary>
@@ -14,5 +16,6 @@ namespace ClinicReservation.Services
         public string? UserId => null;
         public string? UserName => null;
         public string? IpAddress => null;
+        public bool Can(string permission) => false;
     }
 }

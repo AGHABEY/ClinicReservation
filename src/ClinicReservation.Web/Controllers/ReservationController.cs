@@ -45,10 +45,10 @@ namespace ClinicReservation.Controllers
         // ---------- Create ----------
 
         [HasPermission(Permissions.ReservationsManage)]
-        public async Task<IActionResult> Add(DateTime? date, int? doctorId, int? patientId, int? waitlistId,
+        public async Task<IActionResult> Add(DateTime? date, int? doctorId, int? patientId, int? waitlistId, string? time,
             [FromServices] WaitlistQueries waitlist, CancellationToken ct)
         {
-            var model = new ReserveFormViewModel { AppointmentDate = (date ?? ClinicTime.Today).Date, DoctorId = doctorId };
+            var model = new ReserveFormViewModel { AppointmentDate = (date ?? ClinicTime.Today).Date, DoctorId = doctorId, AppointmentTime = time };
             // Booking a waiting patient: their wish (or the offered time) fills the form.
             if (waitlistId != null && await waitlist.EntryAsync(waitlistId.Value, ct) is { Status: WaitlistStatus.Waiting or WaitlistStatus.Offered } w)
             {

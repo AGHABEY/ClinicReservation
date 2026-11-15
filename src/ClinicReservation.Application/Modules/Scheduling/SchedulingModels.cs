@@ -43,6 +43,9 @@ namespace ClinicReservation.Modules.Scheduling
 
         public List<int>? ExaminationTypeIds { get; set; }
 
+        /// <summary>«Araya sal»: book even if the time is taken (permission + the doctor's daily limit).</summary>
+        public bool Overbook { get; set; }
+
         /// <summary>Booked from this waitlist entry (it becomes «Rezerv edildi»).</summary>
         public int? WaitlistId { get; set; }
 

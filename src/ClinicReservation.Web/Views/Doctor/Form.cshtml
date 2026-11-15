@@ -82,6 +82,12 @@
                         <span asp-validation-for="SlotMinutes" class="text-danger"></span>
                     </div>
                     <div class="field">
+                        <label asp-for="MaxOverbookPerDay">Gündə əlavə qəbul (araya salmaq)</label>
+                        <input asp-for="MaxOverbookPerDay" type="number" min="0" max="20" class="form-control" />
+                        <span class="hint-text">Dolu saata yazıla bilən əlavə xəstə sayı; 0 — icazə yoxdur</span>
+                        <span asp-validation-for="MaxOverbookPerDay" class="text-danger"></span>
+                    </div>
+                    <div class="field">
                         <label asp-for="Phone">Telefon</label>
                         <input asp-for="Phone" type="tel" class="form-control" />
                         <span asp-validation-for="Phone" class="text-danger"></span>

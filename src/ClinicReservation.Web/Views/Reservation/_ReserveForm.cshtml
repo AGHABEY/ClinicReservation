@@ -140,9 +140,10 @@
                                 @foreach (var s in slotResult.Slots)
                                 {
                                     var isCurrent = s.Time == Model.AppointmentTime;
-                                    var enabled = Model.CanReschedule && (s.Available || (Model.IsEdit && isCurrent));
-                                    <label class="slot @(enabled || isCurrent ? "" : "disabled")" title="@(s.Past ? "Keçmiş vaxt" : !s.Available ? "Dolu" : "Boş")">
-                                        <input type="radio" name="AppointmentTime" value="@s.Time" checked="@isCurrent" disabled="@(!enabled)" />
+                                    var busy = !s.Past && !s.Available;
+                                    var enabled = Model.CanReschedule && (s.Available || (Model.IsEdit && isCurrent) || (busy && Model.Overbook));
+                                    <label class="slot @(enabled || isCurrent ? "" : "disabled") @(busy ? "busy" : "")" title="@(s.Past ? "Keçmiş vaxt" : !s.Available ? "Dolu" : "Boş")">
+                                        <input type="radio" name="AppointmentTime" value="@s.Time" checked="@isCurrent" disabled="@(!enabled)" data-busy="@(busy ? "1" : "0")" />
                                         <span>@s.Time</span>
                                     </label>
                                 }
@@ -151,6 +152,13 @@
                                 <i class="bi bi-info-circle"></i> <span>@(slotResult.Message ?? (Model.DoctorId == null ? "Saatları görmək üçün həkim seçin" : ""))</span>
                             </p>
                             <span asp-validation-for="AppointmentTime" class="text-danger"></span>
+                            @if (Model.CanReschedule && User.Can(Permissions.ReservationsOverbook))
+                            {
+                                <label class="hint-text" style="display:flex; gap:8px; align-items:center; margin-top:8px;" title="Dolu saata əlavə xəstə yazmaq (həkimin gündəlik limiti daxilində)">
+                                    <input type="checkbox" name="Overbook" value="true" id="overbook" checked="@Model.Overbook" />
+                                    <span><b>Araya sal</b> — dolu saata əlavə qəbul (həkimin gündəlik limiti daxilində)</span>
+                                </label>
+                            }
                             @if (!Model.IsEdit && User.Can(Permissions.ReservationsManage))
                             {
                                 <p class="hint-text" style="margin:6px 0 0;">
@@ -349,6 +357,17 @@
             msg.querySelector('span').textContent = text || '';
         }
 
+        // «Araya sal»: busy (not past) times become selectable.
+        const overbook = document.getElementById('overbook');
+        const overbookOn = () => !!(overbook && overbook.checked);
+        if (overbook) overbook.addEventListener('change', () => {
+            grid.querySelectorAll('input[data-busy="1"]').forEach(i => {
+                i.disabled = !overbook.checked;
+                i.closest('label').classList.toggle('disabled', !overbook.checked);
+                if (!overbook.checked && i.checked) i.checked = false;
+            });
+        });
+
         async function loadSlots() {
             grid.innerHTML = '';
             if (!doctor.value) { showMessage('Saatları görmək üçün həkim seçin'); return; }
@@ -370,12 +389,14 @@
                     slots.sort((a, b) => a.time.localeCompare(b.time));
                 }
                 for (const s of slots) {
-                    const enabled = s.available || s.time === keep;
+                    const busy = !s.past && !s.available;
+                    const enabled = s.available || s.time === keep || (busy && overbookOn());
                     const label = document.createElement('label');
-                    label.className = 'slot' + (enabled ? '' : ' disabled');
+                    label.className = 'slot' + (enabled ? '' : ' disabled') + (busy ? ' busy' : '');
                     label.title = s.past ? 'Keçmiş vaxt' : !s.available ? 'Dolu' : 'Boş';
                     const input = document.createElement('input');
                     input.type = 'radio'; input.name = 'AppointmentTime'; input.value = s.time;
+                    input.dataset.busy = busy ? '1' : '0';
                     input.disabled = !enabled;
                     input.checked = s.time === keep;
                     const span = document.createElement('span');

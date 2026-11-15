@@ -96,7 +96,7 @@ else if (Model.Status?.Name == StatusNames.NoShow)
             <div style="flex:1;">
                 <div class="appt-label">Qəbul vaxtı</div>
                 <div class="appt-value">@Fmt.Appointment(Model.AppointmentAt)</div>
-                <div class="appt-sub">@Fmt.Long(Model.AppointmentAt) · @Model.DurationMinutes dəq@(Model.Equipment != null ? $" · {Model.Equipment.Name}" : "") · @BookingLabels.Source(Model.Source)</div>
+                <div class="appt-sub">@Fmt.Long(Model.AppointmentAt) · @Model.DurationMinutes dəq@(Model.Equipment != null ? $" · {Model.Equipment.Name}" : "") · @BookingLabels.Source(Model.Source)@if (Model.Overbooked) { <span class="badge-soft badge-noshow" style="margin-left:6px;">Əlavə qəbul</span> }</div>
             </div>
             @if (Model.Doctor != null)
             {

@@ -11,8 +11,8 @@ onlayn yazılış = D mərhələsində. Sıra: A → B → E → C → D → F.
 - [x] A2. Kurs (seriya) qəbullar: tarixlər, toqquşma yoxlaması, alternativ, toplu ləğv
 - [x] A3. Gözləmə siyahısı: boşalan vaxt → bildiriş / SMS (ilk yazılana təklif, imtina → növbəti, saat aralığı, müayinə müddəti, SMS linki ilə ləğv də)
 - [x] A4. Avtomatik «gəlmədi» + sayğac + N-dən sonra xəbərdarlıq (Scheduling: AutoNoShowAfterMinutes, NoShowWarnAfter, NoShowWindowMonths; eyni gün «Gecikib gəldi»)
-- [ ] A5. Təqvim: gün / həftə, həkim və ya şöbə, sürüşdürüb köçürmə
-- [ ] A6. Əlavə qəbul (araya salmaq): icazə + həkimə görə gündəlik limit
+- [x] A5. Təqvim: gün / həftə, həkim və ya şöbə, sürüşdürüb köçürmə (iş saatı, fasilə, məzuniyyət, «indi» xətti, boş saata klik → yeni qəbul)
+- [x] A6. Əlavə qəbul (araya salmaq): icazə + həkimə görə gündəlik limit (defolt 2; avadanlıq paylaşılmır)
 
 ## B. Həkim axını
 - [ ] B1. Göndəriş: həkim → başqa mütəxəssis / xidmət; resepsiyada siyahı; icra olunmayanlar

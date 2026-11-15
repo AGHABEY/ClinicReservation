@@ -29,6 +29,8 @@ namespace ClinicReservation.Models
         /// <summary>When it was marked «Gəlmədi», and whether the system did it (not reception).</summary>
         public DateTime? NoShowAt { get; set; }
         public bool NoShowAuto { get; set; }
+        /// <summary>Squeezed into a time that was already taken (araya salınıb).</summary>
+        public bool Overbooked { get; set; }
         /// <summary>Free-text note on the cancellation (the reason itself is CancellationReason).</summary>
         public string? CancelReason { get; set; }
         public int? CancellationReasonId { get; set; }

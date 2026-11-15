@@ -303,6 +303,9 @@ namespace ClinicReservation.Migrations
                     b.Property<bool>("IsActive")
                         .HasColumnType("boolean");
 
+                    b.Property<int>("MaxOverbookPerDay")
+                        .HasColumnType("integer");
+
                     b.Property<string>("Phone")
                         .HasColumnType("text");
 
@@ -1068,6 +1071,9 @@ namespace ClinicReservation.Migrations
                         .HasColumnType("timestamp without time zone");
 
                     b.Property<bool>("NoShowAuto")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("Overbooked")
                         .HasColumnType("boolean");
 
                     b.Property<int>("PatientId")

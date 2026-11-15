@@ -115,6 +115,47 @@ namespace ClinicReservation.Modules.Scheduling
             return result;
         }
 
+        /// <summary>
+        /// «Araya salmaq»: a busy time on the doctor's grid can still be booked, within the doctor's daily limit.
+        /// The device can't be shared, and past times stay closed. Null = allowed (slots.Overbooked is set).
+        /// </summary>
+        public string? ValidateOverbook(int doctorId, DateTime date, string time, int? excludeReserveId, out DateTime start, out SlotResult slots,
+            BookingShape? shape = null)
+        {
+            start = default;
+            slots = GetSlots(doctorId, date, excludeReserveId, shape?.DurationMinutes ?? 0, null);
+            if (!TimeSpan.TryParseExact(time, @"hh\:mm", null, out var tod)) return "Qəbul saatı düzgün deyil";
+            start = date.Date + tod;
+            var slot = slots.Slots.FirstOrDefault(s => s.Time == time);
+            if (slot == null) return slots.Message ?? "Bu saat həkimin iş qrafikinə uyğun deyil";
+            if (slot.Past) return "Keçmiş vaxta rezervasiya etmək olmaz";
+
+            var doctor = _context.Doctors.AsNoTracking().First(d => d.Id == doctorId);
+            var day = date.Date;
+            var next = day.AddDays(1);
+            var used = _context.Reserves.Count(r => r.DoctorId == doctorId && r.Overbooked && r.AppointmentAt >= day && r.AppointmentAt < next
+                && (excludeReserveId == null || r.Id != excludeReserveId)
+                && r.Status!.Name != StatusNames.Cancelled && r.Status.Name != StatusNames.NoShow);
+            if (doctor.MaxOverbookPerDay <= 0) return "Bu həkimə əlavə qəbul yazılmır (limit 0)";
+            if (used >= doctor.MaxOverbookPerDay)
+                return $"Həkimin bu gün üçün əlavə qəbul limiti dolub ({used}/{doctor.MaxOverbookPerDay})";
+
+            if (shape?.EquipmentId != null)
+            {
+                var end = start.AddMinutes(slots.SlotMinutes);
+                var s0 = start;
+                var deviceBusy = _context.Reserves
+                    .Where(r => r.EquipmentId == shape.EquipmentId && r.AppointmentAt >= day && r.AppointmentAt < next
+                                && (excludeReserveId == null || r.Id != excludeReserveId)
+                                && r.Status!.Name != StatusNames.Cancelled && r.Status.Name != StatusNames.NoShow)
+                    .Select(r => new { r.AppointmentAt, r.DurationMinutes }).ToList()
+                    .Any(r => r.AppointmentAt < end && s0 < r.AppointmentAt.AddMinutes(Math.Max(1, r.DurationMinutes)));
+                if (deviceBusy) return $"{shape.EquipmentName ?? "Avadanlıq"} bu saatda məşğuldur — avadanlığa əlavə qəbul olmur";
+            }
+            slots.Overbooked = !slot.Available;
+            return null;
+        }
+
         /// <summary>Returns an error message, or null when the slot can be booked.</summary>
         public string? Validate(int doctorId, DateTime date, string time, int? excludeReserveId, out DateTime start, out SlotResult slots,
             BookingShape? shape = null)
@@ -145,5 +186,7 @@ namespace ClinicReservation.Modules.Scheduling
         public string? Message { get; set; }
         public int SlotMinutes { get; set; }
         public int? RoomId { get; set; }
+        /// <summary>Set by ValidateOverbook when the chosen time was already taken.</summary>
+        public bool Overbooked { get; set; }
     }
 }

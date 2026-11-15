@@ -57,6 +57,7 @@ namespace ClinicReservation.Modules.Scheduling
                 DurationMinutes = slot.SlotMinutes,
                 EquipmentId = SlotService.Shape(examTypes).EquipmentId,
                 Source = Enum.IsDefined(form.Source) ? form.Source : ReserveSource.Reception,
+                Overbooked = slot.Overbooked,
                 AddedDate = ClinicTime.Now,
                 Status = await _db.ReserveStatuses.FirstAsync(rs => rs.Name == StatusNames.Waiting, ct),
                 ReserveExaminationTypes = examTypes.Select(e => new ReserveExaminationType { ExaminationTypeId = e.Id, Price = e.Price }).ToList()
@@ -69,7 +70,7 @@ namespace ClinicReservation.Modules.Scheduling
                 _audit.Log("Xəstə kartı yaradıldı", AuditEntities.Patient, patient.Id, $"{patient.FullName} ({patient.PinCode})");
             var doctorName = await _db.Doctors.Where(d => d.Id == reserve.DoctorId).Select(d => d.FullName).FirstOrDefaultAsync(ct);
             _audit.Log("Rezervasiya yaradıldı", AuditEntities.Reservation, reserve.Id,
-                $"{patient.FullName} — {Fmt.DateTime(reserve.AppointmentAt)}, {doctorName}");
+                $"{patient.FullName} — {Fmt.DateTime(reserve.AppointmentAt)}, {doctorName}" + (reserve.Overbooked ? " (əlavə qəbul, araya salındı)" : ""));
             var ok = Result.Success($"{patient.FullName} — {Fmt.DateTime(reserve.AppointmentAt)} üçün rezervasiya yaradıldı", reserve.Id);
             if (!createdPatient) ok.Warning = _noShows.Warning(await _noShows.CountAsync(patient.Id, ct));
             return ok;
@@ -229,6 +230,7 @@ namespace ClinicReservation.Modules.Scheduling
                 reserve.RoomId = slot.RoomId;
                 reserve.DurationMinutes = slot.SlotMinutes;
                 reserve.EquipmentId = SlotService.Shape(examTypes).EquipmentId;
+                reserve.Overbooked = slot.Overbooked;
             }
 
             var selectedIds = examTypes.Select(e => e.Id).ToHashSet();
@@ -246,6 +248,40 @@ namespace ClinicReservation.Modules.Scheduling
             _audit.Log("Rezervasiya dəyişdirildi", AuditEntities.Reservation, reserve.Id,
                 $"{reserve.Patient.FullName}: " + (changes.Count > 0 ? string.Join("; ", changes) : "dəyişiklik yoxdur"));
             return Result.Success("Rezervasiya yeniləndi", reserve.Id);
+        }
+
+        /// <summary>
+        /// Calendar drag-and-drop: another time and/or doctor, services unchanged. The new time must be free for
+        /// the whole visit (doctor, room, device); an extra (overbooked) visit becomes a normal one. Null = not found.
+        /// </summary>
+        public async Task<Result?> MoveAsync(int id, int doctorId, DateTime date, string time, CancellationToken ct = default)
+        {
+            var res = await _db.Reserves.Include(r => r.Status).Include(r => r.Patient)
+                .Include(r => r.ReserveExaminationTypes!).ThenInclude(x => x.ExaminationType).ThenInclude(e => e.Equipment)
+                .FirstOrDefaultAsync(r => r.Id == id, ct);
+            if (res == null) return null;
+            if (!ReserveFlow.CanReschedule(res))
+                return Result.Failure($"«{StatusNames.Label(res.Status?.Name)}» statusunda rezervasiyanın vaxtı dəyişmir");
+            if (res.AppointmentAt <= ClinicTime.Now) return Result.Failure("Keçmiş rezervasiyanı köçürmək olmaz");
+
+            var shape = SlotService.Shape(res.ReserveExaminationTypes!.Select(x => x.ExaminationType));
+            var error = _slots.Validate(doctorId, date, time, res.Id, out var start, out var slot, shape);
+            if (error != null) return Result.Failure(error);
+            if (start == res.AppointmentAt && doctorId == res.DoctorId) return Result.Success("Dəyişiklik yoxdur", res.Id);
+
+            var from = res.AppointmentAt;
+            var doctorChanged = doctorId != res.DoctorId;
+            res.AppointmentAt = start;
+            res.DoctorId = doctorId;
+            res.RoomId = slot.RoomId;
+            res.DurationMinutes = slot.SlotMinutes;
+            res.EquipmentId = shape.EquipmentId;
+            res.Overbooked = false;
+            await _db.SaveChangesAsync(ct);
+            var doctorName = await _db.Doctors.Where(d => d.Id == doctorId).Select(d => d.FullName).FirstAsync(ct);
+            _audit.Log("Rezervasiya köçürüldü", AuditEntities.Reservation, res.Id,
+                $"{res.Patient.FullName}: {Fmt.DateTime(from)} → {Fmt.DateTime(start)}" + (doctorChanged ? $", həkim: {doctorName}" : ""));
+            return Result.Success($"{res.Patient.FullName} — {Fmt.DateTime(start)}" + (doctorChanged ? $", {doctorName}" : "") + " vaxtına köçürüldü", res.Id);
         }
 
         /// <summary>Moves the visit to the next status (check-in assigns a queue ticket; completion takes the materials).</summary>
@@ -353,6 +389,16 @@ namespace ClinicReservation.Modules.Scheduling
                 {
                     var error = _slots.Validate(form.DoctorId.Value, form.AppointmentDate.Value, form.AppointmentTime, existing?.Id, out start, out var s, shape);
                     slot = s;
+                    // Busy, but reception chose «araya sal»: allowed with the permission, within the doctor's limit.
+                    if (error != null && form.Overbook)
+                    {
+                        if (!_user.Can(Permissions.ReservationsOverbook)) error = "Əlavə qəbul (araya salmaq) üçün icazəniz yoxdur";
+                        else
+                        {
+                            error = _slots.ValidateOverbook(form.DoctorId.Value, form.AppointmentDate.Value, form.AppointmentTime, existing?.Id, out start, out s, shape);
+                            slot = s;
+                        }
+                    }
                     if (error != null) r.Fail(error, nameof(form.AppointmentTime));
                 }
             }

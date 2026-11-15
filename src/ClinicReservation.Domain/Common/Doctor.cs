@@ -16,6 +16,9 @@ namespace ClinicReservation.Models
         /// <summary>Length of one appointment with this doctor.</summary>
         public int SlotMinutes { get; set; } = 30;
 
+        /// <summary>Extra visits squeezed into busy times per day (needs the «araya salmaq» permission); 0 = none.</summary>
+        public int MaxOverbookPerDay { get; set; } = 2;
+
         public bool IsActive { get; set; } = true;
 
         /// <summary>Optional login linked to this doctor (sees "my appointments").</summary>

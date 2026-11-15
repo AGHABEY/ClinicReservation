@@ -52,7 +52,7 @@ namespace ClinicReservation.Models
                 Permissions.PatientsView, Permissions.PatientsEdit, Permissions.ReservationsView,
                 Permissions.ReservationsManage, Permissions.ReservationsStatus, Permissions.PaymentsTake,
                 Permissions.QueueView, Permissions.QueueCall, Permissions.SmsManage, Permissions.LabView,
-                Permissions.InpatientView, Permissions.InpatientManage
+                Permissions.InpatientView, Permissions.InpatientManage, Permissions.ReservationsOverbook
             },
             Cashier => new[]
             {
@@ -99,6 +99,7 @@ namespace ClinicReservation.Models
         public const string ReservationsView = "reservations.view";
         public const string ReservationsManage = "reservations.manage";
         public const string ReservationsStatus = "reservations.status";
+        public const string ReservationsOverbook = "reservations.overbook";
         public const string PaymentsTake = "payments.take";
         public const string PaymentsRefund = "payments.refund";
         public const string KassaTotals = "kassa.totals";
@@ -131,6 +132,7 @@ namespace ClinicReservation.Models
             new(ReservationsView, "Rezervasiyalar", "Rezervasiyalara baxmaq"),
             new(ReservationsManage, "Rezervasiyalar", "Yaratmaq, dəyişmək, təsdiq və ləğv etmək"),
             new(ReservationsStatus, "Rezervasiyalar", "Qəbula başlamaq və tamamlamaq"),
+            new(ReservationsOverbook, "Rezervasiyalar", "Dolu saata əlavə qəbul yazmaq (araya salmaq, həkimin gündəlik limiti daxilində)"),
             new(QueueView, "Növbə", "Növbə ekranı (gözləmə zalı)"),
             new(QueueCall, "Növbə", "Həkim iş masası, xəstəni çağırmaq"),
             new(RecordsView, "Tibbi kart", "Tibbi qeydlərə və diaqnozlara baxmaq"),

@@ -24,6 +24,9 @@ namespace ClinicReservation.Modules.Catalog
         [Range(5, 240, ErrorMessage = "Qəbul müddəti 5–240 dəqiqə olmalıdır")]
         public int SlotMinutes { get; set; } = 30;
 
+        [Range(0, 20, ErrorMessage = "Əlavə qəbul limiti 0–20 olmalıdır")]
+        public int MaxOverbookPerDay { get; set; } = 2;
+
         public bool IsActive { get; set; } = true;
         public string? UserId { get; set; }
 
