@@ -1,5 +1,6 @@
 using ClinicReservation.Data;
 using ClinicReservation.Models;
+using ClinicReservation.Modules.Pharmacy;
 using ClinicReservation.Services;
 using ClinicReservation.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;

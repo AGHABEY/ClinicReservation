@@ -1,9 +1,10 @@
 using ClinicReservation.Data;
 using ClinicReservation.Helpers;
 using ClinicReservation.Models;
+using ClinicReservation.Services;
 using Microsoft.EntityFrameworkCore;
 
-namespace ClinicReservation.Services
+namespace ClinicReservation.Modules.Pharmacy
 {
     /// <summary>
     /// Stock bookkeeping. Every change goes through a document with movements,
@@ -490,44 +491,6 @@ namespace ClinicReservation.Services
             if (o.Shortages.Any())
                 return "Anbarda çatışmayan material: " + string.Join(", ", o.Shortages.Select(s => $"{s.Item} {Qty(s.Missing)} {s.Unit} ({s.Warehouse})"));
             return null;
-        }
-
-        // ------------------------------------------------------------------
-        // Reports
-        // ------------------------------------------------------------------
-
-        public record MovementRow(StockItem Item, decimal Opening, decimal In, decimal Out, decimal Closing, decimal OutValue);
-
-        /// <summary>Opening, in, out and closing per item for a period (transfers ignored when all warehouses are shown).</summary>
-        public List<MovementRow> MovementReport(DateTime from, DateTime toExclusive, int? warehouseId)
-        {
-            var q = _context.StockMovements.AsQueryable();
-            if (warehouseId != null) q = q.Where(m => m.WarehouseId == warehouseId);
-            else q = q.Where(m => m.StockDocument.Type != StockDocType.Transfer);
-
-            var opening = q.Where(m => m.At < from).GroupBy(m => m.StockItemId)
-                .Select(g => new { g.Key, Qty = g.Sum(m => m.Quantity) }).ToDictionary(x => x.Key, x => x.Qty);
-            var period = q.Where(m => m.At >= from && m.At < toExclusive).GroupBy(m => m.StockItemId)
-                .Select(g => new
-                {
-                    g.Key,
-                    In = g.Sum(m => m.Quantity > 0 ? m.Quantity : 0),
-                    Out = g.Sum(m => m.Quantity < 0 ? -m.Quantity : 0),
-                    OutValue = g.Sum(m => m.Quantity < 0 ? -m.Quantity * m.UnitCost : (m.IsReversal ? -m.Quantity * m.UnitCost : 0))
-                }).ToDictionary(x => x.Key);
-
-            var ids = opening.Keys.Union(period.Keys).ToList();
-            var items = _context.StockItems.Where(i => ids.Contains(i.Id)).ToList();
-            return items.Select(i =>
-                {
-                    var open = opening.GetValueOrDefault(i.Id);
-                    var p = period.GetValueOrDefault(i.Id);
-                    var inQ = p?.In ?? 0;
-                    var outQ = p?.Out ?? 0;
-                    return new MovementRow(i, open, inQ, outQ, open + inQ - outQ, Math.Max(0, p?.OutValue ?? 0));
-                })
-                .Where(r => r.Opening != 0 || r.In != 0 || r.Out != 0)
-                .OrderBy(r => r.Item.Name).ToList();
         }
 
         /// <summary>Same item asked twice in one document → one line.</summary>

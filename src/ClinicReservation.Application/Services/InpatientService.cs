@@ -1,5 +1,6 @@
 using ClinicReservation.Data;
 using ClinicReservation.Models;
+using ClinicReservation.Modules.Pharmacy;
 using Microsoft.EntityFrameworkCore;
 
 namespace ClinicReservation.Services

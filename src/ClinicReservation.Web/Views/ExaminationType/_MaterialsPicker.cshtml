@@ -1,6 +1,6 @@
 @{
     var items = ViewBag.StockItems as List<StockItem> ?? new();
-    var rows = ViewBag.Materials as List<ClinicReservation.ViewModels.MaterialInput> ?? new();
+    var rows = ViewBag.Materials as List<MaterialInput> ?? new();
     var inv = System.Globalization.CultureInfo.InvariantCulture;
 }
 <div class="field mt-3">

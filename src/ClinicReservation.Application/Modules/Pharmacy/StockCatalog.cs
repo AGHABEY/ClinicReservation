@@ -1,6 +1,6 @@
 using ClinicReservation.Models;
 
-namespace ClinicReservation.Services
+namespace ClinicReservation.Modules.Pharmacy
 {
     /// <summary>A starter list of common clinic medicines and materials (no stock, no prices).</summary>
     public static class StockCatalog

@@ -2,6 +2,7 @@
 using ClinicReservation.Data;
 using ClinicReservation.Services;
 using ClinicReservation.Models;
+using ClinicReservation.Modules.Pharmacy;
 using ClinicReservation.ViewModels;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;

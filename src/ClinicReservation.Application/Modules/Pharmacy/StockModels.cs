@@ -1,8 +1,11 @@
 using ClinicReservation.Models;
 using ClinicReservation.Services;
 
-namespace ClinicReservation.ViewModels
+namespace ClinicReservation.Modules.Pharmacy
 {
+    /// <summary>One line of the movement report.</summary>
+    public record MovementRow(StockItem Item, decimal Opening, decimal In, decimal Out, decimal Closing, decimal OutValue);
+
     public enum StockState { Ok, Low, Out, Expiring, Expired }
 
     public class StockBalanceRow
@@ -115,7 +118,7 @@ namespace ClinicReservation.ViewModels
         public DateTime To { get; set; }
         public int? WarehouseId { get; set; }
         public List<Warehouse> Warehouses { get; set; } = new();
-        public List<StockService.MovementRow> Rows { get; set; } = new();
+        public List<MovementRow> Rows { get; set; } = new();
         public bool ShowCosts { get; set; }
     }
 

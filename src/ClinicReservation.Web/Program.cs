@@ -92,7 +92,11 @@ builder.Services.AddScoped<ClinicReservation.Services.SlotService>();
 builder.Services.AddScoped<ClinicReservation.Services.AuditService>();
 builder.Services.AddScoped<ClinicReservation.Services.QueueService>();
 builder.Services.AddScoped<ClinicReservation.Services.LabService>();
-builder.Services.AddScoped<ClinicReservation.Services.StockService>();
+// Modules
+builder.Services.AddScoped<ClinicReservation.Modules.Pharmacy.StockService>();
+builder.Services.AddScoped<ClinicReservation.Modules.Pharmacy.StockQueries>();
+builder.Services.AddScoped<ClinicReservation.Modules.Pharmacy.StockDocuments>();
+builder.Services.AddScoped<ClinicReservation.Modules.Pharmacy.StockSettings>();
 builder.Services.AddScoped<ClinicReservation.Services.InpatientService>();
 
 // SMS: "Log" = test mode (messages only appear in the SMS log), "Http" = real gateway.
