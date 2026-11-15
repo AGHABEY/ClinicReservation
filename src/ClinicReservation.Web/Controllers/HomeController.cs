@@ -24,7 +24,7 @@ namespace ClinicReservation.Controllers
 
         public IActionResult Index()
         {
-            var today = DateTime.Today;
+            var today = ClinicTime.Today;
             var tomorrow = today.AddDays(1);
             var dayAfter = today.AddDays(2);
 

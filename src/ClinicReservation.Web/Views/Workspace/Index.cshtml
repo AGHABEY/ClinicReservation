@@ -1,7 +1,7 @@
 @model ClinicReservation.Controllers.WorkspaceViewModel
 @{
     ViewData["Title"] = "İş masası";
-    var now = DateTime.Now;
+    var now = ClinicTime.Now;
     var d = Model.Doctor;
     var current = Model.Current;
     var queue = Model.Queue;
@@ -18,7 +18,7 @@
         <p>
             @if (d != null)
             {
-                <text>@(d.Specialty ?? d.Department?.Name ?? "Həkim")@(d.Room == null ? "" : $" · {d.Room.Name}") · @Fmt.Long(DateTime.Today)</text>
+                <text>@(d.Specialty ?? d.Department?.Name ?? "Həkim")@(d.Room == null ? "" : $" · {d.Room.Name}") · @Fmt.Long(ClinicTime.Today)</text>
             }
             else
             {

@@ -117,8 +117,8 @@
         <div class="card-pad">
             <form asp-action="AddLeave" method="post" class="filter-bar">
                 <input type="hidden" name="DoctorId" value="@Model.Id" />
-                <div class="field" style="margin:0;"><label for="lf">Başlanğıc</label><input id="lf" name="From" type="date" class="form-control" min="@DateTime.Today.ToString("yyyy-MM-dd")" required /></div>
-                <div class="field" style="margin:0;"><label for="lt">Son</label><input id="lt" name="To" type="date" class="form-control" min="@DateTime.Today.ToString("yyyy-MM-dd")" required /></div>
+                <div class="field" style="margin:0;"><label for="lf">Başlanğıc</label><input id="lf" name="From" type="date" class="form-control" min="@ClinicTime.Today.ToString("yyyy-MM-dd")" required /></div>
+                <div class="field" style="margin:0;"><label for="lt">Son</label><input id="lt" name="To" type="date" class="form-control" min="@ClinicTime.Today.ToString("yyyy-MM-dd")" required /></div>
                 <div class="field" style="margin:0; flex:1; min-width:200px;"><label for="lr">Səbəb</label><input id="lr" name="Reason" class="form-control" maxlength="100" placeholder="Məzuniyyət, konfrans..." /></div>
                 <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Əlavə et</button>
             </form>

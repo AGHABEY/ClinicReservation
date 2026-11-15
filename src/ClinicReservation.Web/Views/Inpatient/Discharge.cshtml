@@ -2,7 +2,7 @@
 @{
     var a = (Admission)ViewBag.Admission;
     ViewData["Title"] = "Çıxarış";
-    var (_, days, _) = InpatientService.BedDays(a, DateTime.Now);
+    var (_, days, _) = InpatientRules.BedDays(a, ClinicTime.Now);
 }
 
 <div class="page-head">

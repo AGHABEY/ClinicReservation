@@ -36,7 +36,7 @@ namespace ClinicReservation.Controllers
                 model.Doctor = _context.Doctors.Include(d => d.Room).Include(d => d.Department).FirstOrDefault(d => d.Id == doctorId);
                 if (model.Doctor == null) return NotFound();
 
-                var today = DateTime.Today;
+                var today = ClinicTime.Today;
                 model.Today = _context.Reserves
                     .Include(r => r.Status)
                     .Include(r => r.Patient)
@@ -66,7 +66,7 @@ namespace ClinicReservation.Controllers
             }
 
             var again = res.CalledAt != null;
-            res.CalledAt = DateTime.Now;
+            res.CalledAt = ClinicTime.Now;
             _context.SaveChanges();
             _audit.Log(again ? "Xəstə təkrar çağırıldı" : "Xəstə çağırıldı", AuditEntities.Reservation, res.Id,
                 $"{res.Patient.FullName}, talon {res.QueueTicket ?? "—"}");
@@ -79,7 +79,7 @@ namespace ClinicReservation.Controllers
         [ValidateAntiForgeryToken]
         public IActionResult CallNext(int doctorId)
         {
-            var next = QueueService.WaitingFor(_context.Reserves.Where(r => r.DoctorId == doctorId), DateTime.Today)
+            var next = QueueService.WaitingFor(_context.Reserves.Where(r => r.DoctorId == doctorId), ClinicTime.Today)
                 .Select(r => (int?)r.Id).FirstOrDefault();
             if (next == null)
             {

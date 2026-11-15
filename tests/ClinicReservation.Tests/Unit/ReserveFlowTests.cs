@@ -15,7 +15,7 @@ namespace ClinicReservation.Tests.Unit
         public void Reception_confirms_but_cannot_complete()
         {
             var user = User(Permissions.ReservationsManage);
-            var now = DateTime.Now;
+            var now = ClinicTime.Now;
             Assert.True(ReserveFlow.IsAllowed(At(StatusNames.Waiting, now.AddHours(2)), StatusNames.Confirmed, user, now));
             Assert.False(ReserveFlow.IsAllowed(At(StatusNames.Arrived, now), StatusNames.Completed, user, now));
         }
@@ -24,20 +24,20 @@ namespace ClinicReservation.Tests.Unit
         public void No_show_only_after_the_appointment_time()
         {
             var user = User(Permissions.ReservationsManage);
-            var now = DateTime.Now;
+            var now = ClinicTime.Now;
             Assert.False(ReserveFlow.IsAllowed(At(StatusNames.Confirmed, now.AddMinutes(30)), StatusNames.NoShow, user, now));
             Assert.True(ReserveFlow.IsAllowed(At(StatusNames.Confirmed, now.AddMinutes(-30)), StatusNames.NoShow, user, now));
         }
 
         [Fact]
         public void Completed_visit_has_no_further_steps() =>
-            Assert.Empty(ReserveFlow.Actions(At(StatusNames.Completed, DateTime.Now), User(Permissions.ReservationsManage, Permissions.ReservationsStatus), DateTime.Now));
+            Assert.Empty(ReserveFlow.Actions(At(StatusNames.Completed, ClinicTime.Now), User(Permissions.ReservationsManage, Permissions.ReservationsStatus), ClinicTime.Now));
 
         [Fact]
         public void Admin_role_can_do_everything()
         {
             var admin = new ClaimsPrincipal(new ClaimsIdentity(new[] { new Claim(ClaimTypes.Role, AppRoles.Admin) }, "test"));
-            Assert.True(ReserveFlow.IsAllowed(At(StatusNames.InProgress, DateTime.Now), StatusNames.Completed, admin, DateTime.Now));
+            Assert.True(ReserveFlow.IsAllowed(At(StatusNames.InProgress, ClinicTime.Now), StatusNames.Completed, admin, ClinicTime.Now));
         }
     }
 }

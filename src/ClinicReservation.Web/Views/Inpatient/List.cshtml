@@ -1,7 +1,7 @@
 @model InpatientListViewModel
 @{
     ViewData["Title"] = Model.Status == "active" ? "Stasionardakılar" : "Çıxarılanlar";
-    var now = DateTime.Now;
+    var now = ClinicTime.Now;
 }
 
 <div class="page-head">

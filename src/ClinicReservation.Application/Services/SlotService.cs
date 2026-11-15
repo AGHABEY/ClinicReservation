@@ -62,7 +62,7 @@ namespace ClinicReservation.Services
                 .ToList();
 
             var step = TimeSpan.FromMinutes(Math.Clamp(doctor.SlotMinutes, 5, 240));
-            var now = DateTime.Now;
+            var now = ClinicTime.Now;
             for (var t = hours.Start; t + step <= hours.End; t += step)
             {
                 var start = day + t;

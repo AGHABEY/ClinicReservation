@@ -125,7 +125,7 @@ namespace ClinicReservation.Services
         {
             var message = new SmsMessage
             {
-                CreatedAt = DateTime.Now,
+                CreatedAt = ClinicTime.Now,
                 ReserveId = reserve.Id,
                 PatientId = reserve.PatientId,
                 Kind = kind,
@@ -238,7 +238,7 @@ namespace ClinicReservation.Services
 
         public async Task<int> RunOnceAsync(CancellationToken ct)
         {
-            var now = DateTime.Now;
+            var now = ClinicTime.Now;
             if (InQuietHours(now.TimeOfDay))
                 return 0;
 

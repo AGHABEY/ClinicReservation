@@ -46,7 +46,7 @@ namespace ClinicReservation.Controllers
             if (CanAnswer(res) && res.Status?.Name == StatusNames.Waiting)
             {
                 res.Status = _context.ReserveStatuses.First(s => s.Name == StatusNames.Confirmed);
-                res.ConfirmDate = DateTime.Now;
+                res.ConfirmDate = ClinicTime.Now;
                 _context.SaveChanges();
                 _audit.Log("Xəstə SMS linki ilə təsdiq etdi", AuditEntities.Reservation, res.Id, res.Patient.FullName, userName: "Xəstə (SMS linki)");
             }
@@ -63,7 +63,7 @@ namespace ClinicReservation.Controllers
             if (CanAnswer(res))
             {
                 res.Status = _context.ReserveStatuses.First(s => s.Name == StatusNames.Cancelled);
-                res.CancelDate = DateTime.Now;
+                res.CancelDate = ClinicTime.Now;
                 res.CancelReason = "Xəstə SMS linki ilə ləğv etdi";
                 _context.SaveChanges();
                 _audit.Log("Xəstə SMS linki ilə ləğv etdi", AuditEntities.Reservation, res.Id, res.Patient.FullName, userName: "Xəstə (SMS linki)");
@@ -92,7 +92,7 @@ namespace ClinicReservation.Controllers
             if (res == null) return View("NotFound");
             ViewBag.Token = token;
 
-            var since = DateTime.Now.AddHours(-1);
+            var since = ClinicTime.Now.AddHours(-1);
             var failures = _context.AuditLogs.Count(a => a.Action == LabFailAction && a.EntityId == res.Id.ToString() && a.At >= since);
             if (failures >= 5)
             {
@@ -120,7 +120,7 @@ namespace ClinicReservation.Controllers
 
         /// <summary>Only before the visit and while the booking is still open.</summary>
         public static bool CanAnswer(Reserve r) =>
-            r.AppointmentAt > DateTime.Now && r.Status?.Name is StatusNames.Waiting or StatusNames.Confirmed;
+            r.AppointmentAt > ClinicTime.Now && r.Status?.Name is StatusNames.Waiting or StatusNames.Confirmed;
 
         private Reserve? Load(string token)
         {

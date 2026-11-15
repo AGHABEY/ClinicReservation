@@ -19,7 +19,7 @@ namespace ClinicReservation.Services
         {
             _context.AuditLogs.Add(new AuditLog
             {
-                At = DateTime.Now,
+                At = ClinicTime.Now,
                 UserId = _user.UserId,
                 UserName = userName ?? _user.UserName,
                 Action = action,

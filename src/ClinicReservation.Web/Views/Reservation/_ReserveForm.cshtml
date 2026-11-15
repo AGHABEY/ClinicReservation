@@ -62,7 +62,7 @@
                             <label asp-for="Birthday">Doğum tarixi</label>
                             <input asp-for="Birthday" type="date" class="form-control pf-lock"
                                    value="@Model.Birthday?.ToString("yyyy-MM-dd")"
-                                   max="@DateTime.Today.ToString("yyyy-MM-dd")" min="1900-01-01" readonly="@patientLocked" />
+                                   max="@ClinicTime.Today.ToString("yyyy-MM-dd")" min="1900-01-01" readonly="@patientLocked" />
                             <span asp-validation-for="Birthday" class="text-danger"></span>
                         </div>
                     </div>
@@ -113,7 +113,7 @@
                                 <label asp-for="AppointmentDate">Tarix</label>
                                 <input asp-for="AppointmentDate" type="date" class="form-control" id="apptDate"
                                        value="@Model.AppointmentDate?.ToString("yyyy-MM-dd")"
-                                       min="@(Model.IsEdit ? "" : DateTime.Today.ToString("yyyy-MM-dd"))" readonly="@(!Model.CanReschedule)" />
+                                       min="@(Model.IsEdit ? "" : ClinicTime.Today.ToString("yyyy-MM-dd"))" readonly="@(!Model.CanReschedule)" />
                                 <span asp-validation-for="AppointmentDate" class="text-danger"></span>
                             </div>
                         </div>

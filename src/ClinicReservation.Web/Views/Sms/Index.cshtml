@@ -10,7 +10,7 @@
     var pages = Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
     var testMode = !string.Equals(o.Provider, "Http", StringComparison.OrdinalIgnoreCase);
     var sample = o.ReminderTemplate
-        .Replace("{ad}", "Aynur").Replace("{tarix}", DateTime.Today.AddDays(1).ToString("dd.MM.yyyy"))
+        .Replace("{ad}", "Aynur").Replace("{tarix}", ClinicTime.Today.AddDays(1).ToString("dd.MM.yyyy"))
         .Replace("{saat}", "10:30").Replace("{hekim}", Fmt.Doctor("Leyla Məmmədova")).Replace("{klinika}", o.ClinicName)
         .Replace("{link}", $"{o.PublicBaseUrl.TrimEnd('/')}/r/xxxxxxxx");
     if (o.AsciiOnly) { sample = SmsText.ToAscii(sample); }

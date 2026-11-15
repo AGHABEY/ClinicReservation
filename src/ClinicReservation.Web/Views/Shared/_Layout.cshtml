@@ -237,7 +237,7 @@
                     }
                 </div>
                 <div class="topbar-right">
-                    <span class="topbar-date">@Fmt.Long(DateTime.Today)</span>
+                    <span class="topbar-date">@Fmt.Long(ClinicTime.Today)</span>
                     @if (isAuthenticated && User.Can(Permissions.ReservationsManage))
                     {
                         <a class="btn btn-primary" asp-controller="Reservation" asp-action="Add">

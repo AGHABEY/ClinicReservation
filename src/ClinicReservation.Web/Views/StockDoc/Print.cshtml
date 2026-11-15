@@ -45,7 +45,7 @@
     <div class="sheet">
         <div class="head">
             <div class="brand">MedClinic</div>
-            <div style="text-align:right;">Çap: @Fmt.DateTime(DateTime.Now)</div>
+            <div style="text-align:right;">Çap: @Fmt.DateTime(ClinicTime.Now)</div>
         </div>
         <h1>@StockLabels.Doc(Model.Type) № @Model.Number</h1>
         @if (off) { <div class="cancelled">LƏĞV EDİLİB — @Fmt.DateTime(Model.CancelledAt), @Model.CancelledBy: @Model.CancelReason</div> }

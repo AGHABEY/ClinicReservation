@@ -1,7 +1,7 @@
 @model InpatientBoardViewModel
 @{
     ViewData["Title"] = "Stasionar";
-    var now = DateTime.Now;
+    var now = ClinicTime.Now;
     var total = Model.Beds.Count;
     var busy = Model.Beds.Count(b => b.Stay != null);
     var manage = User.Can(Permissions.InpatientManage);

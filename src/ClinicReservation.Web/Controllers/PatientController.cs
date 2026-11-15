@@ -43,9 +43,9 @@ namespace ClinicReservation.Controllers
                 {
                     Patient = p,
                     Visits = p.Reserves.Count(r => r.Status!.Name == StatusNames.Completed),
-                    LastVisit = p.Reserves.Where(r => r.AppointmentAt < DateTime.Now && r.Status!.Name != StatusNames.Cancelled)
+                    LastVisit = p.Reserves.Where(r => r.AppointmentAt < ClinicTime.Now && r.Status!.Name != StatusNames.Cancelled)
                         .Max(r => (DateTime?)r.AppointmentAt),
-                    NextVisit = p.Reserves.Where(r => r.AppointmentAt >= DateTime.Now && ReserveFlow.Active.Contains(r.Status!.Name))
+                    NextVisit = p.Reserves.Where(r => r.AppointmentAt >= ClinicTime.Now && ReserveFlow.Active.Contains(r.Status!.Name))
                         .Min(r => (DateTime?)r.AppointmentAt)
                 })
                 .ToList();
@@ -155,14 +155,14 @@ namespace ClinicReservation.Controllers
             if (!string.IsNullOrEmpty(pin) && _context.Patients.Any(p => p.PinCode == pin && p.Id != model.Id))
                 ModelState.AddModelError(nameof(model.PinCode), "Bu FİN kodla xəstə artıq mövcuddur");
 
-            if (model.Birthday.HasValue && model.Birthday.Value.Date > DateTime.Today)
+            if (model.Birthday.HasValue && model.Birthday.Value.Date > ClinicTime.Today)
                 ModelState.AddModelError(nameof(model.Birthday), "Doğum tarixi gələcəkdə ola bilməz");
 
             if (!ModelState.IsValid)
                 return View("Form", model);
 
             var isNew = patient == null;
-            patient ??= new Patient { CreatedAt = DateTime.Now };
+            patient ??= new Patient { CreatedAt = ClinicTime.Now };
             var before = isNew ? null : $"{patient.FullName}, {patient.PinCode}, {patient.Phone}";
             patient.Name = model.Name!.Trim();
             patient.Surname = model.Surname!.Trim();

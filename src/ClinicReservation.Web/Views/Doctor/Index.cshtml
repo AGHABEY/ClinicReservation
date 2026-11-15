@@ -2,7 +2,7 @@
 @{
     ViewData["Title"] = "Həkimlər";
     var todayCounts = (Dictionary<int, int>)ViewBag.TodayCounts;
-    var today = DateTime.Today;
+    var today = ClinicTime.Today;
     var canEdit = User.Can(Permissions.CatalogManage);
 }
 

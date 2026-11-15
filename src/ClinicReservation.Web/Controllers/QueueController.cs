@@ -31,7 +31,7 @@ namespace ClinicReservation.Controllers
         [ResponseCache(NoStore = true, Location = ResponseCacheLocation.None)]
         public IActionResult Data(int? departmentId)
         {
-            var now = DateTime.Now;
+            var now = ClinicTime.Now;
             var today = now.Date;
             var query = _context.Reserves
                 .Where(r => r.AppointmentAt >= today && r.AppointmentAt < today.AddDays(1) && r.QueueTicket != null);
@@ -91,7 +91,7 @@ namespace ClinicReservation.Controllers
             }
             var waitingAhead = _context.Reserves.Count(r => r.DoctorId == res.DoctorId && r.Id != res.Id
                 && r.Status!.Name == StatusNames.Arrived && r.ArrivedAt < res.ArrivedAt
-                && r.AppointmentAt >= DateTime.Today && r.AppointmentAt < DateTime.Today.AddDays(1));
+                && r.AppointmentAt >= ClinicTime.Today && r.AppointmentAt < ClinicTime.Today.AddDays(1));
             ViewBag.Ahead = waitingAhead;
             return View(res);
         }

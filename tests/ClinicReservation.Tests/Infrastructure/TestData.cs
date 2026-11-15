@@ -19,7 +19,7 @@ namespace ClinicReservation.Tests.Infrastructure
                 Phone = "+994501234567",
                 Birthday = new DateTime(1980, 5, 1),
                 Gender = gender,
-                CreatedAt = DateTime.Now
+                CreatedAt = ClinicTime.Now
             };
             db.Patients.Add(p);
             db.SaveChanges();
@@ -65,8 +65,8 @@ namespace ClinicReservation.Tests.Infrastructure
             var r = new Reserve
             {
                 PatientId = patient.Id,
-                AppointmentAt = DateTime.Today.AddHours(10),
-                AddedDate = DateTime.Now,
+                AppointmentAt = ClinicTime.Today.AddHours(10),
+                AddedDate = ClinicTime.Now,
                 Status = db.ReserveStatuses.First(s => s.Name == status),
                 ReserveExaminationTypes = exams.Select(e => new ReserveExaminationType { ExaminationTypeId = e.Id, Price = e.Price }).ToList()
             };

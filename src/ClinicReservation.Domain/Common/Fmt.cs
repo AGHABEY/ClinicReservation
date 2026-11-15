@@ -29,7 +29,7 @@ namespace ClinicReservation.Helpers
         /// <summary>Relative day label: "Bu gün", "Sabah", "Dünən" or "18.11 çər".</summary>
         public static string Day(DateTime value)
         {
-            var diff = (value.Date - System.DateTime.Today).Days;
+            var diff = (value.Date - ClinicTime.Today).Days;
             return diff switch
             {
                 0 => "Bu gün",
@@ -99,7 +99,7 @@ namespace ClinicReservation.Helpers
 
         public static int Age(DateTime birthday)
         {
-            var today = System.DateTime.Today;
+            var today = ClinicTime.Today;
             var age = today.Year - birthday.Year;
             if (birthday.Date > today.AddYears(-age)) age--;
             return age;

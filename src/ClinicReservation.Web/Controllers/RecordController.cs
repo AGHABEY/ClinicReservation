@@ -73,7 +73,7 @@ namespace ClinicReservation.Controllers
                 return View(model);
             }
 
-            var now = DateTime.Now;
+            var now = ClinicTime.Now;
             var userName = User.Identity?.Name;
             var rec = reserve.MedicalRecord;
             var isNew = rec == null;

@@ -13,7 +13,7 @@ namespace ClinicReservation.Tests.Services
         private readonly AppFixture _app;
         public StockServiceTests(AppFixture app) => _app = app;
 
-        private static readonly DateTime Today = DateTime.Today;
+        private static readonly DateTime Today = ClinicTime.Today;
 
         private (IServiceScope Scope, AppDbContext Db, StockService Stock) Open()
         {

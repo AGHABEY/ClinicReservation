@@ -3,7 +3,7 @@
     Layout = null;
     var a = Model;
     var p = a.Patient;
-    var (_, days, _) = InpatientService.BedDays(a, DateTime.Now);
+    var (_, days, _) = InpatientRules.BedDays(a, ClinicTime.Now);
 }
 <!DOCTYPE html>
 <html lang="az">

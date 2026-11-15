@@ -4,7 +4,7 @@
     var visits = Model.Reserves.OrderByDescending(r => r.AppointmentAt).ToList();
     var completed = visits.Count(r => r.Status?.Name == StatusNames.Completed);
     var noShows = visits.Count(r => r.Status?.Name == StatusNames.NoShow);
-    var upcoming = visits.Where(r => r.AppointmentAt >= DateTime.Now && ReserveFlow.Active.Contains(r.Status?.Name ?? "")).OrderBy(r => r.AppointmentAt).ToList();
+    var upcoming = visits.Where(r => r.AppointmentAt >= ClinicTime.Now && ReserveFlow.Active.Contains(r.Status?.Name ?? "")).OrderBy(r => r.AppointmentAt).ToList();
     var totalPaid = visits.Sum(r => r.Paid);
     var balance = visits.Sum(r => r.AmountDue - r.Paid);
     var canMoney = User.CanAny(Permissions.PaymentsTake, Permissions.KassaTotals);
@@ -111,7 +111,7 @@
                     @if (current != null)
                     {
                         <a class="history-item" asp-controller="Inpatient" asp-action="Details" asp-route-id="@current.Id" style="border-color:var(--brand-ring); background:var(--brand-tint);">
-                            <div class="d">İndi stasionardadır · @current.Number · @Fmt.Ordinal(current.Day(DateTime.Now)) gün</div>
+                            <div class="d">İndi stasionardadır · @current.Number · @Fmt.Ordinal(current.Day(ClinicTime.Now)) gün</div>
                             <div class="t">@current.Bed?.Label · @current.AdmitDiagnosis</div>
                         </a>
                     }

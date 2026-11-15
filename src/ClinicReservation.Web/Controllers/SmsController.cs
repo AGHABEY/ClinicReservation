@@ -35,8 +35,8 @@ namespace ClinicReservation.Controllers
             page = Math.Max(1, page);
             var rows = query.OrderByDescending(m => m.CreatedAt).Skip((page - 1) * PageSize).Take(PageSize).ToList();
 
-            var today = DateTime.Today;
-            var now = DateTime.Now;
+            var today = ClinicTime.Today;
+            var now = ClinicTime.Now;
             var o = _sms.Options;
             ViewBag.Status = status;
             ViewBag.Page = page;
@@ -61,7 +61,7 @@ namespace ClinicReservation.Controllers
             var res = _context.Reserves.Include(r => r.Status).Include(r => r.Patient).Include(r => r.Doctor)
                 .FirstOrDefault(r => r.Id == reserveId);
             if (res == null) return NotFound();
-            if (res.Status?.Name is not (StatusNames.Waiting or StatusNames.Confirmed) || res.AppointmentAt <= DateTime.Now)
+            if (res.Status?.Name is not (StatusNames.Waiting or StatusNames.Confirmed) || res.AppointmentAt <= ClinicTime.Now)
             {
                 TempData["Error"] = "Xatırlatma yalnız gələcək, aktiv rezervasiyaya göndərilir";
                 return RedirectToAction("Details", "Reservation", new { id = reserveId });

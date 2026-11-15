@@ -157,7 +157,7 @@ namespace ClinicReservation.Controllers
                 ReserveId = reserveId,
                 Amount = amount,
                 Method = input.Method,
-                PaidAt = DateTime.Now,
+                PaidAt = ClinicTime.Now,
                 Note = string.IsNullOrWhiteSpace(input.Note) ? null : input.Note.Trim()
             });
             _context.SaveChanges();

@@ -47,9 +47,9 @@ namespace ClinicReservation.Tests.Services
             using var __ = scope;
             var ward = TestData.Ward(db, 1);
             var bed = ward.Beds[0].Id;
-            db.Admissions.Add(new Admission { PatientId = TestData.Patient(db).Id, BedId = bed, AdmittedAt = DateTime.Now });
+            db.Admissions.Add(new Admission { PatientId = TestData.Patient(db).Id, BedId = bed, AdmittedAt = ClinicTime.Now });
             db.SaveChanges();
-            db.Admissions.Add(new Admission { PatientId = TestData.Patient(db).Id, BedId = bed, AdmittedAt = DateTime.Now });
+            db.Admissions.Add(new Admission { PatientId = TestData.Patient(db).Id, BedId = bed, AdmittedAt = ClinicTime.Now });
             Assert.Throws<DbUpdateException>(() => db.SaveChanges());
         }
 
@@ -82,11 +82,11 @@ namespace ClinicReservation.Tests.Services
             var dept = TestData.Department(db);
             var store = TestData.Warehouse(db, dept.Id);
             var drug = TestData.Item(db, StockItemKind.Medicine, "ampul");
-            stock.Receive(store.Id, null, null, DateTime.Today, null, new[] { new StockService.ReceiptLine(drug.Id, 5, 1, "D", DateTime.Today.AddYears(1)) }, "test");
+            stock.Receive(store.Id, null, null, ClinicTime.Today, null, new[] { new StockService.ReceiptLine(drug.Id, 5, 1, "D", ClinicTime.Today.AddYears(1)) }, "test");
             var ward = TestData.Ward(db, 1, departmentId: dept.Id);
             var a = svc.Admit(TestData.Patient(db).Id, ward.Beds[0].Id, null, AdmissionType.Planned, null, "x", null, null, "test").Admission!;
 
-            var now = DateTime.Now;
+            var now = ClinicTime.Now;
             var slot = now.Date.AddHours(now.Hour);
             var order = new MedicationOrder
             {
@@ -118,7 +118,7 @@ namespace ClinicReservation.Tests.Services
             using var scopeLifetime = scope;
             var ward = TestData.Ward(db, 1);
             var a = svc.Admit(TestData.Patient(db).Id, ward.Beds[0].Id, null, AdmissionType.Planned, null, "x", null, null, "test").Admission!;
-            db.MedicationOrders.Add(new MedicationOrder { AdmissionId = a.Id, DrugName = "Parasetamol", StartAt = DateTime.Now, OrderedAt = DateTime.Now });
+            db.MedicationOrders.Add(new MedicationOrder { AdmissionId = a.Id, DrugName = "Parasetamol", StartAt = ClinicTime.Now, OrderedAt = ClinicTime.Now });
             db.SaveChanges();
 
             Assert.False(svc.Cancel(Load(db, a.Id), "səhv", "test").Ok); // has an order
@@ -151,9 +151,9 @@ namespace ClinicReservation.Tests.Services
         public void Man_in_a_womens_ward_gets_a_warning()
         {
             var bed = new Bed { Name = "1", Ward = new Ward { Name = "Qadın palatası", Gender = WardGender.Female } };
-            Assert.NotNull(InpatientService.GenderWarning(bed, new Patient { Gender = Gender.Male }));
-            Assert.Null(InpatientService.GenderWarning(bed, new Patient { Gender = Gender.Female }));
-            Assert.Null(InpatientService.GenderWarning(bed, new Patient()));
+            Assert.NotNull(InpatientRules.GenderWarning(bed, new Patient { Gender = Gender.Male }));
+            Assert.Null(InpatientRules.GenderWarning(bed, new Patient { Gender = Gender.Female }));
+            Assert.Null(InpatientRules.GenderWarning(bed, new Patient()));
         }
     }
 }

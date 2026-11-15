@@ -15,14 +15,14 @@
     <div class="card-pad">
         <form method="get" class="filter-bar">
             <div class="seg" style="align-self:flex-end;">
-                <a asp-action="Index" asp-route-from="@DateTime.Today.ToString("yyyy-MM-dd")" asp-route-to="@DateTime.Today.ToString("yyyy-MM-dd")">Bu gün</a>
-                <a asp-action="Index" asp-route-from="@DateTime.Today.AddDays(-6).ToString("yyyy-MM-dd")">7 gün</a>
+                <a asp-action="Index" asp-route-from="@ClinicTime.Today.ToString("yyyy-MM-dd")" asp-route-to="@ClinicTime.Today.ToString("yyyy-MM-dd")">Bu gün</a>
+                <a asp-action="Index" asp-route-from="@ClinicTime.Today.AddDays(-6).ToString("yyyy-MM-dd")">7 gün</a>
                 <a asp-action="Index">30 gün</a>
-                <a asp-action="Index" asp-route-from="@(new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).ToString("yyyy-MM-dd"))">Bu ay</a>
+                <a asp-action="Index" asp-route-from="@(new DateTime(ClinicTime.Today.Year, ClinicTime.Today.Month, 1).ToString("yyyy-MM-dd"))">Bu ay</a>
             </div>
             <div class="field" style="margin:0;">
                 <label>Başlanğıc</label>
-                <input type="date" name="from" max="@DateTime.Today.ToString("yyyy-MM-dd")" value="@Model.From.ToString("yyyy-MM-dd")" class="form-control" />
+                <input type="date" name="from" max="@ClinicTime.Today.ToString("yyyy-MM-dd")" value="@Model.From.ToString("yyyy-MM-dd")" class="form-control" />
             </div>
             <div class="field" style="margin:0;">
                 <label>Son</label>

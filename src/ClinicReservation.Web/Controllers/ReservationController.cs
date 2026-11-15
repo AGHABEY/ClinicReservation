@@ -30,7 +30,7 @@ namespace ClinicReservation.Controllers
         public IActionResult Index(string? period, string? status, int? doctorId, string? q)
         {
             period = string.IsNullOrEmpty(period) ? "upcoming" : period;
-            var today = DateTime.Today;
+            var today = ClinicTime.Today;
 
             // A doctor's own login starts on "my appointments"; choosing "all doctors" sends an empty doctorId.
             var myDoctor = MyDoctorId();
@@ -88,7 +88,7 @@ namespace ClinicReservation.Controllers
         {
             var model = new ReserveFormViewModel
             {
-                AppointmentDate = (date ?? DateTime.Today).Date,
+                AppointmentDate = (date ?? ClinicTime.Today).Date,
                 DoctorId = doctorId
             };
 
@@ -147,7 +147,7 @@ namespace ClinicReservation.Controllers
                     Surname = model.Surname!.Trim(),
                     Phone = model.Phone!.Trim(),
                     Birthday = model.Birthday!.Value.Date,
-                    CreatedAt = DateTime.Now
+                    CreatedAt = ClinicTime.Now
                 };
                 _context.Patients.Add(patient);
                 createdPatient = true;
@@ -164,7 +164,7 @@ namespace ClinicReservation.Controllers
                 RoomId = slot!.RoomId,
                 AppointmentAt = start,
                 DurationMinutes = slot.SlotMinutes,
-                AddedDate = DateTime.Now,
+                AddedDate = ClinicTime.Now,
                 Status = _context.ReserveStatuses.First(rs => rs.Name == StatusNames.Waiting),
                 ReserveExaminationTypes = examTypes
                     .Select(e => new ReserveExaminationType { ExaminationTypeId = e.Id, Price = e.Price })
@@ -297,7 +297,7 @@ namespace ClinicReservation.Controllers
             if (res == null)
                 return NotFound();
 
-            var now = DateTime.Now;
+            var now = ClinicTime.Now;
             if (!ReserveFlow.IsAllowed(res, to, User, now))
             {
                 TempData["Error"] = $"«{StatusNames.Label(res.Status?.Name)}» statusundan «{StatusNames.Label(to)}» statusuna keçmək olmaz";
@@ -355,7 +355,7 @@ namespace ClinicReservation.Controllers
                 return RedirectToAction(nameof(Details), new { id = res.Id });
             }
 
-            res.CancelDate = DateTime.Now;
+            res.CancelDate = ClinicTime.Now;
             res.CancelReason = string.IsNullOrWhiteSpace(model.Reason) ? null : model.Reason.Trim();
             res.Status = _context.ReserveStatuses.First(rs => rs.Name == StatusNames.Cancelled);
             _context.SaveChanges();
@@ -469,7 +469,7 @@ namespace ClinicReservation.Controllers
 
             if (model.Birthday.HasValue && ModelState.ContainsKey(nameof(model.Birthday)))
             {
-                if (model.Birthday.Value.Date > DateTime.Today)
+                if (model.Birthday.Value.Date > ClinicTime.Today)
                     ModelState.AddModelError(nameof(model.Birthday), "Doğum tarixi gələcəkdə ola bilməz");
                 else if (model.Birthday.Value.Year < 1900)
                     ModelState.AddModelError(nameof(model.Birthday), "Doğum tarixi düzgün deyil");

@@ -2,7 +2,7 @@
 @{
     var item = Model.Item;
     ViewData["Title"] = item.DisplayName;
-    var today = DateTime.Today;
+    var today = ClinicTime.Today;
     var total = Model.Lots.Sum(b => b.Quantity);
 }
 

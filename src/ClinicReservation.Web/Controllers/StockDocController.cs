@@ -28,7 +28,7 @@ namespace ClinicReservation.Controllers
 
         public IActionResult Index(StockDocType? type, int? warehouseId, DateTime? from, DateTime? to)
         {
-            var end = (to ?? DateTime.Today).Date;
+            var end = (to ?? ClinicTime.Today).Date;
             var start = (from ?? end.AddDays(-30)).Date;
             if (start > end) (start, end) = (end, start);
 
@@ -86,7 +86,7 @@ namespace ClinicReservation.Controllers
             var lines = Filled(model);
             if (lines.Any(l => l.ItemId == null || l.Quantity == null))
                 model.Errors.Add("Hər sətirdə məhsulu və miqdarı yazın");
-            if (model.Date.Date > DateTime.Today) model.Errors.Add("Qaimə tarixi gələcəkdə ola bilməz");
+            if (model.Date.Date > ClinicTime.Today) model.Errors.Add("Qaimə tarixi gələcəkdə ola bilməz");
             if (model.Errors.Any() || model.WarehouseId == null)
             {
                 if (model.WarehouseId == null) model.Errors.Add("Anbarı seçin");

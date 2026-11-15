@@ -70,7 +70,7 @@ namespace ClinicReservation.ViewModels
         public int? ToWarehouseId { get; set; }
         public int? SupplierId { get; set; }
         public string? InvoiceNo { get; set; }
-        public DateTime Date { get; set; } = DateTime.Today;
+        public DateTime Date { get; set; } = ClinicTime.Today;
         public string? Reason { get; set; }
         public string? Note { get; set; }
         /// <summary>Write-off to a patient: their FİN.</summary>

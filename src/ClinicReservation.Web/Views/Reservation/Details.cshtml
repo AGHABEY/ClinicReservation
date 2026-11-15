@@ -9,7 +9,7 @@
     var canPay = User.CanAny(Permissions.PaymentsTake, Permissions.KassaTotals);
     var status = Model.Status?.Name;
     var visited = status is StatusNames.Arrived or StatusNames.InProgress or StatusNames.Completed;
-    var canSms = User.Can(Permissions.SmsManage) && status is StatusNames.Waiting or StatusNames.Confirmed && Model.AppointmentAt > DateTime.Now;
+    var canSms = User.Can(Permissions.SmsManage) && status is StatusNames.Waiting or StatusNames.Confirmed && Model.AppointmentAt > ClinicTime.Now;
     var labOrders = ViewBag.LabOrders as List<LabOrder>;
     var labPending = ViewBag.LabPending as List<LabTest>;
     var showLab = labOrders != null && (labOrders.Any() || labPending!.Any());

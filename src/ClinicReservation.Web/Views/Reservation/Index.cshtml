@@ -13,7 +13,7 @@
     };
     DateTime? lastDay = null;
     var grouped = period is not ("past" or "all");
-    var now = DateTime.Now;
+    var now = ClinicTime.Now;
     ViewData["PrimaryOnly"] = true;
 }
 

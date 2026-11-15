@@ -6,7 +6,7 @@ using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
 // Store DateTime values as 'timestamp without time zone' so that the
-// application's local/unspecified DateTimes (DateTime.Now, posted dates)
+// application's local/unspecified DateTimes (ClinicTime.Now, posted dates)
 // work with PostgreSQL without requiring UTC conversion.
 AppContext.SetSwitch("Npgsql.EnableLegacyTimestampBehavior", true);
 
@@ -86,6 +86,7 @@ builder.Services.Configure<ClinicReservation.Models.ClinicOptions>(builder.Confi
 builder.Services.AddScoped<ClinicReservation.Data.IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
 builder.Services.AddScoped<ClinicReservation.Services.ICurrentUser, ClinicReservation.Authorization.HttpCurrentUser>();
 builder.Services.AddScoped<ClinicReservation.Services.IDistributedLock, PgDistributedLock>();
+builder.Services.AddSingleton<ClinicReservation.Services.IClock, ClinicReservation.Services.ClinicClock>();
 
 builder.Services.AddScoped<ClinicReservation.Services.SlotService>();
 builder.Services.AddScoped<ClinicReservation.Services.AuditService>();
@@ -124,21 +125,21 @@ var app = builder.Build();
 if (app.Configuration.GetValue("ReverseProxy:Enabled", false))
     app.UseForwardedHeaders();
 
-// Stored times are clinic-local (DateTime.Now). A server in another zone would shift every appointment.
+// Stored times are clinic-local. "Now" is computed from UTC + the clinic's zone (ClinicTime), so the
+// server's own time zone doesn't matter; it is only logged when it differs.
 var clinicZone = app.Configuration["Clinic:TimeZone"];
 if (!string.IsNullOrWhiteSpace(clinicZone))
 {
     try
     {
         var zone = TimeZoneInfo.FindSystemTimeZoneById(clinicZone);
-        var now = DateTime.UtcNow;
-        if (zone.GetUtcOffset(now) != TimeZoneInfo.Local.GetUtcOffset(now))
-            app.Logger.LogWarning("Serverin saat qurşağı ({Server}) klinikanınkı ({Clinic}) deyil — vaxtlar sürüşəcək. TZ={Clinic} təyin edin.",
-                TimeZoneInfo.Local.Id, clinicZone, clinicZone);
+        ClinicReservation.ClinicTime.UseTimeZone(zone);
+        if (zone.GetUtcOffset(DateTime.UtcNow) != TimeZoneInfo.Local.GetUtcOffset(DateTime.UtcNow))
+            app.Logger.LogInformation("Server {Server} saat qurşağındadır; klinika vaxtı {Clinic} ilə hesablanır", TimeZoneInfo.Local.Id, clinicZone);
     }
     catch (TimeZoneNotFoundException)
     {
-        app.Logger.LogWarning("Clinic:TimeZone «{Zone}» tanınmadı", clinicZone);
+        app.Logger.LogWarning("Clinic:TimeZone «{Zone}» tanınmadı — serverin saat qurşağı istifadə olunur", clinicZone);
     }
 }
 

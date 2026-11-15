@@ -26,7 +26,7 @@ namespace ClinicReservation.Controllers
         // filter: all | low (az qalan və bitmiş) | expiry (vaxtı keçmiş və ya bitən)
         public IActionResult Index(int? warehouseId, StockItemKind? kind, string? q, string? filter)
         {
-            var today = DateTime.Today;
+            var today = ClinicTime.Today;
             var soon = today.AddDays(StockService.ExpirySoonDays);
             q = q?.Trim();
 
@@ -103,7 +103,7 @@ namespace ClinicReservation.Controllers
         public IActionResult Expiry(int? warehouseId, int days = StockService.ExpirySoonDays)
         {
             days = Math.Clamp(days, 1, 730);
-            var limit = DateTime.Today.AddDays(days);
+            var limit = ClinicTime.Today.AddDays(days);
             var q = _context.StockBatches.Include(b => b.StockItem).Include(b => b.Warehouse)
                 .Where(b => b.Quantity > 0 && b.ExpiryDate != null && b.ExpiryDate <= limit);
             if (warehouseId != null) q = q.Where(b => b.WarehouseId == warehouseId);
@@ -137,7 +137,7 @@ namespace ClinicReservation.Controllers
         /// <summary>Dövriyyə hesabatı: opening, in, out, closing per item.</summary>
         public IActionResult Report(DateTime? from, DateTime? to, int? warehouseId)
         {
-            var end = (to ?? DateTime.Today).Date;
+            var end = (to ?? ClinicTime.Today).Date;
             var start = (from ?? new DateTime(end.Year, end.Month, 1)).Date;
             if (start > end) (start, end) = (end, start);
             return View(new StockReportViewModel

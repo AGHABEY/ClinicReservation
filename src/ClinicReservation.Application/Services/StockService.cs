@@ -45,7 +45,7 @@ namespace ClinicReservation.Services
         /// <summary>On-hand quantity per item in one warehouse (or all), only lots that aren't expired when <paramref name="usableOnly"/>.</summary>
         public Dictionary<int, decimal> OnHand(int? warehouseId, bool usableOnly = false)
         {
-            var today = DateTime.Today;
+            var today = ClinicTime.Today;
             var q = _context.StockBatches.Where(b => b.Quantity > 0);
             if (warehouseId != null) q = q.Where(b => b.WarehouseId == warehouseId);
             if (usableOnly) q = q.Where(b => b.ExpiryDate == null || b.ExpiryDate >= today);
@@ -56,7 +56,7 @@ namespace ClinicReservation.Services
         /// <summary>Usable (or, for write-offs of expired stock, only expired) lots in FEFO order.</summary>
         private List<StockBatch> Lots(int itemId, int warehouseId, bool expiredOnly)
         {
-            var today = DateTime.Today;
+            var today = ClinicTime.Today;
             var q = _context.StockBatches.Where(b => b.StockItemId == itemId && b.WarehouseId == warehouseId && b.Quantity > 0);
             q = expiredOnly
                 ? q.Where(b => b.ExpiryDate != null && b.ExpiryDate < today)
@@ -100,7 +100,7 @@ namespace ClinicReservation.Services
         {
             Type = type,
             Date = date,
-            CreatedAt = DateTime.Now,
+            CreatedAt = ClinicTime.Now,
             CreatedBy = user
         };
 
@@ -162,7 +162,7 @@ namespace ClinicReservation.Services
             if (!o.Ok) return o;
 
             // The document carries the invoice date; movements are stamped with the posting time.
-            var now = DateTime.Now;
+            var now = ClinicTime.Now;
             var doc = NewDoc(StockDocType.Receipt, date, user);
             doc.ToWarehouseId = warehouseId;
             doc.SupplierId = supplierId;
@@ -198,7 +198,7 @@ namespace ClinicReservation.Services
             if (lines.Count == 0) o.Errors.Add("Ən azı bir məhsul əlavə edin");
             if (!o.Ok) return o;
 
-            var date = DateTime.Now;
+            var date = ClinicTime.Now;
             var doc = NewDoc(StockDocType.Transfer, date, user);
             doc.FromWarehouseId = fromId;
             doc.ToWarehouseId = toId;
@@ -254,7 +254,7 @@ namespace ClinicReservation.Services
 
             // Expired stock can only leave as "vaxtı keçib"; everything else uses usable lots only.
             var expiredOnly = reason == "Vaxtı keçib";
-            var date = DateTime.Now;
+            var date = ClinicTime.Now;
             var doc = NewDoc(StockDocType.WriteOff, date, user);
             doc.FromWarehouseId = warehouseId;
             doc.Reason = reason.Trim();
@@ -292,7 +292,7 @@ namespace ClinicReservation.Services
                 o.Errors.Add($"{lot.StockItem.Name}: sayılan miqdar mənfi ola bilməz");
             if (!o.Ok) return o;
 
-            var date = DateTime.Now;
+            var date = ClinicTime.Now;
             var doc = NewDoc(StockDocType.Count, date, user);
             doc.FromWarehouseId = warehouseId;
             doc.ToWarehouseId = warehouseId;
@@ -327,7 +327,7 @@ namespace ClinicReservation.Services
             }
             if (!o.Ok) return o;
 
-            var now = DateTime.Now;
+            var now = ClinicTime.Now;
             foreach (var m in doc.Lines.ToList())
             {
                 var rev = Move(doc, m.StockBatch, -m.Quantity, now);
@@ -379,7 +379,7 @@ namespace ClinicReservation.Services
                 if (lines.Count == 0) return o;
 
                 var reserve = _context.Reserves.First(r => r.Id == reserveId);
-                var now = DateTime.Now;
+                var now = ClinicTime.Now;
                 var warehouses = _context.Warehouses.Where(w => w.IsActive).ToList();
                 var main = warehouses.OrderByDescending(w => w.IsMain).ThenBy(w => w.Id).FirstOrDefault();
 
@@ -458,7 +458,7 @@ namespace ClinicReservation.Services
                 var item = _context.StockItems.Find(itemId);
                 if (wh == null || item == null || quantity <= 0) return o;
 
-                var now = DateTime.Now;
+                var now = ClinicTime.Now;
                 var doc = NewDoc(StockDocType.WriteOff, now, user);
                 doc.FromWarehouseId = wh.Id;
                 doc.Reason = "Xəstəyə verildi";

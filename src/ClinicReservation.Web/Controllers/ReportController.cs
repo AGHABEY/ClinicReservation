@@ -19,8 +19,8 @@ namespace ClinicReservation.Controllers
 
         public IActionResult Index(DateTime? from, DateTime? to)
         {
-            var fromDate = (from ?? DateTime.Today.AddDays(-29)).Date;
-            var toDate = (to ?? DateTime.Today).Date;
+            var fromDate = (from ?? ClinicTime.Today.AddDays(-29)).Date;
+            var toDate = (to ?? ClinicTime.Today).Date;
             if (fromDate > toDate)
                 (fromDate, toDate) = (toDate, fromDate);
             var toExclusive = toDate.AddDays(1);

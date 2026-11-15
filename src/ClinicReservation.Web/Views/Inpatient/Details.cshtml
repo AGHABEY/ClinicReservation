@@ -2,7 +2,7 @@
 @{
     var a = Model.Admission;
     var p = a.Patient;
-    var now = DateTime.Now;
+    var now = ClinicTime.Now;
     var active = a.IsActive;
     var canDoc = User.Can(Permissions.InpatientDoctor);
     var canNurse = User.Can(Permissions.InpatientNurse);
@@ -241,7 +241,7 @@
                                 @foreach (var x in a.Orders.OrderBy(x => x.StoppedAt != null).ThenByDescending(x => x.OrderedAt))
                                 {
                                     var stopped = x.StoppedAt != null;
-                                    var finished = !stopped && x.EndDate != null && x.EndDate.Value.Date < DateTime.Today;
+                                    var finished = !stopped && x.EndDate != null && x.EndDate.Value.Date < ClinicTime.Today;
                                     <tr class="@(stopped || finished ? "row-muted" : "")">
                                         <td class="wrap">
                                             <span style="font-weight:600;">@x.Name</span> @x.Dose
@@ -280,14 +280,14 @@
         {
             var day = Model.Day;
             var first = a.AdmittedAt.Date;
-            var last = (a.DischargedAt ?? DateTime.Today).Date;
+            var last = (a.DischargedAt ?? ClinicTime.Today).Date;
             var orders = a.Orders.Where(x => x.IsActiveOn(day)).OrderBy(x => x.IsPrn).ThenBy(x => x.OrderedAt).ToList();
             <div class="card">
                 <div class="card-head">
                     <h3 class="card-title"><i class="bi bi-check2-square"></i> @Fmt.Long(day)</h3>
                     <div style="display:flex; gap:6px;">
                         @if (day > first) { <a class="btn btn-light btn-sm" asp-action="Details" asp-route-id="@a.Id" asp-route-tab="mar" asp-route-day="@day.AddDays(-1).ToString("yyyy-MM-dd")" aria-label="Əvvəlki gün"><i class="bi bi-chevron-left"></i></a> }
-                        @if (day != DateTime.Today && active) { <a class="btn btn-light btn-sm" asp-action="Details" asp-route-id="@a.Id" asp-route-tab="mar">Bu gün</a> }
+                        @if (day != ClinicTime.Today && active) { <a class="btn btn-light btn-sm" asp-action="Details" asp-route-id="@a.Id" asp-route-tab="mar">Bu gün</a> }
                         @if (day < last) { <a class="btn btn-light btn-sm" asp-action="Details" asp-route-id="@a.Id" asp-route-tab="mar" asp-route-day="@day.AddDays(1).ToString("yyyy-MM-dd")" aria-label="Növbəti gün"><i class="bi bi-chevron-right"></i></a> }
                     </div>
                 </div>
@@ -310,7 +310,7 @@
                                         {
                                             <span class="dose given" title="@d.RecordedBy"><i class="bi bi-check-lg"></i> @Fmt.Time(d.ScheduledAt)</span>
                                         }
-                                        if (active && canNurse && day == DateTime.Today && x.StoppedAt == null)
+                                        if (active && canNurse && day == ClinicTime.Today && x.StoppedAt == null)
                                         {
                                             <form asp-action="Dose" method="post">
                                                 <input type="hidden" name="id" value="@a.Id" /><input type="hidden" name="orderId" value="@x.Id" />
@@ -384,7 +384,7 @@
         @* ================= Yataq-gün ================= *@
         @if (Model.Tab == "bill")
         {
-            var (lines, days, total) = InpatientService.BedDays(a, now);
+            var (lines, days, total) = InpatientRules.BedDays(a, now);
             var meds = a.Orders.Select(x => (Order: x, Given: x.Doses.Count(d => d.Status == DoseStatus.Given))).Where(x => x.Given > 0).ToList();
             <div class="card">
                 <div class="card-head"><h3 class="card-title"><i class="bi bi-receipt"></i> Yataq-gün</h3><span class="hint-text">@days gün</span></div>

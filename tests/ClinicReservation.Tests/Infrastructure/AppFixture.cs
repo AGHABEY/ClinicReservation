@@ -22,6 +22,8 @@ namespace ClinicReservation.Tests.Infrastructure
 
         public async Task InitializeAsync()
         {
+            // Same clinic clock as production, whatever zone the test machine (or CI) runs in.
+            ClinicTime.UseTimeZone(TimeZoneInfo.FindSystemTimeZoneById("Asia/Baku"));
             await _db.StartAsync();
             Factory = new TestAppFactory(_db.GetConnectionString());
             _ = Factory.Server; // builds the host

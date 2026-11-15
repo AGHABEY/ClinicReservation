@@ -29,7 +29,7 @@ namespace ClinicReservation.Controllers
         // tab: pending (sample not taken yet) | work (results being entered) | done (validated)
         public IActionResult Index(string? tab, DateTime? date, string? q)
         {
-            var day = (date ?? DateTime.Today).Date;
+            var day = (date ?? ClinicTime.Today).Date;
             q = q?.Trim();
 
             // A barcode scanner types the 10 digits + Enter into the search box.
@@ -82,7 +82,7 @@ namespace ClinicReservation.Controllers
 
             // One tube per sample type (blood and urine get separate barcodes).
             var orders = tests.GroupBy(t => t.SampleType)
-                .Select(g => _lab.CreateOrder(reserve, g, reserve.Patient.Gender, User.Identity?.Name, DateTime.Now))
+                .Select(g => _lab.CreateOrder(reserve, g, reserve.Patient.Gender, User.Identity?.Name, ClinicTime.Now))
                 .ToList();
             foreach (var o in orders)
                 _audit.Log("Nümunə götürüldü", AuditEntities.Lab, o.Id, $"{reserve.Patient.FullName}, barkod {o.Barcode}, {o.Results.Count} analiz");
@@ -123,7 +123,7 @@ namespace ClinicReservation.Controllers
             if (validate && !User.Can(Permissions.LabValidate))
                 return Forbid();
 
-            var now = DateTime.Now;
+            var now = ClinicTime.Now;
             var userName = User.Identity?.Name;
             var gender = order.Patient.Gender;
             var errors = new List<string>();
@@ -255,7 +255,7 @@ namespace ClinicReservation.Controllers
                 return RedirectToAction(nameof(Order), new { id });
             }
             order.Status = LabOrderStatus.Cancelled;
-            order.CancelledAt = DateTime.Now;
+            order.CancelledAt = ClinicTime.Now;
             order.Note = string.IsNullOrWhiteSpace(reason) ? order.Note : $"Ləğv: {reason.Trim()}";
             _context.SaveChanges();
             _audit.Log("Nümunə ləğv edildi", AuditEntities.Lab, order.Id, $"{order.Patient.FullName}, {order.Barcode}" + (string.IsNullOrWhiteSpace(reason) ? "" : $" — {reason.Trim()}"));

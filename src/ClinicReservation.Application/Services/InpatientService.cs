@@ -48,15 +48,6 @@ namespace ClinicReservation.Services
                 .ThenBy(b => b.Name.Length).ThenBy(b => b.Name).ToList();
         }
 
-        /// <summary>Warning (not an error) when a man is put into a women's ward or the other way round.</summary>
-        public static string? GenderWarning(Bed bed, Patient patient) =>
-            (bed.Ward.Gender, patient.Gender) switch
-            {
-                (WardGender.Male, Gender.Female) => $"{bed.Ward.Name} kişi palatasıdır",
-                (WardGender.Female, Gender.Male) => $"{bed.Ward.Name} qadın palatasıdır",
-                _ => null
-            };
-
         public Result Admit(int patientId, int bedId, int? doctorId, AdmissionType type, string? icd, string? diagnosis,
             string? note, int? reserveId, string? user)
         {
@@ -70,7 +61,7 @@ namespace ClinicReservation.Services
                 return Result.Fail($"{bed.Label} artıq doludur");
             if (doctorId != null && !_context.Doctors.Any(d => d.Id == doctorId)) return Result.Fail("Həkim tapılmadı");
 
-            var now = DateTime.Now;
+            var now = ClinicTime.Now;
             var a = new Admission
             {
                 PatientId = patientId,
@@ -102,7 +93,7 @@ namespace ClinicReservation.Services
             if (_context.Admissions.Any(x => x.BedId == bedId && x.Status == AdmissionStatus.Active))
                 return Result.Fail($"{bed.Label} artıq doludur");
 
-            var now = DateTime.Now;
+            var now = ClinicTime.Now;
             var current = _context.BedStays.Where(s => s.AdmissionId == a.Id && s.To == null).ToList();
             foreach (var s in current) s.To = now;
             a.BedId = bedId;
@@ -115,7 +106,7 @@ namespace ClinicReservation.Services
             string? treatment, string? recommendations, string? user)
         {
             if (!a.IsActive) return Result.Fail("Xəstə artıq çıxarılıb");
-            var now = DateTime.Now;
+            var now = ClinicTime.Now;
             foreach (var s in _context.BedStays.Where(s => s.AdmissionId == a.Id && s.To == null)) s.To = now;
             // Running orders end with the stay.
             foreach (var o in _context.MedicationOrders.Where(o => o.AdmissionId == a.Id && o.StoppedAt == null))
@@ -144,7 +135,7 @@ namespace ClinicReservation.Services
             if (string.IsNullOrWhiteSpace(reason)) return Result.Fail("Ləğv səbəbini yazın");
             if (_context.Observations.Any(o => o.AdmissionId == a.Id) || _context.MedicationOrders.Any(o => o.AdmissionId == a.Id))
                 return Result.Fail("Qeyd və ya təyinat yazılıb — ləğv etmək olmaz, xəstəni çıxarış ilə çıxarın");
-            var now = DateTime.Now;
+            var now = ClinicTime.Now;
             foreach (var s in _context.BedStays.Where(s => s.AdmissionId == a.Id && s.To == null)) s.To = now;
             a.Status = AdmissionStatus.Cancelled;
             a.CancelReason = reason.Trim();
@@ -155,28 +146,13 @@ namespace ClinicReservation.Services
             return new Result(true, null, a);
         }
 
-        public record BedDayLine(BedStay Stay, int Days, decimal Amount);
-
-        /// <summary>
-        /// Bed-days per stay: nights spent (a same-day stay counts as one day for the whole admission).
-        /// </summary>
-        public static (List<BedDayLine> Lines, int Days, decimal Total) BedDays(Admission a, DateTime now)
-        {
-            var lines = a.Stays.Where(s => s.To == null || s.To > s.From).OrderBy(s => s.From)
-                .Select(s => { var d = Math.Max(0, ((s.To ?? now).Date - s.From.Date).Days); return new BedDayLine(s, d, d * s.DailyPrice); })
-                .ToList();
-            if (lines.Count > 0 && lines.Sum(l => l.Days) == 0)
-                lines[0] = lines[0] with { Days = 1, Amount = lines[0].Stay.DailyPrice };
-            return (lines, lines.Sum(l => l.Days), lines.Sum(l => l.Amount));
-        }
-
         /// <summary>Records a dose as given or skipped; a given dose of a stock item leaves the store.</summary>
         public Result RecordDose(MedicationOrder order, DateTime slot, DoseStatus status, string? note, string? user, out string? stockWarning)
         {
             stockWarning = null;
             var a = order.Admission;
             if (!a.IsActive) return Result.Fail("Xəstə artıq çıxarılıb");
-            var now = DateTime.Now;
+            var now = ClinicTime.Now;
             if (order.IsPrn)
             {
                 if (status != DoseStatus.Given) return Result.Fail("Lazım olduqda verilən dərman yalnız «verildi» kimi qeyd olunur");

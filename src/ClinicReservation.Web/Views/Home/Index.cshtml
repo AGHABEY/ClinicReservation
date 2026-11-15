@@ -2,7 +2,7 @@
 @{
     ViewData["Title"] = "İdarə paneli";
     var showMoney = User.Can(Permissions.KassaTotals);
-    var now = DateTime.Now;
+    var now = ClinicTime.Now;
     var nextId = Model.TodayAppointments
         .FirstOrDefault(r => r.Status?.Name is StatusNames.Waiting or StatusNames.Confirmed && r.AppointmentAt >= now.AddMinutes(-15))?.Id;
     ViewData["ReturnTo"] = "home";

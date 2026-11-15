@@ -16,7 +16,7 @@
         @Html.AntiForgeryToken()
         <div class="field">
             <label for="birthday">Doğum tarixi</label>
-            <input id="birthday" name="birthday" type="date" class="form-control" required max="@DateTime.Today.ToString("yyyy-MM-dd")" style="height:48px; font-size:16px;" />
+            <input id="birthday" name="birthday" type="date" class="form-control" required max="@ClinicTime.Today.ToString("yyyy-MM-dd")" style="height:48px; font-size:16px;" />
         </div>
         <div class="pub-actions">
             <button type="submit" class="btn btn-primary"><i class="bi bi-unlock"></i> Nəticələri göstər</button>

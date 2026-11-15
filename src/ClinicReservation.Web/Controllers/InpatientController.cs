@@ -33,7 +33,7 @@ namespace ClinicReservation.Controllers
 
         public IActionResult Index(int? departmentId)
         {
-            var today = DateTime.Today;
+            var today = ClinicTime.Today;
             return View(new InpatientBoardViewModel
             {
                 Beds = _inpatient.Board(departmentId),
@@ -47,7 +47,7 @@ namespace ClinicReservation.Controllers
 
         public IActionResult List(string? status, DateTime? from, DateTime? to, string? q)
         {
-            var end = (to ?? DateTime.Today).Date;
+            var end = (to ?? ClinicTime.Today).Date;
             var start = (from ?? end.AddDays(-30)).Date;
             if (start > end) (start, end) = (end, start);
             q = q?.Trim();
@@ -112,7 +112,7 @@ namespace ClinicReservation.Controllers
             var a = Load(r.Admission!.Id)!;
             _audit.Log("Stasionara yerləşdirildi", AuditEntities.Inpatient, a.Id,
                 $"{a.Number} {a.Patient.FullName}: {a.Bed!.Label}, {InpatientLabels.Type(a.Type)}, {a.AdmitIcdCode} {a.AdmitDiagnosis}".Trim());
-            var warn = InpatientService.GenderWarning(a.Bed, a.Patient);
+            var warn = InpatientRules.GenderWarning(a.Bed, a.Patient);
             TempData["Success"] = $"{a.Patient.FullName} yerləşdirildi: {a.Bed.Label} ({a.Number})";
             if (warn != null) TempData["Error"] = $"Diqqət: {warn}";
             return RedirectToAction(nameof(Details), new { id = a.Id });
@@ -150,7 +150,7 @@ namespace ClinicReservation.Controllers
                 a = Load(id)!;
                 _audit.Log("Çarpayı dəyişdi", AuditEntities.Inpatient, a.Id, $"{a.Number} {a.Patient.FullName}: {from} → {a.Bed!.Label}");
                 TempData["Success"] = $"{a.Patient.FullName} köçürüldü: {a.Bed.Label}";
-                var warn = InpatientService.GenderWarning(a.Bed, a.Patient);
+                var warn = InpatientRules.GenderWarning(a.Bed, a.Patient);
                 if (warn != null) TempData["Error"] = $"Diqqət: {warn}";
             }
             return RedirectToAction(nameof(Details), new { id });
@@ -185,7 +185,7 @@ namespace ClinicReservation.Controllers
 
             var o = new Observation
             {
-                AdmissionId = a.Id, Kind = input.Kind, At = DateTime.Now, Author = UserName, Text = text,
+                AdmissionId = a.Id, Kind = input.Kind, At = ClinicTime.Now, Author = UserName, Text = text,
                 Temperature = input.Temperature, Pulse = input.Pulse, BpSystolic = input.BpSystolic, BpDiastolic = input.BpDiastolic,
                 RespRate = input.RespRate, SpO2 = input.SpO2
             };
@@ -228,7 +228,7 @@ namespace ClinicReservation.Controllers
                 return View(nameof(Details), vm);
             }
 
-            var now = DateTime.Now;
+            var now = ClinicTime.Now;
             var order = new MedicationOrder
             {
                 AdmissionId = a.Id,
@@ -264,7 +264,7 @@ namespace ClinicReservation.Controllers
                 TempData["Error"] = "Təyinat artıq dayandırılıb";
             else
             {
-                o.StoppedAt = DateTime.Now;
+                o.StoppedAt = ClinicTime.Now;
                 o.StoppedBy = UserName;
                 _context.SaveChanges();
                 _audit.Log("Təyinat dayandırıldı", AuditEntities.Inpatient, id, $"{o.Admission.Number} {o.Admission.Patient.FullName}: {o.Name}");
@@ -297,7 +297,7 @@ namespace ClinicReservation.Controllers
                 TempData["Success"] = status == DoseStatus.Given ? $"{o.Name} — verildi" : $"{o.Name} — verilmədi";
                 if (stockWarning != null) TempData["Error"] = stockWarning;
             }
-            return RedirectToAction(nameof(Details), new { id, tab = "mar", day = (day ?? DateTime.Today).ToString("yyyy-MM-dd") });
+            return RedirectToAction(nameof(Details), new { id, tab = "mar", day = (day ?? ClinicTime.Today).ToString("yyyy-MM-dd") });
         }
 
         // ---------- Discharge ----------
@@ -311,7 +311,7 @@ namespace ClinicReservation.Controllers
             // Pre-fill what the system already knows; the doctor edits it.
             var meds = a.Orders.OrderBy(o => o.StartAt)
                 .Select(o => $"{o.Name}{(o.Dose != null ? " " + o.Dose : "")}{(o.Route != null ? ", " + o.Route.ToLower(Fmt.Az) : "")}"
-                    + $" — {(o.IsPrn ? "lazım olduqda" : $"gündə {o.TimeList.Length} dəfə")}, {Fmt.Date(o.StartAt)}–{Fmt.Date(o.StoppedAt ?? DateTime.Today)}")
+                    + $" — {(o.IsPrn ? "lazım olduqda" : $"gündə {o.TimeList.Length} dəfə")}, {Fmt.Date(o.StartAt)}–{Fmt.Date(o.StoppedAt ?? ClinicTime.Today)}")
                 .ToList();
             ViewBag.Admission = a;
             return View(new DischargeInput
@@ -342,7 +342,7 @@ namespace ClinicReservation.Controllers
                 TempData["Error"] = r.Error;
                 return RedirectToAction(nameof(Details), new { id = a.Id });
             }
-            var (_, days, _) = InpatientService.BedDays(a, DateTime.Now);
+            var (_, days, _) = InpatientRules.BedDays(a, ClinicTime.Now);
             _audit.Log("Stasionardan çıxarıldı", AuditEntities.Inpatient, a.Id,
                 $"{a.Number} {a.Patient.FullName}: {InpatientLabels.Outcome(a.Outcome)}, {a.FinalIcdCode} {a.FinalDiagnosis}, {days} yataq-gün");
             TempData["Success"] = $"{a.Patient.FullName} çıxarıldı. Epikrizi çap edib xəstəyə verin.";
@@ -383,7 +383,7 @@ namespace ClinicReservation.Controllers
             {
                 Admission = a,
                 Tab = tab is "orders" or "mar" or "bill" ? tab : "journal",
-                Day = (day ?? DateTime.Today).Date,
+                Day = (day ?? ClinicTime.Today).Date,
                 NewObservation = new ObservationInput
                 {
                     AdmissionId = a.Id,

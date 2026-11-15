@@ -112,7 +112,7 @@ namespace ClinicReservation.ViewModels
         public Admission Admission { get; set; } = null!;
         /// <summary>journal | orders | mar | bill</summary>
         public string Tab { get; set; } = "journal";
-        public DateTime Day { get; set; } = DateTime.Today;
+        public DateTime Day { get; set; } = ClinicTime.Today;
         public List<Bed> FreeBeds { get; set; } = new();
         public List<StockItem> Medicines { get; set; } = new();
         public List<Admission> PreviousStays { get; set; } = new();

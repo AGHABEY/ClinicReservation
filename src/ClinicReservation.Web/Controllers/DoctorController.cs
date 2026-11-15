@@ -32,7 +32,7 @@ namespace ClinicReservation.Controllers
 
         public IActionResult Index()
         {
-            var today = DateTime.Today;
+            var today = ClinicTime.Today;
             var doctors = _context.Doctors
                 .Include(d => d.Department)
                 .Include(d => d.Room)
@@ -234,7 +234,7 @@ namespace ClinicReservation.Controllers
             ViewBag.Departments = _context.Departments.Where(d => d.IsActive || (doctor != null && d.Id == doctor.DepartmentId)).OrderBy(d => d.Name).ToList();
             ViewBag.Rooms = _context.Rooms.Where(r => r.IsActive || (doctor != null && r.Id == doctor.RoomId)).OrderBy(r => r.Name).ToList();
             ViewBag.Users = _context.AppUsers.OrderBy(u => u.UserName).ToList();
-            ViewBag.Leaves = doctor?.Leaves.Where(l => l.To >= DateTime.Today.AddDays(-30)).OrderBy(l => l.From).ToList() ?? new List<DoctorLeave>();
+            ViewBag.Leaves = doctor?.Leaves.Where(l => l.To >= ClinicTime.Today.AddDays(-30)).OrderBy(l => l.From).ToList() ?? new List<DoctorLeave>();
         }
 
         private static bool TryTime(string? s, out TimeSpan t) =>
