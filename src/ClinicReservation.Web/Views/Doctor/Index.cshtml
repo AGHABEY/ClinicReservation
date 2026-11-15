@@ -38,7 +38,7 @@
                     <span><i class="bi bi-stopwatch"></i> @d.SlotMinutes dəq</span>
                 </div>
                 <div class="week-strip" aria-label="İş günləri">
-                    @foreach (var day in ClinicReservation.Controllers.DoctorController.Week)
+                    @foreach (var day in Doctors.Week)
                     {
                         var w = d.WorkHours.FirstOrDefault(x => x.Day == day);
                         <span class="@(w != null ? "on" : "")" title="@Fmt.DayName(day)@(w != null ? $": {w.Start:hh\\:mm}–{w.End:hh\\:mm}" : ": işləmir")">@Fmt.DayShortName(day)</span>

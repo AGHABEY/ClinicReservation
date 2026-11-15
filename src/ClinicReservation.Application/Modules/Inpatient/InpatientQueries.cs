@@ -18,6 +18,12 @@ namespace ClinicReservation.Modules.Inpatient
             _stock = stock;
         }
 
+        /// <summary>A patient's stays (latest 20, cancelled left out) for the patient card.</summary>
+        public Task<List<Admission>> ForPatientAsync(int patientId, CancellationToken ct = default) =>
+            _db.Admissions.Include(a => a.Department).Include(a => a.Bed).ThenInclude(b => b!.Ward)
+                .Where(a => a.PatientId == patientId && a.Status != AdmissionStatus.Cancelled)
+                .OrderByDescending(a => a.AdmittedAt).Take(20).ToListAsync(ct);
+
         /// <summary>Active beds with the stay currently in them (null when free).</summary>
         public async Task<List<(Bed Bed, Admission? Stay)>> BoardBedsAsync(int? departmentId, CancellationToken ct = default)
         {

@@ -49,6 +49,12 @@ namespace ClinicReservation.Modules.Lab
                 .AsSplitQuery()
                 .FirstOrDefaultAsync(o => o.Id == id, ct);
 
+        /// <summary>A patient's samples (latest 20, cancelled left out) for the patient card.</summary>
+        public Task<List<LabOrder>> ForPatientAsync(int patientId, CancellationToken ct = default) =>
+            _db.LabOrders.Include(o => o.Results)
+                .Where(o => o.PatientId == patientId && o.Status != LabOrderStatus.Cancelled)
+                .OrderByDescending(o => o.CollectedAt).Take(20).ToListAsync(ct);
+
         /// <summary>Samples of one visit (lab card on the reservation page).</summary>
         public Task<List<LabOrder>> OrdersForReserveAsync(int reserveId, CancellationToken ct = default) =>
             _db.LabOrders.Include(o => o.Results).ThenInclude(r => r.LabTest)

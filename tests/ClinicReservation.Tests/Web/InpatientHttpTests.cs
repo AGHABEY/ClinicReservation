@@ -69,7 +69,8 @@ namespace ClinicReservation.Tests.Web
             // Orders: a wrong time is refused; a stock drug due now is ordered.
             var badTime = await doctor.PostAsync(url, "/Inpatient/Order", ("AdmissionId", id.ToString()), ("DrugName", "Kaptopril"), ("Times", "25:00"));
             Assert.Contains("«25:00» düzgün vaxt deyil", await WebSession.TextAsync(badTime));
-            var hour = ClinicTime.Now.ToString("HH:00");
+            // The current minute (not the hour): a dose due before the hour turned would fall outside the order.
+            var hour = ClinicTime.Now.ToString("HH:mm");
             var ordered = await doctor.PostAsync(url, "/Inpatient/Order", ("AdmissionId", id.ToString()), ("StockItemId", drug.Id.ToString()),
                 ("Dose", "4 mq"), ("QuantityPerDose", "1"), ("Route", "Venadaxili"), ("Times", hour), ("Days", "3"));
             Assert.Contains("təyin edildi", await doctor.FollowAsync(ordered));

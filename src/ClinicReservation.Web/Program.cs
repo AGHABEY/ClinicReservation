@@ -97,6 +97,10 @@ builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.DashboardQueries
 builder.Services.AddScoped<ClinicReservation.Modules.Emr.MedicalRecords>();
 builder.Services.AddScoped<ClinicReservation.Modules.Billing.Kassa>();
 builder.Services.AddScoped<ClinicReservation.Modules.Billing.ReportQueries>();
+builder.Services.AddScoped<ClinicReservation.Modules.Patients.PatientDirectory>();
+builder.Services.AddScoped<ClinicReservation.Modules.Catalog.Doctors>();
+builder.Services.AddScoped<ClinicReservation.Modules.Catalog.ClinicSettings>();
+builder.Services.AddScoped<ClinicReservation.Services.IUserDirectory, UserDirectory>();
 builder.Services.AddScoped<ClinicReservation.Services.AuditService>();
 builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.QueueService>();
 builder.Services.AddScoped<ClinicReservation.Modules.Lab.LabService>();

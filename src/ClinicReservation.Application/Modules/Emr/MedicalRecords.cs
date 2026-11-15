@@ -42,6 +42,11 @@ namespace ClinicReservation.Modules.Emr
                 .AsSplitQuery()
                 .FirstOrDefaultAsync(r => r.Id == reserveId, ct);
 
+        /// <summary>All of a patient's notes, newest first (patient card).</summary>
+        public Task<List<MedicalRecord>> ForPatientAsync(int patientId, CancellationToken ct = default) =>
+            _db.MedicalRecords.Include(m => m.Doctor).Where(m => m.PatientId == patientId)
+                .OrderByDescending(m => m.CreatedAt).ToListAsync(ct);
+
         public Task<MedicalRecord?> RecordAsync(int id, CancellationToken ct = default) =>
             _db.MedicalRecords
                 .Include(m => m.Patient)
