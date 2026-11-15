@@ -244,7 +244,18 @@ namespace ClinicReservation.Services
 
             using var scope = _services.CreateScope();
             var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
-            var sms = scope.ServiceProvider.GetRequiredService<SmsService>();
+            var sent = 0;
+            // With several app instances only one sends a round; the others skip it (no double SMS).
+            var ran = await DbLock.TryRunAsync(context.Database.GetConnectionString()!, DbLock.SmsReminders,
+                async () => sent = await SendDueAsync(scope.ServiceProvider, context, now, ct), ct);
+            if (!ran)
+                _logger.LogDebug("SMS xatırlatma: başqa nüsxə artıq işləyir, bu dövrə buraxıldı");
+            return sent;
+        }
+
+        private async Task<int> SendDueAsync(IServiceProvider sp, AppDbContext context, DateTime now, CancellationToken ct)
+        {
+            var sms = sp.GetRequiredService<SmsService>();
 
             var until = now.AddHours(_options.ReminderHoursBefore);
             var minLead = _options.MinLeadHours;

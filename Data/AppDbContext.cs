@@ -1,10 +1,11 @@
 using ClinicReservation.Models;
+using Microsoft.AspNetCore.DataProtection.EntityFrameworkCore;
 using Microsoft.AspNetCore.Identity.EntityFrameworkCore;
 using Microsoft.EntityFrameworkCore;
 
 namespace ClinicReservation.Data
 {
-    public class AppDbContext : IdentityDbContext
+    public class AppDbContext : IdentityDbContext, IDataProtectionKeyContext
     {
         public AppDbContext(DbContextOptions options) : base(options)
         {
@@ -43,6 +44,9 @@ namespace ClinicReservation.Data
         public DbSet<MedicationOrder> MedicationOrders { get; set; }
         public DbSet<MedicationDose> MedicationDoses { get; set; }
         public DbSet<AppUser> AppUsers { get; set; }
+
+        /// <summary>Keys that sign login cookies and form tokens — shared by every app instance.</summary>
+        public DbSet<DataProtectionKey> DataProtectionKeys { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
         {

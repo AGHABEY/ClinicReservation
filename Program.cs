@@ -1,4 +1,7 @@
 using ClinicReservation.Data;
+using Microsoft.AspNetCore.DataProtection;
+using Microsoft.AspNetCore.Diagnostics.HealthChecks;
+using Microsoft.AspNetCore.HttpOverrides;
 using Microsoft.AspNetCore.Identity;
 using Microsoft.EntityFrameworkCore;
 
@@ -36,6 +39,31 @@ builder.Services.AddDbContext<AppDbContext>(options =>
     options.UseNpgsql(
         builder.Configuration.GetConnectionString("ClinicReservation") ?? throw new InvalidOperationException("Connection string 'ClinicReservation' not found."),
         npgsql => npgsql.EnableRetryOnFailure()));
+
+// ---- Running several instances behind a load balancer ----
+// Login cookies, form (CSRF) tokens and TempData are signed with these keys; keeping them in the
+// database means every instance accepts what another one issued, and deploys don't log users out.
+builder.Services.AddDataProtection()
+    .SetApplicationName("MedClinic")
+    .PersistKeysToDbContext<AppDbContext>();
+
+// /health/live: the process answers. /health (ready): it can also reach the database.
+builder.Services.AddHealthChecks()
+    .AddDbContextCheck<AppDbContext>("database", tags: new[] { "ready" });
+
+// Behind nginx / a load balancer: take the client IP (audit log) and scheme from X-Forwarded-*.
+if (builder.Configuration.GetValue("ReverseProxy:Enabled", false))
+{
+    builder.Services.Configure<ForwardedHeadersOptions>(o =>
+    {
+        o.ForwardedHeaders = ForwardedHeaders.XForwardedFor | ForwardedHeaders.XForwardedProto;
+        var proxies = builder.Configuration.GetSection("ReverseProxy:KnownProxies").Get<string[]>() ?? Array.Empty<string>();
+        o.KnownNetworks.Clear();
+        o.KnownProxies.Clear();
+        // Without a list every sender is trusted — only do that when the app isn't reachable directly.
+        foreach (var ip in proxies) o.KnownProxies.Add(System.Net.IPAddress.Parse(ip));
+    });
+}
 
 builder.Services.AddIdentity<IdentityUser, IdentityRole>(
     options =>
@@ -88,6 +116,27 @@ builder.Services.ConfigureApplicationCookie(options =>
 
 var app = builder.Build();
 
+if (app.Configuration.GetValue("ReverseProxy:Enabled", false))
+    app.UseForwardedHeaders();
+
+// Stored times are clinic-local (DateTime.Now). A server in another zone would shift every appointment.
+var clinicZone = app.Configuration["Clinic:TimeZone"];
+if (!string.IsNullOrWhiteSpace(clinicZone))
+{
+    try
+    {
+        var zone = TimeZoneInfo.FindSystemTimeZoneById(clinicZone);
+        var now = DateTime.UtcNow;
+        if (zone.GetUtcOffset(now) != TimeZoneInfo.Local.GetUtcOffset(now))
+            app.Logger.LogWarning("Serverin saat qurşağı ({Server}) klinikanınkı ({Clinic}) deyil — vaxtlar sürüşəcək. TZ={Clinic} təyin edin.",
+                TimeZoneInfo.Local.Id, clinicZone, clinicZone);
+    }
+    catch (TimeZoneNotFoundException)
+    {
+        app.Logger.LogWarning("Clinic:TimeZone «{Zone}» tanınmadı", clinicZone);
+    }
+}
+
 // Configure the HTTP request pipeline.
 if (!app.Environment.IsDevelopment())
 {
@@ -117,7 +166,22 @@ app.MapControllerRoute(
     name: "default",
     pattern: "{controller=Home}/{action=Index}/{id?}");
 
-// Apply pending migrations and seed initial data on startup.
-await SeedData.InitializeAsync(app.Services);
+app.MapHealthChecks("/health/live", new HealthCheckOptions { Predicate = _ => false });
+app.MapHealthChecks("/health", new HealthCheckOptions { Predicate = c => c.Tags.Contains("ready") });
+
+// `dotnet ClinicReservation.dll --migrate` applies migrations + seed and exits (a deploy step / init job).
+if (args.Contains("--migrate"))
+{
+    await SeedData.InitializeAsync(app.Services);
+    return;
+}
+
+// Single server / docker-compose: migrate on startup (instances take turns via a database lock).
+// Large deployments set Database:MigrateOnStartup=false and run --migrate once per release.
+if (app.Configuration.GetValue("Database:MigrateOnStartup", true))
+    await SeedData.InitializeAsync(app.Services);
 
 app.Run();
+
+/// <summary>Lets the integration tests start the app with WebApplicationFactory&lt;Program&gt;.</summary>
+public partial class Program { }

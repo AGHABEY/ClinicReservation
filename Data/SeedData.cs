@@ -17,11 +17,27 @@ namespace ClinicReservation.Data
             var provider = scope.ServiceProvider;
 
             var context = provider.GetRequiredService<AppDbContext>();
-            await context.Database.MigrateAsync();
+            var logger = provider.GetRequiredService<ILoggerFactory>().CreateLogger("SeedData");
 
-            await SeedStatusesAsync(context);
-            await SeedWarehouseAsync(context);
-            await SeedRolesAndAdminAsync(provider);
+            async Task Run()
+            {
+                await context.Database.MigrateAsync();
+                await SeedStatusesAsync(context);
+                await SeedWarehouseAsync(context);
+                await SeedRolesAndAdminAsync(provider);
+            }
+
+            // Several instances starting together: one migrates, the others wait and then find nothing to do.
+            try
+            {
+                await DbLock.RunExclusiveAsync(context.Database.GetConnectionString()!, DbLock.Migrations, Run);
+            }
+            catch (Npgsql.PostgresException ex) when (ex.SqlState == Npgsql.PostgresErrorCodes.InvalidCatalogName)
+            {
+                // The database doesn't exist yet (first local run): nothing to lock on, MigrateAsync creates it.
+                logger.LogInformation("Baza hələ yoxdur — yaradılır");
+                await Run();
+            }
         }
 
         private static async Task SeedStatusesAsync(AppDbContext context)

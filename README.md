@@ -183,6 +183,38 @@ dəyişdirilir). `appsettings.json` → `Clinic`:
 Qəbul saatları həkimin öz qrafikindən hesablanır: bir həkim eyni anda bir xəstə qəbul edir,
 bir kabinetdə eyni anda bir qəbul olur.
 
+## 🧪 Testlər
+
+```bash
+dotnet test
+```
+
+Testlər Docker-də müvəqqəti PostgreSQL konteyneri (`postgres:16-alpine`, Testcontainers) açır və
+işin sonunda silir — lokal bazaya toxunmur, Docker işləməlidir. Əhatə: anbar (FEFO, köçürmə, ləğv,
+inventarizasiya, xidmət sərfiyyatı, eyni partiyaya paralel müraciət), stasionar (yerləşdirmə,
+köçürmə, dərman icrası, çıxarış), laboratoriya normaları, qəbul statusları, rollar üzrə giriş
+icazələri, CSRF qoruması, əsas səhifələr və bir neçə nüsxədə işləmə.
+
+## 📈 Bir neçə serverdə işlətmə
+
+Tətbiq vəziyyətsizdir (stateless) — eyni bazaya qoşulan istənilən sayda nüsxə load balancer
+arxasında işləyə bilər:
+
+- **Giriş açarları** bazada saxlanır (`DataProtectionKeys`): bir nüsxənin verdiyi giriş və forma
+  tokenini o biriləri qəbul edir, yeni versiya qurulanda istifadəçilər sistemdən çıxmır.
+- **SMS xatırlatmaları** hər dövrədə yalnız bir nüsxə göndərir (PostgreSQL advisory lock).
+- **Miqrasiyalar**: eyni anda açılan nüsxələr növbə ilə işləyir. Böyük qurulumda
+  `Database__MigrateOnStartup=false` edin və hər buraxılışda bir dəfə
+  `dotnet ClinicReservation.dll --migrate` işlədin (CI addımı və ya init konteyner).
+- **Sağlamlıq yoxlaması**: `/health/live` (proses cavab verir), `/health` (baza da əlçatandır) —
+  load balancer bunlara baxır.
+- **Proksi arxasında** (nginx, ALB): `ReverseProxy__Enabled=true` və
+  `ReverseProxy__KnownProxies__0=10.0.0.5` — audit jurnalında xəstənin real IP-si görünür.
+- **Saat qurşağı**: vaxtlar klinikanın yerli vaxtı ilə saxlanır, hər server `TZ=Asia/Baku`
+  ilə işləməlidir (`Clinic:TimeZone` uyğun gəlməsə açılışda xəbərdarlıq yazılır).
+- **Baza bağlantıları**: nüsxə sayı × `Maximum Pool Size` PostgreSQL-in `max_connections`
+  həddini keçməməlidir (məs. 3 nüsxə × 30 = 90 < 100); çox nüsxədə PgBouncer qoyun.
+
 ## 📁 Struktur
 
 ```
