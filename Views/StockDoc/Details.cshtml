@@ -1,0 +1,87 @@
+@model StockDocument
+@{
+    ViewData["Title"] = Model.Number;
+    var off = Model.Status == StockDocStatus.Cancelled;
+}
+
+<div class="page-head">
+    <div>
+        <h2><i class="bi @StockLabels.Icon(Model.Type)" style="color:var(--subtle); margin-right:6px;"></i>@Model.Number</h2>
+        <p>@StockLabels.Doc(Model.Type) · @Fmt.Date(Model.Date) · @Model.CreatedBy
+            @if (off) { <span class="badge-soft badge-cancelled" style="margin-left:6px;">Ləğv edilib</span> }</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-light" asp-action="Index"><i class="bi bi-arrow-left"></i> Sənədlər</a>
+        <a class="btn btn-light" asp-action="Print" asp-route-id="@Model.Id" target="_blank" rel="noopener"><i class="bi bi-printer"></i> Çap et</a>
+        @if (!off && User.Can(Permissions.StockManage))
+        {
+            <button type="button" class="btn btn-danger" onclick="document.getElementById('cancelDoc').showModal()"><i class="bi bi-x-circle"></i> Ləğv et</button>
+        }
+    </div>
+</div>
+
+@if (off)
+{
+    <div class="alert alert-warning"><i class="bi bi-arrow-counterclockwise"></i> @Fmt.DateTime(Model.CancelledAt) tarixində @Model.CancelledBy tərəfindən ləğv edilib: «@Model.CancelReason». Qalıqlar geri qaytarılıb.</div>
+}
+@if (Model.Note != null && Model.Type == StockDocType.Consumption)
+{
+    <div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> @Model.Note</div>
+}
+
+@{
+    var meta = new List<(string Label, string? Value)>();
+    if (Model.Type == StockDocType.Transfer)
+    {
+        meta.Add(("Haradan", Model.FromWarehouse?.Name));
+        meta.Add(("Haraya", Model.ToWarehouse?.Name));
+    }
+    else meta.Add(("Anbar", Model.FromWarehouse?.Name ?? Model.ToWarehouse?.Name));
+    meta.Add(("Təchizatçı", Model.Supplier?.Name));
+    meta.Add(("Qaimə №", Model.InvoiceNo));
+    meta.Add(("Səbəb", Model.Type == StockDocType.Consumption ? null : Model.Reason));
+    meta.Add(("Qeydə alınıb", Fmt.DateTime(Model.CreatedAt)));
+}
+<div class="card card-pad" style="margin-bottom:20px;">
+    <dl class="doc-meta">
+        @foreach (var (label, value) in meta.Where(m => m.Value != null))
+        {
+            <div><dt>@label</dt><dd>@value</dd></div>
+        }
+        @if (Model.Patient != null)
+        {
+            <div><dt>Xəstə</dt><dd>
+                @if (User.Can(Permissions.PatientsView)) { <a asp-controller="Patient" asp-action="Details" asp-route-id="@Model.PatientId">@Model.Patient.FullName</a> } else { @Model.Patient.FullName }
+            </dd></div>
+        }
+        @if (Model.ReserveId != null && User.Can(Permissions.ReservationsView))
+        {
+            <div><dt>Rezervasiya</dt><dd><a asp-controller="Reservation" asp-action="Details" asp-route-id="@Model.ReserveId">#@Model.ReserveId</a></dd></div>
+        }
+        @if (Model.Note != null && Model.Type != StockDocType.Consumption)
+        {
+            <div style="grid-column:1/-1;"><dt>Qeyd</dt><dd>@Model.Note</dd></div>
+        }
+    </dl>
+</div>
+
+<div class="card"><div class="table-scroll"><partial name="_Lines" model="Model" /></div></div>
+
+@if (!off && User.Can(Permissions.StockManage))
+{
+    <dialog id="cancelDoc" class="modal">
+        <form asp-action="Cancel" method="post">
+            <input type="hidden" name="id" value="@Model.Id" />
+            <h3 style="margin:0 0 8px;">@Model.Number ləğv edilsin?</h3>
+            <p class="hint-text" style="margin:0 0 14px;">Bütün sətirlər geri qaytarılır. @(Model.Type == StockDocType.Receipt ? "Mədaxil edilən məhsul artıq istifadə olunubsa, ləğv mümkün deyil." : "")</p>
+            <div class="field">
+                <label for="reason">Səbəb</label>
+                <input id="reason" name="reason" class="form-control" maxlength="300" required autocomplete="off" />
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-danger-solid">Ləğv et</button>
+                <button type="button" class="btn btn-light" onclick="this.closest('dialog').close()">Bağla</button>
+            </div>
+        </form>
+    </dialog>
+}

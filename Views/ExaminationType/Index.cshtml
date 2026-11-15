@@ -33,6 +33,7 @@
                     <tr>
                         <td style="font-weight:600;"><i class="bi bi-clipboard2-pulse text-muted"></i> @item.Name
                             @if (item.LabTests.Any()) { <div class="test-chips" style="margin-top:4px;">@foreach (var l in item.LabTests.OrderBy(l => l.LabTest.SortOrder)) { <span class="test-chip">@l.LabTest.Code</span> }</div> }
+                            @if (item.Materials.Any()) { <div class="hint-text" style="font-weight:400; margin-top:4px;" title="@string.Join(", ", item.Materials.Select(m => $"{m.StockItem.DisplayName} × {StockService.Qty(m.Quantity)}"))"><i class="bi bi-box-seam"></i> @item.Materials.Count material</div> }
                         </td>
                         <td class="text-muted">@(item.Department?.Name ?? "Ümumi")</td>
                         <td class="text-muted wrap">@(string.IsNullOrEmpty(item.Description) ? "—" : item.Description)</td>

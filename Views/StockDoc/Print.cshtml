@@ -1,0 +1,77 @@
+@model StockDocument
+@{
+    Layout = null;
+    var off = Model.Status == StockDocStatus.Cancelled;
+}
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="utf-8">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230E7C74'/%3E%3Cpath d='M6 17h5l2-5 4 10 3-7h6' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>@Model.Number · @StockLabels.Doc(Model.Type)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; }
+        body { margin: 0; background: #F4F5F7; color: #101828; font-size: 12px; }
+        .sheet { width: 210mm; min-height: 297mm; margin: 24px auto; padding: 16mm 14mm; background: #fff; }
+        .head { display: flex; justify-content: space-between; align-items: flex-start; border-bottom: 2px solid #101828; padding-bottom: 10px; }
+        .brand { font-weight: 700; font-size: 16px; }
+        h1 { margin: 16px 0 4px; font-size: 18px; }
+        .meta { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; margin: 12px 0 16px; }
+        .meta div span:first-child { color: #475467; margin-right: 6px; }
+        table { width: 100%; border-collapse: collapse; }
+        th, td { border: 1px solid #D0D5DD; padding: 5px 6px; text-align: left; vertical-align: top; }
+        th { background: #F2F4F7; font-size: 11px; }
+        .num { text-align: right; white-space: nowrap; }
+        .hint-text, .text-muted { color: #475467; }
+        tfoot td { font-weight: 700; }
+        .empty-state { padding: 16px; border: 1px dashed #D0D5DD; text-align: center; }
+        .empty-state i { display: none; }
+        .cancelled { margin: 8px 0; padding: 8px; border: 2px solid #B42318; color: #B42318; font-weight: 700; text-align: center; }
+        .signs { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 40px; }
+        .signs div { border-top: 1px solid #101828; padding-top: 4px; color: #475467; }
+        .tools { text-align: center; margin: 0 0 24px; }
+        .tools button { font: 600 14px Inter, sans-serif; height: 40px; padding: 0 16px; border-radius: 10px; border: 0; background: #0E7C74; color: #fff; cursor: pointer; }
+        @@media print {
+            @@page { size: A4; margin: 0; }
+            body { background: #fff; }
+            .sheet { margin: 0; }
+            .tools { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="sheet">
+        <div class="head">
+            <div class="brand">MedClinic</div>
+            <div style="text-align:right;">Çap: @Fmt.DateTime(DateTime.Now)</div>
+        </div>
+        <h1>@StockLabels.Doc(Model.Type) № @Model.Number</h1>
+        @if (off) { <div class="cancelled">LƏĞV EDİLİB — @Fmt.DateTime(Model.CancelledAt), @Model.CancelledBy: @Model.CancelReason</div> }
+        <div class="meta">
+            <div><span>Tarix:</span>@Fmt.Date(Model.Date)</div>
+            @if (Model.Type == StockDocType.Transfer)
+            {
+                <div><span>Haradan → haraya:</span>@Model.FromWarehouse?.Name → @Model.ToWarehouse?.Name</div>
+            }
+            else
+            {
+                <div><span>Anbar:</span>@(Model.FromWarehouse?.Name ?? Model.ToWarehouse?.Name)</div>
+            }
+            @if (Model.Supplier != null) { <div><span>Təchizatçı:</span>@Model.Supplier.Name@(Model.Supplier.Voen != null ? $" (VÖEN {Model.Supplier.Voen})" : "")</div> }
+            @if (Model.InvoiceNo != null) { <div><span>Qaimə №:</span>@Model.InvoiceNo</div> }
+            @if (Model.Reason != null) { <div><span>Səbəb:</span>@Model.Reason</div> }
+            @if (Model.Patient != null) { <div><span>Xəstə:</span>@Model.Patient.FullName</div> }
+            <div><span>Tərtib edən:</span>@Model.CreatedBy</div>
+            @if (Model.Note != null) { <div style="grid-column:1/-1;"><span>Qeyd:</span>@Model.Note</div> }
+        </div>
+        <partial name="_Lines" model="Model" />
+        <div class="signs">
+            <div>@(Model.Type == StockDocType.Receipt ? "Təhvil verdi" : "Verdi")</div>
+            <div>@(Model.Type == StockDocType.Receipt ? "Qəbul etdi" : Model.Type == StockDocType.Count ? "Komissiya" : "Aldı")</div>
+        </div>
+    </div>
+    <div class="tools"><button type="button" onclick="window.print()">Çap et</button></div>
+</body>
+</html>

@@ -234,6 +234,25 @@ namespace ClinicReservation.Migrations
                     b.ToTable("ExaminationTypeLabTests");
                 });
 
+            modelBuilder.Entity("ClinicReservation.Models.ExaminationTypeStockItem", b =>
+                {
+                    b.Property<int>("ExaminationTypeId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("StockItemId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)");
+
+                    b.HasKey("ExaminationTypeId", "StockItemId");
+
+                    b.HasIndex("StockItemId");
+
+                    b.ToTable("ExaminationTypeStockItems");
+                });
+
             modelBuilder.Entity("ClinicReservation.Models.LabOrder", b =>
                 {
                     b.Property<int>("Id")
@@ -670,6 +689,9 @@ namespace ClinicReservation.Migrations
                     b.Property<int>("ReserveId")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime?>("StockConsumedAt")
+                        .HasColumnType("timestamp without time zone");
+
                     b.HasKey("Id");
 
                     b.HasIndex("ExaminationTypeId");
@@ -767,6 +789,300 @@ namespace ClinicReservation.Migrations
                     b.HasIndex("ReserveId");
 
                     b.ToTable("SmsMessages");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.StockBatch", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("BatchNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("ExpiryDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)");
+
+                    b.Property<DateTime>("ReceivedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("StockItemId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("UnitCost")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<uint>("Version")
+                        .IsConcurrencyToken()
+                        .ValueGeneratedOnAddOrUpdate()
+                        .HasColumnType("xid")
+                        .HasColumnName("xmin");
+
+                    b.Property<int>("WarehouseId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExpiryDate");
+
+                    b.HasIndex("WarehouseId");
+
+                    b.HasIndex("StockItemId", "WarehouseId");
+
+                    b.ToTable("StockBatches");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.StockDocument", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CancelReason")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("CancelledBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<DateTime>("Date")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int?>("FromWarehouseId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("InvoiceNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int?>("PatientId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Reason")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<int?>("ReserveId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("SupplierId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("ToWarehouseId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Date");
+
+                    b.HasIndex("FromWarehouseId");
+
+                    b.HasIndex("PatientId");
+
+                    b.HasIndex("ReserveId");
+
+                    b.HasIndex("SupplierId");
+
+                    b.HasIndex("ToWarehouseId");
+
+                    b.ToTable("StockDocuments");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.StockItem", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<string>("Form")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("MinQuantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Unit")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique();
+
+                    b.HasIndex("Name");
+
+                    b.ToTable("StockItems");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.StockMovement", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("At")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<decimal?>("Counted")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)");
+
+                    b.Property<bool>("IsReversal")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal>("Quantity")
+                        .HasPrecision(18, 3)
+                        .HasColumnType("numeric(18,3)");
+
+                    b.Property<int>("StockBatchId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("StockDocumentId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("StockItemId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("UnitCost")
+                        .HasPrecision(18, 4)
+                        .HasColumnType("numeric(18,4)");
+
+                    b.Property<int>("WarehouseId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("StockBatchId");
+
+                    b.HasIndex("StockDocumentId");
+
+                    b.HasIndex("StockItemId", "At");
+
+                    b.HasIndex("WarehouseId", "At");
+
+                    b.ToTable("StockMovements");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.Supplier", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Phone")
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<string>("Voen")
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Suppliers");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.Warehouse", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int?>("DepartmentId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsMain")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DepartmentId");
+
+                    b.ToTable("Warehouses");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -1052,6 +1368,25 @@ namespace ClinicReservation.Migrations
                     b.Navigation("LabTest");
                 });
 
+            modelBuilder.Entity("ClinicReservation.Models.ExaminationTypeStockItem", b =>
+                {
+                    b.HasOne("ClinicReservation.Models.ExaminationType", "ExaminationType")
+                        .WithMany("Materials")
+                        .HasForeignKey("ExaminationTypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ClinicReservation.Models.StockItem", "StockItem")
+                        .WithMany()
+                        .HasForeignKey("StockItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("ExaminationType");
+
+                    b.Navigation("StockItem");
+                });
+
             modelBuilder.Entity("ClinicReservation.Models.LabOrder", b =>
                 {
                     b.HasOne("ClinicReservation.Models.Patient", "Patient")
@@ -1194,6 +1529,108 @@ namespace ClinicReservation.Migrations
                     b.Navigation("Reserve");
                 });
 
+            modelBuilder.Entity("ClinicReservation.Models.StockBatch", b =>
+                {
+                    b.HasOne("ClinicReservation.Models.StockItem", "StockItem")
+                        .WithMany("Batches")
+                        .HasForeignKey("StockItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ClinicReservation.Models.Warehouse", "Warehouse")
+                        .WithMany()
+                        .HasForeignKey("WarehouseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("StockItem");
+
+                    b.Navigation("Warehouse");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.StockDocument", b =>
+                {
+                    b.HasOne("ClinicReservation.Models.Warehouse", "FromWarehouse")
+                        .WithMany()
+                        .HasForeignKey("FromWarehouseId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ClinicReservation.Models.Patient", "Patient")
+                        .WithMany()
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ClinicReservation.Models.Reserve", "Reserve")
+                        .WithMany()
+                        .HasForeignKey("ReserveId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ClinicReservation.Models.Supplier", "Supplier")
+                        .WithMany()
+                        .HasForeignKey("SupplierId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.HasOne("ClinicReservation.Models.Warehouse", "ToWarehouse")
+                        .WithMany()
+                        .HasForeignKey("ToWarehouseId")
+                        .OnDelete(DeleteBehavior.Restrict);
+
+                    b.Navigation("FromWarehouse");
+
+                    b.Navigation("Patient");
+
+                    b.Navigation("Reserve");
+
+                    b.Navigation("Supplier");
+
+                    b.Navigation("ToWarehouse");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.StockMovement", b =>
+                {
+                    b.HasOne("ClinicReservation.Models.StockBatch", "StockBatch")
+                        .WithMany()
+                        .HasForeignKey("StockBatchId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ClinicReservation.Models.StockDocument", "StockDocument")
+                        .WithMany("Movements")
+                        .HasForeignKey("StockDocumentId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ClinicReservation.Models.StockItem", "StockItem")
+                        .WithMany()
+                        .HasForeignKey("StockItemId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ClinicReservation.Models.Warehouse", "Warehouse")
+                        .WithMany()
+                        .HasForeignKey("WarehouseId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("StockBatch");
+
+                    b.Navigation("StockDocument");
+
+                    b.Navigation("StockItem");
+
+                    b.Navigation("Warehouse");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.Warehouse", b =>
+                {
+                    b.HasOne("ClinicReservation.Models.Department", "Department")
+                        .WithMany()
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Department");
+                });
+
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRoleClaim<string>", b =>
                 {
                     b.HasOne("Microsoft.AspNetCore.Identity.IdentityRole", null)
@@ -1260,6 +1697,8 @@ namespace ClinicReservation.Migrations
             modelBuilder.Entity("ClinicReservation.Models.ExaminationType", b =>
                 {
                     b.Navigation("LabTests");
+
+                    b.Navigation("Materials");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.LabOrder", b =>
@@ -1291,6 +1730,16 @@ namespace ClinicReservation.Migrations
             modelBuilder.Entity("ClinicReservation.Models.ReserveStatus", b =>
                 {
                     b.Navigation("Reserves");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.StockDocument", b =>
+                {
+                    b.Navigation("Movements");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.StockItem", b =>
+                {
+                    b.Navigation("Batches");
                 });
 #pragma warning restore 612, 618
         }

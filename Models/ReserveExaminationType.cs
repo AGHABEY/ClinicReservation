@@ -14,5 +14,8 @@
         /// totals (and payment status) of existing reservations.
         /// </summary>
         public decimal Price { get; set; }
+
+        /// <summary>When this line's materials were taken from stock (null = not yet).</summary>
+        public DateTime? StockConsumedAt { get; set; }
     }
 }

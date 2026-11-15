@@ -90,6 +90,16 @@ Tələblər: .NET 8 SDK + işləyən PostgreSQL.
   əvvəlki nəticə yanında görünür. Təsdiqdən sonra A4 blank, xəstəyə SMS və doğum tarixi ilə
   qorunan onlayn nəticə səhifəsi. Həkim qəbul zamanı analiz təyin edir və nəticəni tibbi
   qeyd ekranında görür. Təsdiqi geri almaq yalnız səbəb yazmaqla mümkündür (audit)
+- **Aptek və anbar** — dərman, sərf materialı və reagent kataloqu (43 standart məhsul bir kliklə),
+  mərkəzi və şöbə anbarları, təchizatçılar. Mədaxil (seriya, son istifadə tarixi, alış qiyməti),
+  köçürmə, silinmə (xəstəyə verildi, vaxtı keçib, zədələnib …) və inventarizasiya sənədləri; hər
+  sənəd çap olunur və səbəb yazılaraq ləğv edilir. Partiyalar FEFO qaydası ilə seçilir (vaxtı ən
+  tez bitən birinci çıxır), vaxtı keçmiş partiya yalnız «Vaxtı keçib» kimi silinir. Müayinəyə
+  sərf materialları bağlanır: qəbul tamamlananda (analizlərdə — nümunə götürüləndə) şöbənin
+  anbarından avtomatik silinir, çatışmayan material xəbərdarlıq kimi göstərilir və qəbulu
+  dayandırmır. Az qalan / vaxtı bitən siyahıları, məhsul kartı (partiyalar və hərəkətlər),
+  dövriyyə hesabatı (əvvələ qalıq, mədaxil, məxaric, sona qalıq). Anbardar rolu əlavə olunub;
+  alış qiymətləri yalnız anbar idarəsi və hesabat icazəsi olanlara görünür
 - **SMS xatırlatma** — qəbuldan 24 saat əvvəl avtomatik SMS; içindəki linklə xəstə girişsiz
   «Gələcəyəm» və ya «Gələ bilməyəcəyəm» seçir. SMS jurnalı, əl ilə göndəriş, sakit saatlar
 
@@ -101,7 +111,10 @@ Tələblər: .NET 8 SDK + işləyən PostgreSQL.
 4. «İstifadəçilər»də işçilərə rol verin, həkimlərə öz loginini bağlayın.
 5. «Analiz kataloqu»nda standart analizləri yükləyin, normaları öz laboratoriyanıza görə
    yoxlayın və «Müayinələr»də analiz müayinələrini (məs. «Ümumi qan analizi») analizlərə bağlayın.
-6. Şöbələrə talon hərfi verin (məs. Kardiologiya → `K`) və gözləmə zalındakı TV-də
+6. «Aptek və anbar → Məhsullar»da standart siyahını yükləyin, lazım olsa «Anbarlar»da şöbə
+   anbarları yaradın, ilk qalığı mədaxil sənədi ilə qəbul edin və müayinələrə sərf
+   materiallarını bağlayın.
+7. Şöbələrə talon hərfi verin (məs. Kardiologiya → `K`) və gözləmə zalındakı TV-də
    «Növbə ekranı»nı açın (növbə ekranı icazəsi olan ayrıca istifadəçi ilə).
 
 ## 📱 SMS sazlamaları

@@ -1,0 +1,74 @@
+@model StockDocListViewModel
+@{
+    ViewData["Title"] = "Anbar sənədləri";
+}
+
+<div class="page-head">
+    <div>
+        <h2>Aptek və anbar</h2>
+        <p>Mədaxil, köçürmə, silinmə, xidmət sərfiyyatı və inventarizasiya sənədləri</p>
+    </div>
+    <div class="page-actions"><partial name="_StockActions" /></div>
+</div>
+
+<partial name="_StockNav" />
+
+<form method="get" class="card card-pad" style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; margin-bottom:20px;">
+    <div class="field"><label for="from">Başlanğıc</label><input id="from" type="date" name="from" value="@Model.From.ToString("yyyy-MM-dd")" class="form-control" /></div>
+    <div class="field"><label for="to">Son</label><input id="to" type="date" name="to" value="@Model.To.ToString("yyyy-MM-dd")" class="form-control" /></div>
+    <div class="field">
+        <label for="type">Növ</label>
+        <select id="type" name="type" class="form-select">
+            <option value="">Hamısı</option>
+            @foreach (var t in Enum.GetValues<StockDocType>()) { <option value="@t" selected="@(Model.Type == t)">@StockLabels.Doc(t)</option> }
+        </select>
+    </div>
+    <div class="field">
+        <label for="wh">Anbar</label>
+        <select id="wh" name="warehouseId" class="form-select">
+            <option value="">Bütün anbarlar</option>
+            @foreach (var w in Model.Warehouses) { <option value="@w.Id" selected="@(Model.WarehouseId == w.Id)">@w.Name</option> }
+        </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Göstər</button>
+</form>
+
+<div class="card">
+    @if (Model.Documents.Any())
+    {
+        <div class="table-scroll">
+            <table class="data">
+                <thead><tr><th>Sənəd</th><th>Tarix</th><th>Anbar</th><th>Təfərrüat</th><th class="num">Sətir</th>@if (Model.ShowCosts) { <th class="num">Dəyər</th> }<th>Kim</th></tr></thead>
+                <tbody>
+                    @foreach (var d in Model.Documents)
+                    {
+                        var off = d.Status == StockDocStatus.Cancelled;
+                        var lineCount = d.Lines.Count(m => d.Type != StockDocType.Transfer || m.Quantity > 0);
+                        <tr class="@(off ? "row-muted" : "")">
+                            <td style="white-space:nowrap;">
+                                <a asp-action="Details" asp-route-id="@d.Id" class="link-strong"><i class="bi @StockLabels.Icon(d.Type) text-muted"></i> @d.Number</a>
+                                <div class="hint-text">@StockLabels.Doc(d.Type)@(off ? " · ləğv edilib" : "")</div>
+                            </td>
+                            <td style="white-space:nowrap;">@Fmt.Date(d.Date)<div class="hint-text">@Fmt.Time(d.CreatedAt)</div></td>
+                            <td class="text-muted">
+                                @if (d.Type == StockDocType.Transfer) { <span>@d.FromWarehouse?.Name → @d.ToWarehouse?.Name</span> }
+                                else { <span>@(d.FromWarehouse?.Name ?? d.ToWarehouse?.Name)</span> }
+                            </td>
+                            <td class="wrap text-muted">
+                                @(d.Supplier?.Name)@(d.InvoiceNo != null ? $" · qaimə {d.InvoiceNo}" : "")
+                                @(d.Type is StockDocType.WriteOff ? d.Reason : null)@(d.Patient != null ? $" · {d.Patient.FullName}" : "")
+                            </td>
+                            <td class="num">@lineCount</td>
+                            @if (Model.ShowCosts) { <td class="num money">@Fmt.Money(d.Value)</td> }
+                            <td class="text-muted">@d.CreatedBy</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state"><i class="bi bi-file-earmark-text"></i><p>Bu dövrdə sənəd yoxdur</p></div>
+    }
+</div>

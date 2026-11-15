@@ -1,0 +1,63 @@
+@model StockReportViewModel
+@{
+    ViewData["Title"] = "Dövriyyə hesabatı";
+}
+
+<div class="page-head">
+    <div>
+        <h2>Dövriyyə hesabatı</h2>
+        <p>@Fmt.Date(Model.From) – @Fmt.Date(Model.To): dövrün əvvəlinə qalıq, mədaxil, məxaric, dövrün sonuna qalıq</p>
+    </div>
+    <div class="page-actions">
+        <button type="button" class="btn btn-light" onclick="window.print()"><i class="bi bi-printer"></i> Çap et</button>
+    </div>
+</div>
+
+<partial name="_StockNav" />
+
+<form method="get" class="filter-bar card card-pad" style="display:flex; gap:12px; flex-wrap:wrap; align-items:flex-end; margin-bottom:20px;">
+    <div class="field"><label for="from">Başlanğıc</label><input id="from" type="date" name="from" value="@Model.From.ToString("yyyy-MM-dd")" class="form-control" /></div>
+    <div class="field"><label for="to">Son</label><input id="to" type="date" name="to" value="@Model.To.ToString("yyyy-MM-dd")" class="form-control" /></div>
+    <div class="field">
+        <label for="wh">Anbar</label>
+        <select id="wh" name="warehouseId" class="form-select">
+            <option value="">Bütün anbarlar</option>
+            @foreach (var w in Model.Warehouses) { <option value="@w.Id" selected="@(Model.WarehouseId == w.Id)">@w.Name</option> }
+        </select>
+    </div>
+    <button type="submit" class="btn btn-primary">Göstər</button>
+</form>
+
+<div class="card">
+    @if (Model.Rows.Any())
+    {
+        <div class="table-scroll">
+            <table class="data">
+                <thead><tr><th>Məhsul</th><th>Vahid</th><th class="num">Əvvələ</th><th class="num">Mədaxil</th><th class="num">Məxaric</th><th class="num">Sona</th>@if (Model.ShowCosts) { <th class="num">Məxaric dəyəri</th> }</tr></thead>
+                <tbody>
+                    @foreach (var r in Model.Rows)
+                    {
+                        <tr>
+                            <td><a asp-action="Item" asp-route-id="@r.Item.Id" class="link-strong">@r.Item.Name</a><div class="hint-text">@r.Item.Form</div></td>
+                            <td class="text-muted">@r.Item.Unit</td>
+                            <td class="num">@StockService.Qty(r.Opening)</td>
+                            <td class="num" style="color:var(--ok);">@(r.In > 0 ? "+" + StockService.Qty(r.In) : "—")</td>
+                            <td class="num" style="color:var(--bad);">@(r.Out > 0 ? "−" + StockService.Qty(r.Out) : "—")</td>
+                            <td class="num" style="font-weight:600;">@StockService.Qty(r.Closing)</td>
+                            @if (Model.ShowCosts) { <td class="num money">@Fmt.Money(r.OutValue)</td> }
+                        </tr>
+                    }
+                </tbody>
+                @if (Model.ShowCosts)
+                {
+                    <tfoot><tr><td colspan="6" style="font-weight:600;">Cəmi məxaric (alış qiyməti ilə)</td><td class="num money" style="font-weight:700;">@Fmt.Money(Model.Rows.Sum(r => r.OutValue))</td></tr></tfoot>
+                }
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state"><i class="bi bi-bar-chart"></i><p>Bu dövrdə hərəkət yoxdur</p></div>
+    }
+</div>
+<p class="hint-text" style="margin-top:12px;"><i class="bi bi-info-circle"></i> «Bütün anbarlar» seçiləndə anbarlararası köçürmələr hesabata düşmür — klinikanın ümumi qalığını dəyişmirlər. Ləğv edilmiş sənədlər həm mədaxil, həm məxaric kimi görünür.</p>

@@ -19,5 +19,8 @@ namespace ClinicReservation.Models
 
         /// <summary>Lab tests run for this examination (empty for non-lab services).</summary>
         public List<ExaminationTypeLabTest> LabTests { get; set; } = new();
+
+        /// <summary>Materials taken from stock each time this examination is done.</summary>
+        public List<ExaminationTypeStockItem> Materials { get; set; } = new();
     }
 }

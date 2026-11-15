@@ -68,6 +68,14 @@
                                 </a>
                             </li>
                         }
+                        @if (User.CanAny(Permissions.StockView, Permissions.StockIssue, Permissions.StockManage))
+                        {
+                            <li>
+                                <a class="@Active("Stock") @Active("StockDoc") @Active("StockItem")" aria-current="@(Current("Stock") ?? Current("StockDoc") ?? Current("StockItem"))" asp-controller="Stock" asp-action="Index">
+                                    <i class="bi bi-capsule-pill"></i> Aptek və anbar
+                                </a>
+                            </li>
+                        }
                         @if (User.Can(Permissions.PatientsView))
                         {
                             <li>

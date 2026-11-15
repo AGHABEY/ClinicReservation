@@ -1115,3 +1115,36 @@ tr.flag-crit td { background: #FEF3F2; }
 .picker-group-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--subtle); margin-bottom: 8px; }
 .seg-count { display: inline-block; min-width: 20px; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--line); color: var(--muted); font-size: 12px; font-weight: 700; line-height: 18px; text-align: center; }
 .seg .on .seg-count { background: var(--brand-soft); color: var(--brand-dark); }
+
+/* ---------------------------------------------------------------------
+   Aptek və anbar
+   --------------------------------------------------------------------- */
+.mat-rows { display: grid; gap: 8px; }
+.mat-row { display: grid; grid-template-columns: minmax(0, 1fr) 110px 70px 40px; gap: 8px; align-items: center; }
+.mat-unit { white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+table.doc-lines td { vertical-align: middle; padding-top: 8px; padding-bottom: 8px; }
+table.doc-lines .form-control, table.doc-lines .form-select { min-width: 0; }
+table.doc-lines td.onhand { white-space: nowrap; }
+@media (max-width: 640px) {
+    .mat-row { grid-template-columns: minmax(0, 1fr) 90px 40px; }
+    .mat-row .mat-unit { display: none; }
+}
+@media print {
+    .sidebar, .topbar, .page-actions, .seg, .toolbar form .form-select, .form-actions, .filter-bar button { display: none !important; }
+    .main { margin-left: 0 !important; }
+    body, .card { background: #fff !important; }
+}
+.doc-meta { display: grid; grid-template-columns: repeat(auto-fit, minmax(180px, 1fr)); gap: 16px 24px; margin: 0; }
+.doc-meta dt { font-size: 12px; font-weight: 600; text-transform: uppercase; letter-spacing: .04em; color: var(--subtle); margin-bottom: 4px; }
+.doc-meta dd { margin: 0; font-weight: 600; }
+@media (max-width: 640px) {
+    .count-table .opt, .count-table .diff, .count-table th:last-child, .count-table td.num, .count-table th.num { display: none; }
+    .count-table .form-control { min-width: 80px; }
+}
+.count-table .sm-only { display: none; }
+@media (max-width: 640px) { .count-table .sm-only { display: inline; } }
+@media (max-width: 640px) {
+    .count-table td:first-child { white-space: normal; }
+    .stock-filters > .form-control, .stock-filters > .form-select { flex: 1 1 140px; max-width: none !important; }
+    .stock-filters > input[type=search] { flex-basis: 100%; }
+}

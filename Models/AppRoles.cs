@@ -14,8 +14,9 @@ namespace ClinicReservation.Models
         public const string Doctor = "Hekim";
         public const string Manager = "Rehber";
         public const string Lab = "Laborant";
+        public const string Storekeeper = "Anbardar";
 
-        public static readonly string[] BuiltIn = { Admin, Staff, Reception, Cashier, Doctor, Manager, Lab };
+        public static readonly string[] BuiltIn = { Admin, Staff, Reception, Cashier, Doctor, Manager, Lab, Storekeeper };
 
         public static string Label(string? role) => role switch
         {
@@ -26,6 +27,7 @@ namespace ClinicReservation.Models
             Doctor => "Həkim",
             Manager => "Rəhbərlik",
             Lab => "Laborant",
+            Storekeeper => "Anbardar / aptek",
             _ => role ?? "—"
         };
 
@@ -40,7 +42,8 @@ namespace ClinicReservation.Models
             {
                 Permissions.PatientsView, Permissions.PatientsEdit, Permissions.ReservationsView,
                 Permissions.ReservationsManage, Permissions.ReservationsStatus, Permissions.PaymentsTake,
-                Permissions.CatalogManage, Permissions.QueueView, Permissions.LabView
+                Permissions.CatalogManage, Permissions.QueueView, Permissions.LabView,
+                Permissions.StockView, Permissions.StockIssue
             },
             Reception => new[]
             {
@@ -62,12 +65,17 @@ namespace ClinicReservation.Models
             Lab => new[]
             {
                 Permissions.PatientsView, Permissions.ReservationsView,
-                Permissions.LabView, Permissions.LabWork, Permissions.LabValidate
+                Permissions.LabView, Permissions.LabWork, Permissions.LabValidate,
+                Permissions.StockView, Permissions.StockIssue
+            },
+            Storekeeper => new[]
+            {
+                Permissions.PatientsView, Permissions.StockView, Permissions.StockIssue, Permissions.StockManage
             },
             Manager => new[]
             {
                 Permissions.PatientsView, Permissions.ReservationsView, Permissions.KassaTotals,
-                Permissions.ReportsView, Permissions.AuditView, Permissions.QueueView
+                Permissions.ReportsView, Permissions.AuditView, Permissions.QueueView, Permissions.StockView
             },
             _ => Array.Empty<string>()
         };
@@ -97,6 +105,9 @@ namespace ClinicReservation.Models
         public const string LabView = "lab.view";
         public const string LabWork = "lab.work";
         public const string LabValidate = "lab.validate";
+        public const string StockView = "stock.view";
+        public const string StockIssue = "stock.issue";
+        public const string StockManage = "stock.manage";
 
         public record Info(string Code, string Group, string Label);
 
@@ -114,6 +125,9 @@ namespace ClinicReservation.Models
             new(LabView, "Laboratoriya", "Analiz nəticələrinə baxmaq və çap etmək"),
             new(LabWork, "Laboratoriya", "Nümunə götürmək, nəticə yazmaq"),
             new(LabValidate, "Laboratoriya", "Nəticəni təsdiqləmək və xəstəyə göndərmək"),
+            new(StockView, "Aptek və anbar", "Qalıqlara, son istifadə tarixlərinə baxmaq"),
+            new(StockIssue, "Aptek və anbar", "Material silmək, xəstəyə dərman vermək"),
+            new(StockManage, "Aptek və anbar", "Mədaxil, köçürmə, inventarizasiya, məhsul kataloqu, alış qiymətləri"),
             new(PaymentsTake, "Kassa", "Ödəniş qəbul etmək"),
             new(PaymentsRefund, "Kassa", "Geri qaytarma etmək"),
             new(KassaTotals, "Kassa", "Kassa cəmlərini və məbləğləri görmək"),

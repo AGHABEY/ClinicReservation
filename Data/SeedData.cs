@@ -20,6 +20,7 @@ namespace ClinicReservation.Data
             await context.Database.MigrateAsync();
 
             await SeedStatusesAsync(context);
+            await SeedWarehouseAsync(context);
             await SeedRolesAndAdminAsync(provider);
         }
 
@@ -32,6 +33,14 @@ namespace ClinicReservation.Data
                 if (!existing.Contains(name))
                     context.ReserveStatuses.Add(new ReserveStatus { Name = name });
             }
+            await context.SaveChangesAsync();
+        }
+
+        /// <summary>Stock needs at least one warehouse to receive into.</summary>
+        private static async Task SeedWarehouseAsync(AppDbContext context)
+        {
+            if (await context.Warehouses.AnyAsync()) return;
+            context.Warehouses.Add(new Warehouse { Name = "Mərkəzi anbar", IsMain = true });
             await context.SaveChangesAsync();
         }
 

@@ -28,6 +28,13 @@ namespace ClinicReservation.Data
         public DbSet<ExaminationTypeLabTest> ExaminationTypeLabTests { get; set; }
         public DbSet<LabOrder> LabOrders { get; set; }
         public DbSet<LabResult> LabResults { get; set; }
+        public DbSet<StockItem> StockItems { get; set; }
+        public DbSet<Warehouse> Warehouses { get; set; }
+        public DbSet<Supplier> Suppliers { get; set; }
+        public DbSet<StockBatch> StockBatches { get; set; }
+        public DbSet<StockDocument> StockDocuments { get; set; }
+        public DbSet<StockMovement> StockMovements { get; set; }
+        public DbSet<ExaminationTypeStockItem> ExaminationTypeStockItems { get; set; }
         public DbSet<AppUser> AppUsers { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -124,6 +131,94 @@ namespace ClinicReservation.Data
                     .HasForeignKey(r => r.LabOrderId).OnDelete(DeleteBehavior.Cascade);
                 e.HasOne(r => r.LabTest).WithMany()
                     .HasForeignKey(r => r.LabTestId).OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<StockItem>(e =>
+            {
+                e.HasIndex(i => i.Code).IsUnique();
+                e.HasIndex(i => i.Name);
+                e.Property(i => i.Name).HasMaxLength(200);
+                e.Property(i => i.Code).HasMaxLength(50);
+                e.Property(i => i.Form).HasMaxLength(100);
+                e.Property(i => i.Unit).HasMaxLength(20);
+                e.Property(i => i.Note).HasMaxLength(500);
+                e.Property(i => i.MinQuantity).HasPrecision(18, 3);
+            });
+
+            builder.Entity<Warehouse>(e =>
+            {
+                e.Property(w => w.Name).HasMaxLength(100);
+                e.HasOne(w => w.Department).WithMany()
+                    .HasForeignKey(w => w.DepartmentId).OnDelete(DeleteBehavior.SetNull);
+            });
+
+            builder.Entity<Supplier>(e =>
+            {
+                e.Property(s => s.Name).HasMaxLength(200);
+                e.Property(s => s.Voen).HasMaxLength(20);
+                e.Property(s => s.Phone).HasMaxLength(32);
+                e.Property(s => s.Note).HasMaxLength(500);
+            });
+
+            builder.Entity<StockBatch>(e =>
+            {
+                e.HasIndex(b => new { b.StockItemId, b.WarehouseId });
+                e.HasIndex(b => b.ExpiryDate);
+                e.Property(b => b.BatchNo).HasMaxLength(50);
+                e.Property(b => b.Quantity).HasPrecision(18, 3);
+                e.Property(b => b.UnitCost).HasPrecision(18, 4);
+                e.HasOne(b => b.StockItem).WithMany(i => i.Batches)
+                    .HasForeignKey(b => b.StockItemId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(b => b.Warehouse).WithMany()
+                    .HasForeignKey(b => b.WarehouseId).OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<StockDocument>(e =>
+            {
+                e.HasIndex(d => d.Date);
+                e.HasIndex(d => d.ReserveId);
+                e.Property(d => d.Number).HasMaxLength(20);
+                e.Property(d => d.InvoiceNo).HasMaxLength(50);
+                e.Property(d => d.Reason).HasMaxLength(100);
+                e.Property(d => d.Note).HasMaxLength(1000);
+                e.Property(d => d.CancelReason).HasMaxLength(300);
+                e.HasOne(d => d.FromWarehouse).WithMany()
+                    .HasForeignKey(d => d.FromWarehouseId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(d => d.ToWarehouse).WithMany()
+                    .HasForeignKey(d => d.ToWarehouseId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(d => d.Supplier).WithMany()
+                    .HasForeignKey(d => d.SupplierId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(d => d.Patient).WithMany()
+                    .HasForeignKey(d => d.PatientId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(d => d.Reserve).WithMany()
+                    .HasForeignKey(d => d.ReserveId).OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<StockMovement>(e =>
+            {
+                e.HasIndex(m => new { m.StockItemId, m.At });
+                e.HasIndex(m => new { m.WarehouseId, m.At });
+                e.Property(m => m.Quantity).HasPrecision(18, 3);
+                e.Property(m => m.Counted).HasPrecision(18, 3);
+                e.Property(m => m.UnitCost).HasPrecision(18, 4);
+                e.HasOne(m => m.StockDocument).WithMany(d => d.Movements)
+                    .HasForeignKey(m => m.StockDocumentId).OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(m => m.StockItem).WithMany()
+                    .HasForeignKey(m => m.StockItemId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(m => m.StockBatch).WithMany()
+                    .HasForeignKey(m => m.StockBatchId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(m => m.Warehouse).WithMany()
+                    .HasForeignKey(m => m.WarehouseId).OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<ExaminationTypeStockItem>(e =>
+            {
+                e.HasKey(x => new { x.ExaminationTypeId, x.StockItemId });
+                e.Property(x => x.Quantity).HasPrecision(18, 3);
+                e.HasOne(x => x.ExaminationType).WithMany(x => x.Materials)
+                    .HasForeignKey(x => x.ExaminationTypeId).OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(x => x.StockItem).WithMany()
+                    .HasForeignKey(x => x.StockItemId).OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<SmsMessage>(e =>

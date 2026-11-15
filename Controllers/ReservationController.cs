@@ -291,7 +291,7 @@ namespace ClinicReservation.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [HasPermission(Permissions.ReservationsManage, Permissions.ReservationsStatus)]
-        public IActionResult Transition(int id, string to, string? returnTo)
+        public IActionResult Transition(int id, string to, string? returnTo, [FromServices] StockService stock)
         {
             var res = _context.Reserves.Include(r => r.Status).Include(r => r.Patient).FirstOrDefault(rs => rs.Id == id);
             if (res == null)
@@ -323,6 +323,11 @@ namespace ClinicReservation.Controllers
                 TempData["Success"] = to == StatusNames.Arrived
                     ? $"{res.Patient.FullName} — gəldi. Növbə talonu: {res.QueueTicket}"
                     : $"{res.Patient.FullName} — {StatusNames.Label(to)}";
+                if (to == StatusNames.Completed)
+                {
+                    var warn = StockService.Warning(stock.ConsumeForReserve(res.Id, false, User.Identity?.Name));
+                    if (warn != null) TempData["Error"] = warn;
+                }
             }
 
             return returnTo switch
@@ -368,6 +373,15 @@ namespace ClinicReservation.Controllers
             var res = LoadReserve(id);
             if (res == null)
                 return NotFound();
+            if (User.CanAny(Permissions.StockView, Permissions.StockIssue, Permissions.StockManage))
+            {
+                ViewBag.StockDocs = _context.StockDocuments.Include(d => d.Movements).ThenInclude(m => m.StockItem)
+                    .Include(d => d.FromWarehouse)
+                    .Where(d => d.ReserveId == id).OrderBy(d => d.CreatedAt).ToList();
+                // Completed, but some service's materials were never taken (e.g. stock failed at that moment).
+                ViewBag.StockPending = res.Status?.Name == StatusNames.Completed
+                    && _context.ReserveExaminationTypes.Any(x => x.ReserveId == id && x.StockConsumedAt == null && x.ExaminationType.Materials.Any());
+            }
             if (User.CanAny(Permissions.LabView, Permissions.LabWork))
             {
                 ViewBag.LabOrders = _context.LabOrders.Include(o => o.Results).ThenInclude(r => r.LabTest)

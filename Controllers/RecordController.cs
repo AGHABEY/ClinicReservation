@@ -131,6 +131,12 @@ namespace ClinicReservation.Controllers
                 _audit.Log("Status dəyişdi", AuditEntities.Reservation, reserve.Id, $"{patient.FullName}: Qəbulda → Tamamlandı");
 
             TempData["Success"] = finish ? $"{patient.FullName} — qəbul tamamlandı, tibbi qeyd saxlanıldı" : "Tibbi qeyd saxlanıldı";
+            if (finish && reserve.Status?.Name == StatusNames.Completed)
+            {
+                var warn = StockService.Warning(HttpContext.RequestServices.GetRequiredService<StockService>()
+                    .ConsumeForReserve(reserve.Id, false, userName));
+                if (warn != null) TempData["Error"] = warn;
+            }
             return finish
                 ? RedirectToAction(nameof(Show), new { id = rec.Id })
                 : RedirectToAction(nameof(Edit), new { reserveId = reserve.Id });

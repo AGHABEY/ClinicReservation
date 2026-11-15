@@ -88,6 +88,10 @@ namespace ClinicReservation.Controllers
                 _audit.Log("Nümunə götürüldü", AuditEntities.Lab, o.Id, $"{reserve.Patient.FullName}, barkod {o.Barcode}, {o.Results.Count} analiz");
 
             TempData["Success"] = $"Nümunə götürüldü: {string.Join(", ", orders.Select(o => o.Barcode))}";
+            // Tubes, needles, reagents of the lab services leave stock when the sample is taken.
+            var warn = StockService.Warning(HttpContext.RequestServices.GetRequiredService<StockService>()
+                .ConsumeForReserve(reserveId, true, User.Identity?.Name));
+            if (warn != null) TempData["Error"] = warn;
             TempData["PrintLabels"] = string.Join(",", orders.Select(o => o.Id));
             return returnTo == "reservation"
                 ? RedirectToAction("Details", "Reservation", new { id = reserveId })

@@ -44,6 +44,7 @@ namespace ClinicReservation.Services
         public const string MedicalRecord = "Tibbi qeyd";
         public const string Sms = "SMS";
         public const string Lab = "Laboratoriya";
+        public const string Stock = "Anbar";
         public const string Doctor = "Həkim";
         public const string Catalog = "Sazlama";
         public const string User = "İstifadəçi";

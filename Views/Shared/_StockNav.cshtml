@@ -1,0 +1,18 @@
+@{
+    var c = ViewContext.RouteData.Values["controller"]?.ToString();
+    var a = ViewContext.RouteData.Values["action"]?.ToString();
+    string On(string controller, params string[] actions) => c == controller && (actions.Length == 0 || actions.Contains(a)) ? "on" : "";
+    var manage = User.Can(Permissions.StockManage);
+}
+<div class="seg seg-scroll" style="margin-bottom:20px;">
+    <a class="@On("Stock", "Index", "Item")" asp-controller="Stock" asp-action="Index">Qalıqlar</a>
+    <a class="@On("Stock", "Expiry")" asp-controller="Stock" asp-action="Expiry">Son istifadə tarixi</a>
+    <a class="@On("StockDoc")" asp-controller="StockDoc" asp-action="Index">Sənədlər</a>
+    <a class="@On("Stock", "Report")" asp-controller="Stock" asp-action="Report">Dövriyyə</a>
+    @if (manage)
+    {
+        <a class="@On("StockItem", "Index", "Create", "Edit", "Save")" asp-controller="StockItem" asp-action="Index">Məhsullar</a>
+        <a class="@On("StockItem", "Warehouses")" asp-controller="StockItem" asp-action="Warehouses">Anbarlar</a>
+        <a class="@On("StockItem", "Suppliers")" asp-controller="StockItem" asp-action="Suppliers">Təchizatçılar</a>
+    }
+</div>

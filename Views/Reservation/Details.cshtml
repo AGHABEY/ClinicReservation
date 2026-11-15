@@ -13,6 +13,10 @@
     var labOrders = ViewBag.LabOrders as List<LabOrder>;
     var labPending = ViewBag.LabPending as List<LabTest>;
     var showLab = labOrders != null && (labOrders.Any() || labPending!.Any());
+    var stockDocs = ViewBag.StockDocs as List<StockDocument>;
+    var stockPending = ViewBag.StockPending as bool? ?? false;
+    var canIssue = User.CanAny(Permissions.StockIssue, Permissions.StockManage);
+    var showStock = stockDocs != null && (stockDocs.Any() || stockPending || (canIssue && visited));
     var showRecord = User.CanAny(Permissions.RecordsView, Permissions.RecordsEdit) && (Model.MedicalRecord != null || visited);
     ViewData["ReturnTo"] = "details";
     ViewData["Small"] = false;
@@ -213,6 +217,46 @@ else if (Model.Status?.Name == StatusNames.NoShow)
                 @if (TempData["PrintLabels"] is string labels)
                 {
                     <a class="btn btn-light btn-sm" style="margin-top:8px;" asp-controller="Lab" asp-action="Label" asp-route-ids="@labels" asp-route-print="1" target="_blank" rel="noopener"><i class="bi bi-printer"></i> Etiketi çap et</a>
+                }
+            </div>
+        }
+
+        @if (showStock)
+        {
+            <div class="card card-pad">
+                <div class="flex-between" style="margin-bottom:10px;">
+                    <h3 class="card-title" style="margin:0;"><i class="bi bi-box-seam"></i> Materiallar</h3>
+                    @if (canIssue && visited)
+                    {
+                        <a class="btn btn-ghost btn-sm" asp-controller="StockDoc" asp-action="WriteOff" asp-route-reserveId="@Model.Id"><i class="bi bi-plus-lg"></i> Sərfiyyat yaz</a>
+                    }
+                </div>
+                @foreach (var d in stockDocs!)
+                {
+                    var off = d.Status == StockDocStatus.Cancelled;
+                    <a class="line-item quick-link @(off ? "row-muted" : "")" style="margin-bottom:8px;" asp-controller="StockDoc" asp-action="Details" asp-route-id="@d.Id">
+                        <span style="min-width:0;">
+                            <span style="font-weight:600;">@d.Number</span> <span class="hint-text">@StockLabels.Doc(d.Type)@(off ? " · ləğv edilib" : "")</span>
+                            <span class="hint-text" style="display:block;">@(d.Lines.Any() ? string.Join(", ", d.Lines.GroupBy(m => m.StockItem).Select(g => $"{g.Key.Name} × {StockService.Qty(-g.Sum(m => m.Quantity))}")) : "sətir yoxdur")</span>
+                        </span>
+                        <i class="bi bi-chevron-right text-muted"></i>
+                    </a>
+                    @if (!off && d.Note != null && d.Type == StockDocType.Consumption)
+                    {
+                        <div class="lab-alert" style="margin:-2px 0 8px; background:var(--warn-bg); color:var(--warn);"><i class="bi bi-exclamation-triangle-fill"></i> @d.Note</div>
+                    }
+                }
+                @if (!stockDocs.Any() && !stockPending)
+                {
+                    <p class="hint-text" style="margin:0;">Bu qəbulda anbardan material silinməyib.</p>
+                }
+                @if (stockPending && canIssue)
+                {
+                    <p class="hint-text" style="margin:4px 0 10px;">Xidmətlərin materialları hələ anbardan silinməyib.</p>
+                    <form asp-controller="StockDoc" asp-action="ConsumeReserve" method="post">
+                        <input type="hidden" name="reserveId" value="@Model.Id" />
+                        <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-box-arrow-up"></i> Materialları sil</button>
+                    </form>
                 }
             </div>
         }

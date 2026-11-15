@@ -1,0 +1,17 @@
+@{
+    var manage = User.Can(Permissions.StockManage);
+    var issue = User.CanAny(Permissions.StockIssue, Permissions.StockManage);
+}
+@if (manage)
+{
+    <a class="btn btn-light" asp-controller="StockDoc" asp-action="Count"><i class="bi bi-list-check"></i> İnventarizasiya</a>
+    <a class="btn btn-light" asp-controller="StockDoc" asp-action="Transfer"><i class="bi bi-arrow-left-right"></i> Köçürmə</a>
+}
+@if (issue)
+{
+    <a class="btn btn-light" asp-controller="StockDoc" asp-action="WriteOff"><i class="bi bi-box-arrow-up"></i> Silinmə</a>
+}
+@if (manage)
+{
+    <a class="btn btn-primary" asp-controller="StockDoc" asp-action="Receipt"><i class="bi bi-box-arrow-in-down"></i> Mədaxil</a>
+}
