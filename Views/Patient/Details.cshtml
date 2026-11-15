@@ -8,6 +8,9 @@
     var totalPaid = visits.Sum(r => r.Paid);
     var balance = visits.Sum(r => r.AmountDue - r.Paid);
     var canMoney = User.CanAny(Permissions.PaymentsTake, Permissions.KassaTotals);
+    var records = ViewBag.Records as List<MedicalRecord>;
+    // Allergies matter for anyone treating the patient; other staff don't see medical details.
+    var seeMedical = User.CanAny(Permissions.RecordsView, Permissions.RecordsEdit);
 }
 
 <div class="page-head">
@@ -30,6 +33,14 @@
     </div>
 </div>
 
+@if (seeMedical && !string.IsNullOrWhiteSpace(Model.Allergies))
+{
+    <div class="med-alert" style="margin-bottom:12px;"><i class="bi bi-exclamation-octagon-fill"></i><span><strong>Allergiya:</strong> @Model.Allergies</span></div>
+}
+@if (seeMedical && !string.IsNullOrWhiteSpace(Model.ChronicConditions))
+{
+    <div class="med-alert chronic" style="margin-bottom:20px;"><i class="bi bi-heart-pulse-fill"></i><span><strong>Xroniki xəstəliklər:</strong> @Model.ChronicConditions</span></div>
+}
 @if (!string.IsNullOrEmpty(Model.Notes))
 {
     <div class="alert alert-warning"><i class="bi bi-sticky-fill"></i> <strong>Qeyd:</strong> @Model.Notes</div>
@@ -89,6 +100,28 @@
                 </dl>
             </div>
         </div>
+        @if (records != null)
+        {
+            <div class="card">
+                <div class="card-pad">
+                    <h3 class="card-title"><i class="bi bi-file-earmark-medical"></i> Tibbi tarixçə</h3>
+                    @if (records.Any())
+                    {
+                        @foreach (var m in records)
+                        {
+                            <a class="history-item" asp-controller="Record" asp-action="Show" asp-route-id="@m.Id">
+                                <div class="d">@Fmt.Date(m.CreatedAt) · @(m.Doctor?.FullName ?? "—")</div>
+                                <div class="t">@if (m.IcdCode != null) {<span class="icd">@m.IcdCode</span>}@(m.Diagnosis ?? "Diaqnoz yazılmayıb")</div>
+                            </a>
+                        }
+                    }
+                    else
+                    {
+                        <p class="hint-text" style="margin:0;">Hələ tibbi qeyd yoxdur.</p>
+                    }
+                </div>
+            </div>
+        }
         @if (upcoming.Any())
         {
             <div class="card">

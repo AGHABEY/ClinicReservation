@@ -74,6 +74,17 @@ Tələblər: .NET 8 SDK + işləyən PostgreSQL.
 - **Audit jurnalı** — kim nə vaxt nə etdi: girişlər, xəstə kartına baxış, rezervasiya və
   status dəyişiklikləri, ödənişlər, istifadəçi və icazə dəyişiklikləri
 - **İstifadəçilər** — yaratma, rol, şifrə sıfırlama, silmə; öz şifrəsini dəyişmə
+- **Elektron növbə** — xəstə «Gəldi» qeyd olunanda talon alır (məs. `K-007`; hərf şöbədə
+  seçilir), talon 80 mm çekdə çap olunur. Gözləmə zalı üçün tam ekran **növbə ekranı**:
+  çağırılan talon → kabinet, növbədə olanlar, səs siqnalı; xəstə adı göstərilmir
+- **Həkimin iş masası** — günün növbəsi, gözləmə vaxtı, «Növbəti xəstəni çağır»,
+  cari xəstə (allergiya xəbərdarlığı ilə), qəbula başla / bitir, orta gözləmə vaxtı
+- **Tibbi kart** — hər vizit üçün şikayət, anamnez, obyektiv müayinə, BXT-10 kodu ilə diaqnoz,
+  müalicə, resept, tövsiyələr, kontrol qəbulu; A4 formatda çap / PDF. Allergiya və xroniki
+  xəstəliklər xəstə kartında qırmızı xəbərdarlıq kimi görünür. Həkim yalnız öz xəstəsinə
+  qeyd yaza bilər; hər baxış və dəyişiklik audit jurnalına düşür
+- **SMS xatırlatma** — qəbuldan 24 saat əvvəl avtomatik SMS; içindəki linklə xəstə girişsiz
+  «Gələcəyəm» və ya «Gələ bilməyəcəyəm» seçir. SMS jurnalı, əl ilə göndəriş, sakit saatlar
 
 ## 🚦 İlk quraşdırma
 
@@ -81,6 +92,31 @@ Tələblər: .NET 8 SDK + işləyən PostgreSQL.
 2. «Həkimlər» səhifəsində həkimləri və onların həftəlik qrafikini qurun.
 3. «Müayinələr»də müayinələri şöbələrə bağlayın (istəyə bağlı).
 4. «İstifadəçilər»də işçilərə rol verin, həkimlərə öz loginini bağlayın.
+5. Şöbələrə talon hərfi verin (məs. Kardiologiya → `K`) və gözləmə zalındakı TV-də
+   «Növbə ekranı»nı açın (növbə ekranı icazəsi olan ayrıca istifadəçi ilə).
+
+## 📱 SMS sazlamaları
+
+Default olaraq SMS **test rejimindədir**: heç nə göndərilmir, mesajlar yalnız
+«SMS xatırlatmaları» səhifəsindəki jurnala yazılır. Real göndəriş üçün `appsettings.json` → `Sms`:
+
+```json
+"Sms": {
+  "Provider": "Http",
+  "PublicBaseUrl": "https://clinic.example.az",
+  "Http": {
+    "Url": "https://provayder.az/send?login=...&key=...&msisdn={phone}&text={text}",
+    "SuccessContains": ""
+  }
+}
+```
+
+- `{phone}` → `994501234567` formatında nömrə, `{text}` → mesaj (URL-encode olunur).
+- `PublicBaseUrl` — xəstənin açacağı təsdiq linkinin ünvanı (internetdən açılmalıdır).
+- `ReminderHoursBefore` (24), `MinLeadHours` (3), `QuietStart`/`QuietEnd` (21:00–09:00),
+  `AsciiOnly` (ə, ş, ç… latın hərfi ilə əvəz olunur — 1 SMS 160 simvol olur).
+- Provayder açarlarını repozitoriyaya yazmayın: environment dəyişəni ilə verin, məs.
+  `Sms__Http__Url`.
 
 ## 🕘 Default iş saatı
 

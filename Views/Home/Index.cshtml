@@ -163,6 +163,15 @@
         </div>
     }
 
+    @if (Model.MyDoctor != null && User.Can(Permissions.QueueCall))
+    {
+        <a class="card card-pad quick-link" asp-controller="Workspace" asp-action="Index" style="display:flex; align-items:center; gap:14px;">
+            <span class="ticket" style="min-width:44px;"><i class="bi bi-clipboard2-heart"></i></span>
+            <span style="flex:1;"><strong style="display:block;">İş masasını aç</strong><span class="hint-text">@Model.WaitingRoomCount xəstə növbədə gözləyir</span></span>
+            <i class="bi bi-chevron-right"></i>
+        </a>
+    }
+
     @if (Model.MyDoctor == null && User.Can(Permissions.CatalogManage))
     {
         <div class="card card-pad">

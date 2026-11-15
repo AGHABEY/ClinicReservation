@@ -56,6 +56,17 @@ builder.Services.Configure<SecurityStampValidatorOptions>(o => o.ValidationInter
 builder.Services.Configure<ClinicReservation.Models.ClinicOptions>(builder.Configuration.GetSection("Clinic"));
 builder.Services.AddScoped<ClinicReservation.Services.SlotService>();
 builder.Services.AddScoped<ClinicReservation.Services.AuditService>();
+builder.Services.AddScoped<ClinicReservation.Services.QueueService>();
+
+// SMS: "Log" = test mode (messages only appear in the SMS log), "Http" = real gateway.
+builder.Services.Configure<ClinicReservation.Models.SmsOptions>(builder.Configuration.GetSection("Sms"));
+if (string.Equals(builder.Configuration["Sms:Provider"], "Http", StringComparison.OrdinalIgnoreCase))
+    builder.Services.AddHttpClient<ClinicReservation.Services.ISmsSender, ClinicReservation.Services.HttpSmsSender>(c => c.Timeout = TimeSpan.FromSeconds(15));
+else
+    builder.Services.AddSingleton<ClinicReservation.Services.ISmsSender, ClinicReservation.Services.LogSmsSender>();
+builder.Services.AddScoped<ClinicReservation.Services.SmsService>();
+builder.Services.AddSingleton<ClinicReservation.Services.ReminderWorker>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<ClinicReservation.Services.ReminderWorker>());
 builder.Services.AddHttpContextAccessor();
 
 // Permission-based authorization: [HasPermission(Permissions.X)] on controllers/actions.

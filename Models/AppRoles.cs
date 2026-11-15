@@ -27,19 +27,24 @@ namespace ClinicReservation.Models
             _ => role ?? "—"
         };
 
-        /// <summary>Permissions given to a built-in role the first time it is created.</summary>
+        /// <summary>
+        /// Permissions given to a built-in role the first time it is created.
+        /// A permission added in a later version is also granted once to the
+        /// roles listed here (see SeedData), as long as no role has it yet.
+        /// </summary>
         public static string[] DefaultPermissions(string role) => role switch
         {
             Staff => new[]
             {
                 Permissions.PatientsView, Permissions.PatientsEdit, Permissions.ReservationsView,
                 Permissions.ReservationsManage, Permissions.ReservationsStatus, Permissions.PaymentsTake,
-                Permissions.CatalogManage
+                Permissions.CatalogManage, Permissions.QueueView
             },
             Reception => new[]
             {
                 Permissions.PatientsView, Permissions.PatientsEdit, Permissions.ReservationsView,
-                Permissions.ReservationsManage, Permissions.ReservationsStatus, Permissions.PaymentsTake
+                Permissions.ReservationsManage, Permissions.ReservationsStatus, Permissions.PaymentsTake,
+                Permissions.QueueView, Permissions.QueueCall, Permissions.SmsManage
             },
             Cashier => new[]
             {
@@ -48,12 +53,13 @@ namespace ClinicReservation.Models
             },
             Doctor => new[]
             {
-                Permissions.PatientsView, Permissions.ReservationsView, Permissions.ReservationsStatus
+                Permissions.PatientsView, Permissions.ReservationsView, Permissions.ReservationsStatus,
+                Permissions.QueueView, Permissions.QueueCall, Permissions.RecordsView, Permissions.RecordsEdit
             },
             Manager => new[]
             {
                 Permissions.PatientsView, Permissions.ReservationsView, Permissions.KassaTotals,
-                Permissions.ReportsView, Permissions.AuditView
+                Permissions.ReportsView, Permissions.AuditView, Permissions.QueueView
             },
             _ => Array.Empty<string>()
         };
@@ -75,6 +81,11 @@ namespace ClinicReservation.Models
         public const string CatalogManage = "catalog.manage";
         public const string UsersManage = "users.manage";
         public const string AuditView = "audit.view";
+        public const string QueueView = "queue.view";
+        public const string QueueCall = "queue.call";
+        public const string RecordsView = "records.view";
+        public const string RecordsEdit = "records.edit";
+        public const string SmsManage = "sms.manage";
 
         public record Info(string Code, string Group, string Label);
 
@@ -85,6 +96,10 @@ namespace ClinicReservation.Models
             new(ReservationsView, "Rezervasiyalar", "Rezervasiyalara baxmaq"),
             new(ReservationsManage, "Rezervasiyalar", "Yaratmaq, dəyişmək, təsdiq və ləğv etmək"),
             new(ReservationsStatus, "Rezervasiyalar", "Qəbula başlamaq və tamamlamaq"),
+            new(QueueView, "Növbə", "Növbə ekranı (gözləmə zalı)"),
+            new(QueueCall, "Növbə", "Həkim iş masası, xəstəni çağırmaq"),
+            new(RecordsView, "Tibbi kart", "Tibbi qeydlərə və diaqnozlara baxmaq"),
+            new(RecordsEdit, "Tibbi kart", "Tibbi qeyd yazmaq, allergiyaları dəyişmək"),
             new(PaymentsTake, "Kassa", "Ödəniş qəbul etmək"),
             new(PaymentsRefund, "Kassa", "Geri qaytarma etmək"),
             new(KassaTotals, "Kassa", "Kassa cəmlərini və məbləğləri görmək"),
@@ -92,6 +107,7 @@ namespace ClinicReservation.Models
             new(AuditView, "Rəhbərlik", "Audit jurnalı"),
             new(CatalogManage, "Sazlamalar", "Həkimlər, şöbələr, kabinetlər, müayinələr"),
             new(UsersManage, "Sazlamalar", "İstifadəçilər və rollar"),
+            new(SmsManage, "Sazlamalar", "SMS jurnalı, xatırlatma göndərmək"),
         };
     }
 }

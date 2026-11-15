@@ -1,0 +1,101 @@
+@model MedicalRecord
+@{
+    var p = Model.Patient;
+    ViewData["Title"] = $"Tibbi qeyd — {p.FullName}";
+    var canWrite = ViewBag.CanWrite as bool? ?? false;
+    var followUp = Model.FollowUpDays == null ? (DateTime?)null : Model.CreatedAt.Date.AddDays(Model.FollowUpDays.Value);
+
+    (string Label, string? Text)[] sections =
+    {
+        ("Şikayətlər", Model.Complaint),
+        ("Anamnez", Model.Anamnesis),
+        ("Obyektiv müayinə", Model.Examination),
+        ("Müalicə planı", Model.Treatment),
+        ("Resept", Model.Prescription),
+        ("Tövsiyələr", Model.Recommendations),
+    };
+}
+
+<div class="page-head">
+    <div style="display:flex; align-items:center; gap:16px;">
+        <span class="avatar-lg">@Fmt.Initials(p.FullName)</span>
+        <div>
+            <h2>@p.FullName</h2>
+            <p>Tibbi qeyd · @Fmt.Date(Model.CreatedAt) · @(Model.Doctor?.FullName ?? "—")</p>
+        </div>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-light" asp-controller="Patient" asp-action="Details" asp-route-id="@p.Id"><i class="bi bi-person-vcard"></i> Xəstə kartı</a>
+        <a class="btn btn-light" asp-controller="Reservation" asp-action="Details" asp-route-id="@Model.ReserveId"><i class="bi bi-calendar-event"></i> Rezervasiya</a>
+        @if (canWrite)
+        {
+            <a class="btn btn-light" asp-action="Edit" asp-route-reserveId="@Model.ReserveId"><i class="bi bi-pencil"></i> Düzəliş</a>
+        }
+        <a class="btn btn-primary" asp-action="Print" asp-route-id="@Model.Id" target="_blank" rel="noopener"><i class="bi bi-printer"></i> Çap / PDF</a>
+    </div>
+</div>
+
+@if (!string.IsNullOrWhiteSpace(p.Allergies))
+{
+    <div class="med-alert" style="margin-bottom:12px;"><i class="bi bi-exclamation-octagon-fill"></i><span><strong>Allergiya:</strong> @p.Allergies</span></div>
+}
+@if (!string.IsNullOrWhiteSpace(p.ChronicConditions))
+{
+    <div class="med-alert chronic" style="margin-bottom:20px;"><i class="bi bi-heart-pulse-fill"></i><span><strong>Xroniki:</strong> @p.ChronicConditions</span></div>
+}
+
+<div class="detail-grid">
+    <div class="card card-pad">
+        <div class="diagnosis-box">
+            <div class="label">Diaqnoz</div>
+            <div class="value">@if (Model.IcdCode != null) {<span class="icd">@Model.IcdCode</span>}@(Model.Diagnosis ?? "Yazılmayıb")</div>
+        </div>
+        <dl class="record-view">
+            @foreach (var (label, text) in sections.Where(s => !string.IsNullOrWhiteSpace(s.Text)))
+            {
+                <dt>@label</dt>
+                <dd>@text</dd>
+            }
+        </dl>
+        @if (sections.All(s => string.IsNullOrWhiteSpace(s.Text)))
+        {
+            <p class="hint-text" style="margin:0;">Başqa qeyd yazılmayıb.</p>
+        }
+    </div>
+
+    <div class="stack">
+        <div class="card card-pad">
+            <h3 class="card-title"><i class="bi bi-info-circle"></i> Vizit</h3>
+            <dl class="detail-list">
+                <div class="detail-row"><dt>Tarix</dt><dd>@Fmt.DateTime(Model.Reserve.AppointmentAt)</dd></div>
+                <div class="detail-row"><dt>Həkim</dt><dd>@(Model.Doctor?.FullName ?? "—")</dd></div>
+                <div class="detail-row"><dt>Müayinə</dt><dd>@string.Join(", ", Model.Reserve.ReserveExaminationTypes!.Select(x => x.ExaminationType.Name))</dd></div>
+                <div class="detail-row"><dt>Status</dt><dd><partial name="_StatusBadge" model="Model.Reserve.Status?.Name" /></dd></div>
+                <div class="detail-row"><dt>Yazıb</dt><dd>@Model.CreatedBy · @Fmt.DateTime(Model.CreatedAt)</dd></div>
+                @if (Model.UpdatedAt != null)
+                {
+                    <div class="detail-row"><dt>Dəyişib</dt><dd>@Model.UpdatedBy · @Fmt.DateTime(Model.UpdatedAt)</dd></div>
+                }
+            </dl>
+        </div>
+
+        @if (followUp != null)
+        {
+            <div class="card card-pad">
+                <h3 class="card-title"><i class="bi bi-arrow-repeat"></i> Kontrol qəbulu</h3>
+                <p style="margin:0 0 14px;">@Model.FollowUpDays gün sonra — <strong>@Fmt.Date(followUp)</strong></p>
+                @if (User.Can(Permissions.ReservationsManage))
+                {
+                    <a class="btn btn-primary w-100" asp-controller="Reservation" asp-action="Add"
+                       asp-route-patientId="@p.Id" asp-route-doctorId="@Model.DoctorId" asp-route-date="@followUp.Value.ToString("yyyy-MM-dd")">
+                        <i class="bi bi-calendar-plus"></i> Rezervasiya yarat
+                    </a>
+                }
+                else
+                {
+                    <p class="hint-text" style="margin:0;">Resepsiya kontrol qəbulunu bu tarixə yazacaq.</p>
+                }
+            </div>
+        }
+    </div>
+</div>

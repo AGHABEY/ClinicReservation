@@ -38,9 +38,15 @@ namespace ClinicReservation.Controllers
 
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public IActionResult SaveDepartment(int id, string? name, bool isActive = true)
+        public IActionResult SaveDepartment(int id, string? name, string? queuePrefix, bool isActive = true)
         {
             name = name?.Trim();
+            queuePrefix = string.IsNullOrWhiteSpace(queuePrefix) ? null : queuePrefix.Trim().ToUpperInvariant();
+            if (queuePrefix != null && !System.Text.RegularExpressions.Regex.IsMatch(queuePrefix, "^[A-Z]{1,3}$"))
+            {
+                TempData["Error"] = "Talon hərfi 1–3 latın hərfi olmalıdır (məs: K)";
+                return RedirectToAction(nameof(Index));
+            }
             if (string.IsNullOrEmpty(name))
             {
                 TempData["Error"] = "Şöbənin adı boş ola bilməz";
@@ -56,10 +62,11 @@ namespace ClinicReservation.Controllers
             if (dep == null) return NotFound();
             var isNew = id == 0;
             dep.Name = name;
+            dep.QueuePrefix = queuePrefix;
             dep.IsActive = isNew || isActive;
             if (isNew) _context.Departments.Add(dep);
             _context.SaveChanges();
-            _audit.Log(isNew ? "Şöbə əlavə edildi" : "Şöbə dəyişdirildi", AuditEntities.Catalog, dep.Id, $"{dep.Name}{(dep.IsActive ? "" : " (deaktiv)")}");
+            _audit.Log(isNew ? "Şöbə əlavə edildi" : "Şöbə dəyişdirildi", AuditEntities.Catalog, dep.Id, $"{dep.Name}, talon {dep.QueuePrefix ?? QueueService.DefaultPrefix}{(dep.IsActive ? "" : " (deaktiv)")}");
             TempData["Success"] = isNew ? $"«{name}» şöbəsi əlavə edildi" : "Şöbə yeniləndi";
             return RedirectToAction(nameof(Index));
         }

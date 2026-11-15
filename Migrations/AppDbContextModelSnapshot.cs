@@ -79,6 +79,10 @@ namespace ClinicReservation.Migrations
                         .IsRequired()
                         .HasColumnType("text");
 
+                    b.Property<string>("QueuePrefix")
+                        .HasMaxLength(3)
+                        .HasColumnType("character varying(3)");
+
                     b.HasKey("Id");
 
                     b.ToTable("Departments");
@@ -215,6 +219,82 @@ namespace ClinicReservation.Migrations
                     b.ToTable("ExaminationTypes");
                 });
 
+            modelBuilder.Entity("ClinicReservation.Models.MedicalRecord", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Anamnesis")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("Complaint")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<string>("Diagnosis")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<int?>("DoctorId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Examination")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<int?>("FollowUpDays")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("IcdCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<int>("PatientId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Prescription")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<string>("Recommendations")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<int>("ReserveId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Treatment")
+                        .HasMaxLength(4000)
+                        .HasColumnType("character varying(4000)");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("UpdatedBy")
+                        .HasColumnType("text");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DoctorId");
+
+                    b.HasIndex("ReserveId")
+                        .IsUnique();
+
+                    b.HasIndex("PatientId", "CreatedAt");
+
+                    b.ToTable("MedicalRecords");
+                });
+
             modelBuilder.Entity("ClinicReservation.Models.Patient", b =>
                 {
                     b.Property<int>("Id")
@@ -223,8 +303,16 @@ namespace ClinicReservation.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<string>("Allergies")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
                     b.Property<DateTime>("Birthday")
                         .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("ChronicConditions")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
 
                     b.Property<DateTime>("CreatedAt")
                         .HasColumnType("timestamp without time zone");
@@ -305,6 +393,9 @@ namespace ClinicReservation.Migrations
                     b.Property<DateTime?>("ArrivedAt")
                         .HasColumnType("timestamp without time zone");
 
+                    b.Property<DateTime?>("CalledAt")
+                        .HasColumnType("timestamp without time zone");
+
                     b.Property<DateTime?>("CancelDate")
                         .HasColumnType("timestamp without time zone");
 
@@ -326,6 +417,20 @@ namespace ClinicReservation.Migrations
                     b.Property<int>("PatientId")
                         .HasColumnType("integer");
 
+                    b.Property<string>("PatientToken")
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<int?>("QueueNumber")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("QueueTicket")
+                        .HasMaxLength(16)
+                        .HasColumnType("character varying(16)");
+
+                    b.Property<DateTime?>("ReminderSentAt")
+                        .HasColumnType("timestamp without time zone");
+
                     b.Property<int?>("RoomId")
                         .HasColumnType("integer");
 
@@ -340,6 +445,9 @@ namespace ClinicReservation.Migrations
                     b.HasIndex("AppointmentAt");
 
                     b.HasIndex("PatientId");
+
+                    b.HasIndex("PatientToken")
+                        .IsUnique();
 
                     b.HasIndex("RoomId");
 
@@ -411,6 +519,59 @@ namespace ClinicReservation.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Rooms");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.SmsMessage", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Error")
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<string>("Kind")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<int?>("PatientId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(32)
+                        .HasColumnType("character varying(32)");
+
+                    b.Property<int?>("ReserveId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("SentBy")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Text")
+                        .IsRequired()
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CreatedAt");
+
+                    b.HasIndex("PatientId");
+
+                    b.HasIndex("ReserveId");
+
+                    b.ToTable("SmsMessages");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.Identity.IdentityRole", b =>
@@ -677,6 +838,32 @@ namespace ClinicReservation.Migrations
                     b.Navigation("Department");
                 });
 
+            modelBuilder.Entity("ClinicReservation.Models.MedicalRecord", b =>
+                {
+                    b.HasOne("ClinicReservation.Models.Doctor", "Doctor")
+                        .WithMany()
+                        .HasForeignKey("DoctorId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ClinicReservation.Models.Patient", "Patient")
+                        .WithMany("MedicalRecords")
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ClinicReservation.Models.Reserve", "Reserve")
+                        .WithOne("MedicalRecord")
+                        .HasForeignKey("ClinicReservation.Models.MedicalRecord", "ReserveId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.Navigation("Doctor");
+
+                    b.Navigation("Patient");
+
+                    b.Navigation("Reserve");
+                });
+
             modelBuilder.Entity("ClinicReservation.Models.Payment", b =>
                 {
                     b.HasOne("ClinicReservation.Models.Reserve", "Reserve")
@@ -734,6 +921,23 @@ namespace ClinicReservation.Migrations
                         .IsRequired();
 
                     b.Navigation("ExaminationType");
+
+                    b.Navigation("Reserve");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.SmsMessage", b =>
+                {
+                    b.HasOne("ClinicReservation.Models.Patient", "Patient")
+                        .WithMany()
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ClinicReservation.Models.Reserve", "Reserve")
+                        .WithMany()
+                        .HasForeignKey("ReserveId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Patient");
 
                     b.Navigation("Reserve");
                 });
@@ -803,11 +1007,15 @@ namespace ClinicReservation.Migrations
 
             modelBuilder.Entity("ClinicReservation.Models.Patient", b =>
                 {
+                    b.Navigation("MedicalRecords");
+
                     b.Navigation("Reserves");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.Reserve", b =>
                 {
+                    b.Navigation("MedicalRecord");
+
                     b.Navigation("Payments");
 
                     b.Navigation("ReserveExaminationTypes");

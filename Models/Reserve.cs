@@ -28,6 +28,21 @@ namespace ClinicReservation.Models
         public DateTime? CancelDate { get; set; }
         public string? CancelReason { get; set; }
 
+        // ----- Queue (assigned when the patient checks in) -----
+        /// <summary>Running number for the day within the ticket prefix.</summary>
+        public int? QueueNumber { get; set; }
+        /// <summary>What the patient sees on the ticket and the hall screen, e.g. "A-017".</summary>
+        public string? QueueTicket { get; set; }
+        /// <summary>Last time the doctor called this patient in (shown on the hall screen).</summary>
+        public DateTime? CalledAt { get; set; }
+
+        // ----- Reminders -----
+        public DateTime? ReminderSentAt { get; set; }
+        /// <summary>Random token for the patient's confirm/cancel link (no login needed).</summary>
+        public string? PatientToken { get; set; }
+
+        public MedicalRecord? MedicalRecord { get; set; }
+
         public List<ReserveExaminationType>? ReserveExaminationTypes { get; set; }
 
         public List<Payment>? Payments { get; set; }

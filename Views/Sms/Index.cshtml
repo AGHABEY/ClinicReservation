@@ -1,0 +1,120 @@
+@model List<SmsMessage>
+@using ClinicReservation.Controllers
+@{
+    ViewData["Title"] = "SMS xatırlatmaları";
+    var o = (SmsOptions)ViewBag.Options;
+    var status = ViewBag.Status as SmsStatus?;
+    var pageNo = (int)ViewBag.Page;
+    var total = (int)ViewBag.Total;
+    var pageSize = (int)ViewBag.PageSize;
+    var pages = Math.Max(1, (int)Math.Ceiling(total / (double)pageSize));
+    var testMode = !string.Equals(o.Provider, "Http", StringComparison.OrdinalIgnoreCase);
+    var sample = o.ReminderTemplate
+        .Replace("{ad}", "Aynur").Replace("{tarix}", DateTime.Today.AddDays(1).ToString("dd.MM.yyyy"))
+        .Replace("{saat}", "10:30").Replace("{hekim}", Fmt.Doctor("Leyla Məmmədova")).Replace("{klinika}", o.ClinicName)
+        .Replace("{link}", $"{o.PublicBaseUrl.TrimEnd('/')}/r/xxxxxxxx");
+    if (o.AsciiOnly) { sample = SmsText.ToAscii(sample); }
+}
+
+<div class="page-head">
+    <div>
+        <h2>SMS xatırlatmaları</h2>
+        <p>Xəstələrə qəbuldan @o.ReminderHoursBefore saat əvvəl təsdiq və ləğv linki olan SMS gedir</p>
+    </div>
+    <form asp-action="RunNow" method="post">
+        <button type="submit" class="btn btn-primary"><i class="bi bi-send"></i> İndi göndər</button>
+    </form>
+</div>
+
+@if (testMode)
+{
+    <div class="alert alert-warning">
+        <i class="bi bi-cone-striped"></i>
+        <strong>Test rejimi.</strong> SMS-lər həqiqətən göndərilmir, yalnız bu jurnala yazılır. Real göndəriş üçün
+        <code>appsettings.json</code> faylında <code>Sms:Provider</code> dəyərini <code>Http</code> edin və SMS provayderinin linkini <code>Sms:Http:Url</code>-a yazın.
+    </div>
+}
+
+<div class="stat-grid">
+    <div class="stat"><div class="icon teal"><i class="bi bi-chat-dots"></i></div><div><div class="value">@ViewBag.SentToday</div><div class="label">Bu gün göndərilib</div></div></div>
+    <div class="stat"><div class="icon blue"><i class="bi bi-hourglass-split"></i></div><div><div class="value">@ViewBag.Pending</div><div class="label">Növbədə (@o.ReminderHoursBefore saat ərzində)</div></div></div>
+    <div class="stat"><div class="icon green"><i class="bi bi-check2-circle"></i></div><div><div class="value">@ViewBag.ConfirmedBySms <span class="hint-text" style="font-size:14px;">/ @ViewBag.CancelledBySms ləğv</span></div><div class="label">Linklə təsdiq (30 gün)</div></div></div>
+    <div class="stat"><div class="icon red"><i class="bi bi-exclamation-triangle"></i></div><div><div class="value">@ViewBag.FailedToday</div><div class="label">Bu gün xəta</div></div></div>
+</div>
+
+<div class="detail-grid">
+    <div class="card">
+        <div class="card-head">
+            <h3 class="card-title"><i class="bi bi-journal-text"></i> Jurnal</h3>
+            <div class="seg" role="group" aria-label="Status">
+                <a class="@(status == null ? "on" : "")" asp-action="Index">Hamısı</a>
+                <a class="@(status == SmsStatus.Sent ? "on" : "")" asp-action="Index" asp-route-status="@SmsStatus.Sent">Göndərilib</a>
+                <a class="@(status == SmsStatus.Simulated ? "on" : "")" asp-action="Index" asp-route-status="@SmsStatus.Simulated">Test</a>
+                <a class="@(status == SmsStatus.Failed ? "on" : "")" asp-action="Index" asp-route-status="@SmsStatus.Failed">Xəta</a>
+            </div>
+        </div>
+        @if (Model.Any())
+        {
+            <div class="table-scroll">
+                <table class="data">
+                    <thead><tr><th>Vaxt</th><th>Xəstə</th><th>Status</th><th>Mətn</th></tr></thead>
+                    <tbody>
+                        @foreach (var m in Model)
+                        {
+                            <tr>
+                                <td style="white-space:nowrap;">
+                                    <div style="font-weight:600;">@Fmt.DateTime(m.CreatedAt)</div>
+                                    <div class="hint-text">@m.Kind@(m.SentBy == null ? "" : $" · {m.SentBy}")</div>
+                                </td>
+                                <td>
+                                    @if (m.Patient != null)
+                                    {
+                                        <a asp-controller="Reservation" asp-action="Details" asp-route-id="@m.ReserveId" class="link-strong">@m.Patient.FullName</a>
+                                    }
+                                    <div class="hint-text">@(m.Phone.StartsWith("994") ? "+" : "")@m.Phone</div>
+                                </td>
+                                <td>
+                                    <span class="badge-soft @(m.Status switch { SmsStatus.Sent => "badge-sent", SmsStatus.Simulated => "badge-sim", _ => "badge-failed" })">@SmsController.StatusLabel(m.Status)</span>
+                                    @if (m.Error != null) { <div class="hint-text" style="color:var(--bad); max-width:200px; white-space:normal;">@m.Error</div> }
+                                </td>
+                                <td class="wrap"><div class="sms-text">@m.Text</div><div class="hint-text">@m.Text.Length simvol · @SmsText.Segments(m.Text) SMS</div></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+            @if (pages > 1)
+            {
+                <div class="pager">
+                    <span class="hint-text">@total SMS · səhifə @pageNo / @pages</span>
+                    <span>
+                        @if (pageNo > 1) { <a class="btn btn-light btn-sm" asp-action="Index" asp-route-status="@status" asp-route-page="@(pageNo - 1)">‹ Əvvəlki</a> }
+                        @if (pageNo < pages) { <a class="btn btn-light btn-sm" asp-action="Index" asp-route-status="@status" asp-route-page="@(pageNo + 1)">Növbəti ›</a> }
+                    </span>
+                </div>
+            }
+        }
+        else
+        {
+            <div class="empty-state"><i class="bi bi-chat-square-dots"></i><p>Hələ SMS göndərilməyib</p></div>
+        }
+    </div>
+
+    <div class="stack">
+        <div class="card card-pad">
+            <h3 class="card-title"><i class="bi bi-sliders"></i> Sazlamalar</h3>
+            <div class="settings-list">
+                <div><span>Provayder</span><strong>@(testMode ? "Test (jurnal)" : "HTTP")</strong></div>
+                <div><span>Avtomatik göndəriş</span><strong>@(o.RemindersEnabled ? "Aktiv" : "Söndürülüb")</strong></div>
+                <div><span>Nə vaxt</span><strong>Qəbuldan @o.ReminderHoursBefore saat əvvəl</strong></div>
+                <div><span>Sakit saatlar</span><strong>@o.QuietStart – @o.QuietEnd</strong></div>
+            </div>
+            <p class="hint-text" style="margin:12px 0 0;">Qəbuldan @o.MinLeadHours saatdan az əvvəl yazılan xəstələrə xatırlatma getmir. Sazlamalar <code>appsettings.json</code> → <code>Sms</code> bölməsindədir.</p>
+        </div>
+        <div class="card card-pad">
+            <h3 class="card-title"><i class="bi bi-phone"></i> Nümunə mətn</h3>
+            <div class="sms-preview">@sample</div>
+            <p class="hint-text" style="margin:10px 0 0;">@sample.Length simvol · @SmsText.Segments(sample) SMS@(o.AsciiOnly ? " · Azərbaycan hərfləri latın hərfləri ilə əvəz olunur (1 SMS = 160 simvol)" : "")</p>
+        </div>
+    </div>
+</div>

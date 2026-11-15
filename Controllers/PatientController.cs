@@ -69,6 +69,15 @@ namespace ClinicReservation.Controllers
             if (patient == null)
                 return NotFound();
 
+            if (User.Can(Permissions.RecordsView))
+            {
+                ViewBag.Records = _context.MedicalRecords
+                    .Include(m => m.Doctor)
+                    .Where(m => m.PatientId == id)
+                    .OrderByDescending(m => m.CreatedAt)
+                    .ToList();
+            }
+
             _audit.Log("Xəstə kartına baxıldı", AuditEntities.Patient, patient.Id, patient.FullName);
             return View(patient);
         }

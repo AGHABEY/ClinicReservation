@@ -6,6 +6,9 @@ namespace ClinicReservation.Models
         public string Name { get; set; } = "";
         public bool IsActive { get; set; } = true;
 
+        /// <summary>Letter(s) in front of queue tickets, e.g. "K" → K-007. Defaults to "A".</summary>
+        public string? QueuePrefix { get; set; }
+
         public List<Doctor> Doctors { get; set; } = new();
     }
 

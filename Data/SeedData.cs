@@ -59,6 +59,27 @@ namespace ClinicReservation.Data
                 }
             }
 
+            // Permissions introduced in a later version: if no role carries one yet,
+            // give it to the built-in roles that have it by default. After that the
+            // Roles page is the only place that changes it.
+            var allRoleClaims = new List<(IdentityRole Role, IList<System.Security.Claims.Claim> Claims)>();
+            foreach (var roleName in AppRoles.BuiltIn)
+            {
+                var role = await roleManager.FindByNameAsync(roleName);
+                if (role != null) allRoleClaims.Add((role, await roleManager.GetClaimsAsync(role)));
+            }
+            var customRoles = roleManager.Roles.Where(r => !AppRoles.BuiltIn.Contains(r.Name!)).ToList();
+            foreach (var role in customRoles)
+                allRoleClaims.Add((role, await roleManager.GetClaimsAsync(role)));
+
+            foreach (var permission in Permissions.All.Select(p => p.Code))
+            {
+                var anyoneHasIt = allRoleClaims.Any(x => x.Claims.Any(c => c.Type == Permissions.ClaimType && c.Value == permission));
+                if (anyoneHasIt) continue;
+                foreach (var (role, claims) in allRoleClaims.Where(x => AppRoles.DefaultPermissions(x.Role.Name!).Contains(permission)))
+                    await roleManager.AddClaimAsync(role, new System.Security.Claims.Claim(Permissions.ClaimType, permission));
+            }
+
             await EnsureUserAsync(userManager, "admin", "admin123", "Administrator", "admin@clinic.local", AppRoles.Admin);
             await EnsureUserAsync(userManager, "kassir", "kassir123", "Kassir", "kassir@clinic.local", AppRoles.Staff);
         }

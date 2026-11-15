@@ -20,9 +20,19 @@ namespace ClinicReservation.Models
         /// <summary>Free-form note for staff (e.g. "prefers morning appointments").</summary>
         public string? Notes { get; set; }
 
+        /// <summary>Known allergies — shown as a red warning to doctors.</summary>
+        public string? Allergies { get; set; }
+
+        /// <summary>Chronic conditions (e.g. diabetes, hypertension).</summary>
+        public string? ChronicConditions { get; set; }
+
         public DateTime CreatedAt { get; set; }
 
         public List<Reserve> Reserves { get; set; } = new();
+        public List<MedicalRecord> MedicalRecords { get; set; } = new();
+
+        [NotMapped]
+        public bool HasMedicalAlerts => !string.IsNullOrWhiteSpace(Allergies) || !string.IsNullOrWhiteSpace(ChronicConditions);
 
         [NotMapped]
         public string FullName => $"{Name} {Surname}";

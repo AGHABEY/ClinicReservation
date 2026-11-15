@@ -52,6 +52,14 @@
                                 </a>
                             </li>
                         }
+                        @if (User.Can(Permissions.QueueCall))
+                        {
+                            <li>
+                                <a class="@Active("Workspace") @Active("Record")" aria-current="@(Current("Workspace") ?? Current("Record"))" asp-controller="Workspace" asp-action="Index">
+                                    <i class="bi bi-clipboard2-heart-fill"></i> İş masası
+                                </a>
+                            </li>
+                        }
                         @if (User.Can(Permissions.PatientsView))
                         {
                             <li>
@@ -70,20 +78,31 @@
                         }
                     </ul>
 
-                    @if (User.CanAny(Permissions.CatalogManage, Permissions.ReservationsView))
+                    @if (User.CanAny(Permissions.CatalogManage, Permissions.ReservationsView, Permissions.QueueView))
                     {
                         <div class="nav-section">Klinika</div>
                         <ul class="sidebar-nav">
-                            <li>
-                                <a class="@Active("Doctor")" aria-current="@Current("Doctor")" asp-controller="Doctor" asp-action="Index">
-                                    <i class="bi bi-person-badge-fill"></i> Həkimlər
-                                </a>
-                            </li>
-                            <li>
-                                <a class="@Active("ExaminationType")" aria-current="@Current("ExaminationType")" asp-controller="ExaminationType" asp-action="Index">
-                                    <i class="bi bi-clipboard2-pulse-fill"></i> Müayinələr
-                                </a>
-                            </li>
+                            @if (User.CanAny(Permissions.CatalogManage, Permissions.ReservationsView))
+                            {
+                                <li>
+                                    <a class="@Active("Doctor")" aria-current="@Current("Doctor")" asp-controller="Doctor" asp-action="Index">
+                                        <i class="bi bi-person-badge-fill"></i> Həkimlər
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="@Active("ExaminationType")" aria-current="@Current("ExaminationType")" asp-controller="ExaminationType" asp-action="Index">
+                                        <i class="bi bi-clipboard2-pulse-fill"></i> Müayinələr
+                                    </a>
+                                </li>
+                            }
+                            @if (User.Can(Permissions.QueueView))
+                            {
+                                <li>
+                                    <a asp-controller="Queue" asp-action="Screen" target="_blank" rel="noopener">
+                                        <i class="bi bi-tv-fill"></i> Növbə ekranı <i class="bi bi-box-arrow-up-right" style="margin-left:auto; font-size:.75rem; opacity:.6;"></i>
+                                    </a>
+                                </li>
+                            }
                             @if (User.Can(Permissions.CatalogManage))
                             {
                                 <li>
@@ -95,7 +114,7 @@
                         </ul>
                     }
 
-                    @if (User.CanAny(Permissions.ReportsView, Permissions.UsersManage, Permissions.AuditView))
+                    @if (User.CanAny(Permissions.ReportsView, Permissions.UsersManage, Permissions.AuditView, Permissions.SmsManage))
                     {
                         <div class="nav-section">İdarəetmə</div>
                         <ul class="sidebar-nav">
@@ -117,6 +136,14 @@
                                 <li>
                                     <a class="@Active("Role")" aria-current="@Current("Role")" asp-controller="Role" asp-action="Index">
                                         <i class="bi bi-shield-lock-fill"></i> Rollar və icazələr
+                                    </a>
+                                </li>
+                            }
+                            @if (User.Can(Permissions.SmsManage))
+                            {
+                                <li>
+                                    <a class="@Active("Sms")" aria-current="@Current("Sms")" asp-controller="Sms" asp-action="Index">
+                                        <i class="bi bi-chat-dots-fill"></i> SMS xatırlatmaları
                                     </a>
                                 </li>
                             }

@@ -66,6 +66,14 @@ namespace ClinicReservation.Helpers
             _ => "B."
         };
 
+        /// <summary>"Leyla Məmmədova" → "Dr. Leyla Məmmədova"; names that already start with "Dr" stay as they are.</summary>
+        public static string Doctor(string? name)
+        {
+            name = (name ?? "").Trim();
+            if (name.Length == 0) return "";
+            return name.StartsWith("Dr", StringComparison.OrdinalIgnoreCase) ? name : "Dr. " + name;
+        }
+
         public static string Initials(string? name)
         {
             var parts = (name ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);

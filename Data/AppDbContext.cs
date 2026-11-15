@@ -22,6 +22,8 @@ namespace ClinicReservation.Data
         public DbSet<DoctorWorkHours> DoctorWorkHours { get; set; }
         public DbSet<DoctorLeave> DoctorLeaves { get; set; }
         public DbSet<AuditLog> AuditLogs { get; set; }
+        public DbSet<MedicalRecord> MedicalRecords { get; set; }
+        public DbSet<SmsMessage> SmsMessages { get; set; }
         public DbSet<AppUser> AppUsers { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -44,6 +46,47 @@ namespace ClinicReservation.Data
                     .HasForeignKey(r => r.DoctorId).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(r => r.Room).WithMany()
                     .HasForeignKey(r => r.RoomId).OnDelete(DeleteBehavior.Restrict);
+                e.HasIndex(r => r.PatientToken).IsUnique();
+                e.Property(r => r.PatientToken).HasMaxLength(64);
+                e.Property(r => r.QueueTicket).HasMaxLength(16);
+            });
+
+            builder.Entity<Patient>(e =>
+            {
+                e.Property(p => p.Allergies).HasMaxLength(500);
+                e.Property(p => p.ChronicConditions).HasMaxLength(500);
+            });
+
+            builder.Entity<Department>().Property(d => d.QueuePrefix).HasMaxLength(3);
+
+            builder.Entity<MedicalRecord>(e =>
+            {
+                e.HasIndex(m => m.ReserveId).IsUnique();
+                e.HasIndex(m => new { m.PatientId, m.CreatedAt });
+                e.HasOne(m => m.Reserve).WithOne(r => r.MedicalRecord)
+                    .HasForeignKey<MedicalRecord>(m => m.ReserveId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(m => m.Patient).WithMany(p => p.MedicalRecords)
+                    .HasForeignKey(m => m.PatientId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(m => m.Doctor).WithMany()
+                    .HasForeignKey(m => m.DoctorId).OnDelete(DeleteBehavior.SetNull);
+                e.Property(m => m.IcdCode).HasMaxLength(10);
+                e.Property(m => m.Diagnosis).HasMaxLength(300);
+                foreach (var name in new[] { nameof(MedicalRecord.Complaint), nameof(MedicalRecord.Anamnesis), nameof(MedicalRecord.Examination),
+                             nameof(MedicalRecord.Treatment), nameof(MedicalRecord.Prescription), nameof(MedicalRecord.Recommendations) })
+                    e.Property(name).HasMaxLength(4000);
+            });
+
+            builder.Entity<SmsMessage>(e =>
+            {
+                e.HasIndex(m => m.CreatedAt);
+                e.HasOne(m => m.Reserve).WithMany()
+                    .HasForeignKey(m => m.ReserveId).OnDelete(DeleteBehavior.SetNull);
+                e.HasOne(m => m.Patient).WithMany()
+                    .HasForeignKey(m => m.PatientId).OnDelete(DeleteBehavior.SetNull);
+                e.Property(m => m.Phone).HasMaxLength(32);
+                e.Property(m => m.Text).HasMaxLength(1000);
+                e.Property(m => m.Kind).HasMaxLength(32);
+                e.Property(m => m.Error).HasMaxLength(500);
             });
 
             builder.Entity<Doctor>(e =>

@@ -16,12 +16,14 @@ namespace ClinicReservation.Controllers
         private readonly AppDbContext _context;
         private readonly SlotService _slots;
         private readonly AuditService _audit;
+        private readonly QueueService _queue;
 
-        public ReservationController(AppDbContext context, SlotService slots, AuditService audit)
+        public ReservationController(AppDbContext context, SlotService slots, AuditService audit, QueueService queue)
         {
             _context = context;
             _slots = slots;
             _audit = audit;
+            _queue = queue;
         }
 
         // period: today | tomorrow | week | upcoming (default) | past | all
@@ -307,20 +309,28 @@ namespace ClinicReservation.Controllers
                 switch (to)
                 {
                     case StatusNames.Confirmed: res.ConfirmDate = now; break;
-                    case StatusNames.Arrived: res.ArrivedAt = now; break;
+                    case StatusNames.Arrived:
+                        res.ArrivedAt = now;
+                        _queue.AssignTicket(res, now);
+                        break;
                     case StatusNames.InProgress: res.StartedAt = now; res.ArrivedAt ??= now; break;
                     case StatusNames.Completed: res.CompletedAt = now; res.StartedAt ??= now; res.ArrivedAt ??= now; break;
                 }
                 _context.SaveChanges();
                 _audit.Log("Status dəyişdi", AuditEntities.Reservation, res.Id,
-                    $"{res.Patient.FullName}: {StatusNames.Label(from)} → {StatusNames.Label(to)}");
-                TempData["Success"] = $"{res.Patient.FullName} — {StatusNames.Label(to)}";
+                    $"{res.Patient.FullName}: {StatusNames.Label(from)} → {StatusNames.Label(to)}"
+                    + (to == StatusNames.Arrived ? $", talon {res.QueueTicket}" : ""));
+                TempData["Success"] = to == StatusNames.Arrived
+                    ? $"{res.Patient.FullName} — gəldi. Növbə talonu: {res.QueueTicket}"
+                    : $"{res.Patient.FullName} — {StatusNames.Label(to)}";
             }
 
             return returnTo switch
             {
                 "details" => RedirectToAction(nameof(Details), new { id }),
                 "home" => RedirectToAction("Index", "Home"),
+                "workspace" => RedirectToAction("Index", "Workspace", new { doctorId = res.DoctorId }),
+                "record" when to == StatusNames.InProgress => RedirectToAction("Edit", "Record", new { reserveId = id }),
                 _ => RedirectToAction(nameof(Index), new { period = Request.Form["period"].ToString() })
             };
         }
@@ -388,7 +398,9 @@ namespace ClinicReservation.Controllers
                 .Include(rs => rs.Doctor).ThenInclude(d => d!.Department)
                 .Include(rs => rs.Room)
                 .Include(rs => rs.Payments)
+                .Include(rs => rs.MedicalRecord)
                 .Include(rs => rs.ReserveExaminationTypes!).ThenInclude(rs => rs.ExaminationType)
+                .AsSplitQuery()
                 .FirstOrDefault(rs => rs.Id == id);
 
         private void PrepareForm(ReserveFormViewModel model, Reserve? existing = null)
