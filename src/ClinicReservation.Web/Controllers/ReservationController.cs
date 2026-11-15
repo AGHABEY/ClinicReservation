@@ -1,203 +1,95 @@
-﻿using System.Security.Claims;
+using System.Security.Claims;
 using ClinicReservation.Authorization;
-using ClinicReservation.Data;
-using ClinicReservation.Helpers;
 using ClinicReservation.Models;
+using ClinicReservation.Modules;
 using ClinicReservation.Modules.Lab;
 using ClinicReservation.Modules.Pharmacy;
+using ClinicReservation.Modules.Scheduling;
 using ClinicReservation.Services;
-using ClinicReservation.ViewModels;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace ClinicReservation.Controllers
 {
     [HasPermission(Permissions.ReservationsView)]
     public class ReservationController : Controller
     {
-        private readonly AppDbContext _context;
-        private readonly SlotService _slots;
-        private readonly AuditService _audit;
-        private readonly QueueService _queue;
+        private readonly ReservationQueries _queries;
+        private readonly Reservations _reservations;
 
-        public ReservationController(AppDbContext context, SlotService slots, AuditService audit, QueueService queue)
+        public ReservationController(ReservationQueries queries, Reservations reservations)
         {
-            _context = context;
-            _slots = slots;
-            _audit = audit;
-            _queue = queue;
+            _queries = queries;
+            _reservations = reservations;
         }
 
         // period: today | tomorrow | week | upcoming (default) | past | all
-        public IActionResult Index(string? period, string? status, int? doctorId, string? q)
+        public async Task<IActionResult> Index(string? period, string? status, int? doctorId, string? q, CancellationToken ct)
         {
             period = string.IsNullOrEmpty(period) ? "upcoming" : period;
-            var today = ClinicTime.Today;
-
             // A doctor's own login starts on "my appointments"; choosing "all doctors" sends an empty doctorId.
-            var myDoctor = MyDoctorId();
-            if (doctorId == null && myDoctor != null && !Request.Query.ContainsKey("doctorId"))
-                doctorId = myDoctor;
-
-            var query = _context.Reserves
-                .Include(r => r.Status)
-                .Include(r => r.Patient)
-                .Include(r => r.Doctor)
-                .Include(r => r.Room)
-                .AsQueryable();
-
-            query = period switch
-            {
-                "today" => query.Where(r => r.AppointmentAt >= today && r.AppointmentAt < today.AddDays(1)),
-                "tomorrow" => query.Where(r => r.AppointmentAt >= today.AddDays(1) && r.AppointmentAt < today.AddDays(2)),
-                "week" => query.Where(r => r.AppointmentAt >= today && r.AppointmentAt < today.AddDays(7)),
-                "past" => query.Where(r => r.AppointmentAt < today),
-                "all" => query,
-                _ => query.Where(r => r.AppointmentAt >= today)
-            };
-
-            if (!string.IsNullOrEmpty(status) && StatusNames.All.Contains(status))
-                query = query.Where(r => r.Status!.Name == status);
-
-            if (doctorId != null)
-                query = query.Where(r => r.DoctorId == doctorId);
-
-            if (!string.IsNullOrWhiteSpace(q))
-            {
-                var term = $"%{q.Trim()}%";
-                query = query.Where(r =>
-                    EF.Functions.ILike(r.Patient.Name + " " + r.Patient.Surname, term) ||
-                    EF.Functions.ILike(r.Patient.PinCode, term) ||
-                    EF.Functions.ILike(r.Patient.Phone, term));
-            }
-
-            query = period is "past" or "all"
-                ? query.OrderByDescending(r => r.AppointmentAt)
-                : query.OrderBy(r => r.AppointmentAt);
+            if (doctorId == null && !Request.Query.ContainsKey("doctorId"))
+                doctorId = await _queries.DoctorIdForUserAsync(User.FindFirstValue(ClaimTypes.NameIdentifier), ct);
 
             ViewBag.Period = period;
             ViewBag.Status = status;
             ViewBag.DoctorId = doctorId;
             ViewBag.Query = q;
-            ViewBag.Doctors = _context.Doctors.OrderBy(d => d.FullName).ToList();
-            return View(query.Take(500).ToList());
+            ViewBag.Doctors = await _queries.AllDoctorsAsync(ct);
+            return View(await _queries.ListAsync(period, status, doctorId, q, ct));
         }
 
         // ---------- Create ----------
 
         [HasPermission(Permissions.ReservationsManage)]
-        public IActionResult Add(DateTime? date, int? doctorId, int? patientId)
+        public async Task<IActionResult> Add(DateTime? date, int? doctorId, int? patientId, CancellationToken ct)
         {
-            var model = new ReserveFormViewModel
+            var model = new ReserveFormViewModel { AppointmentDate = (date ?? ClinicTime.Today).Date, DoctorId = doctorId };
+            if (patientId != null && await _queries.PatientAsync(patientId.Value, ct) is { } p)
             {
-                AppointmentDate = (date ?? ClinicTime.Today).Date,
-                DoctorId = doctorId
-            };
-
-            if (patientId != null)
-            {
-                var p = _context.Patients.Find(patientId);
-                if (p != null)
-                {
-                    model.PinCode = p.PinCode;
-                    model.Name = p.Name;
-                    model.Surname = p.Surname;
-                    model.Phone = p.Phone;
-                    model.Birthday = p.Birthday;
-                    model.ExistingPatient = p;
-                }
+                model.PinCode = p.PinCode;
+                model.Name = p.Name;
+                model.Surname = p.Surname;
+                model.Phone = p.Phone;
+                model.Birthday = p.Birthday;
+                model.ExistingPatient = p;
             }
-
-            PrepareForm(model);
-            return View(model);
+            return await FormView(model, null, ct);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         [HasPermission(Permissions.ReservationsManage)]
-        public IActionResult Add(ReserveFormViewModel model)
+        public async Task<IActionResult> Add(ReserveFormViewModel model, CancellationToken ct)
         {
             model.Id = 0;
-            var pin = Patient.NormalizePin(model.PinCode);
-            var patient = string.IsNullOrEmpty(pin) ? null : _context.Patients.FirstOrDefault(p => p.PinCode == pin);
-
+            var patient = await _queries.PatientByPinAsync(model.PinCode, ct);
             // An existing card is the source of truth for name/birthday; only the phone may be refreshed.
             if (patient != null)
             {
                 foreach (var key in new[] { nameof(model.Name), nameof(model.Surname), nameof(model.Birthday) })
                     ModelState.Remove(key);
-                if (string.IsNullOrWhiteSpace(model.Phone))
-                    ModelState.Remove(nameof(model.Phone));
+                if (string.IsNullOrWhiteSpace(model.Phone)) ModelState.Remove(nameof(model.Phone));
             }
 
-            var examTypes = ValidateForm(model, existing: null, out var start, out var slot);
-
-            if (!ModelState.IsValid)
+            var r = await _reservations.CreateAsync(model, patient, FormErrors(), ct);
+            if (r.Ok)
             {
-                model.ExistingPatient = patient;
-                PrepareForm(model);
-                return View(model);
+                TempData["Success"] = r.Message;
+                return RedirectToAction(nameof(Details), new { id = r.Id });
             }
-
-            var createdPatient = false;
-            if (patient == null)
-            {
-                patient = new Patient
-                {
-                    PinCode = pin,
-                    Name = model.Name!.Trim(),
-                    Surname = model.Surname!.Trim(),
-                    Phone = model.Phone!.Trim(),
-                    Birthday = model.Birthday!.Value.Date,
-                    CreatedAt = ClinicTime.Now
-                };
-                _context.Patients.Add(patient);
-                createdPatient = true;
-            }
-            else if (!string.IsNullOrWhiteSpace(model.Phone) && model.Phone.Trim() != patient.Phone)
-            {
-                patient.Phone = model.Phone.Trim();
-            }
-
-            var reserve = new Reserve
-            {
-                Patient = patient,
-                DoctorId = model.DoctorId,
-                RoomId = slot!.RoomId,
-                AppointmentAt = start,
-                DurationMinutes = slot.SlotMinutes,
-                AddedDate = ClinicTime.Now,
-                Status = _context.ReserveStatuses.First(rs => rs.Name == StatusNames.Waiting),
-                ReserveExaminationTypes = examTypes
-                    .Select(e => new ReserveExaminationType { ExaminationTypeId = e.Id, Price = e.Price })
-                    .ToList()
-            };
-
-            _context.Reserves.Add(reserve);
-            _context.SaveChanges();
-
-            if (createdPatient)
-                _audit.Log("Xəstə kartı yaradıldı", AuditEntities.Patient, patient.Id, $"{patient.FullName} ({patient.PinCode})");
-            var doctorName = _context.Doctors.Where(d => d.Id == reserve.DoctorId).Select(d => d.FullName).FirstOrDefault();
-            _audit.Log("Rezervasiya yaradıldı", AuditEntities.Reservation, reserve.Id,
-                $"{patient.FullName} — {Fmt.DateTime(reserve.AppointmentAt)}, {doctorName}");
-
-            TempData["Success"] = $"{patient.FullName} — {Fmt.DateTime(reserve.AppointmentAt)} üçün rezervasiya yaradıldı";
-            return RedirectToAction(nameof(Details), new { id = reserve.Id });
+            ShowErrors(r);
+            model.ExistingPatient = patient;
+            return await FormView(model, null, ct);
         }
 
         // ---------- Edit ----------
 
         [HasPermission(Permissions.ReservationsManage)]
-        public IActionResult Edit(int id)
+        public async Task<IActionResult> Edit(int id, CancellationToken ct)
         {
-            var reserve = LoadReserve(id);
+            var reserve = await _queries.ReserveAsync(id, ct);
             if (reserve == null) return NotFound();
-            if (!ReserveFlow.CanEdit(reserve))
-            {
-                TempData["Error"] = $"«{StatusNames.Label(reserve.Status?.Name)}» statusunda rezervasiyaya düzəliş etmək olmaz";
-                return RedirectToAction(nameof(Details), new { id });
-            }
+            if (!ReserveFlow.CanEdit(reserve)) return NotEditable(reserve);
 
             var model = new ReserveFormViewModel
             {
@@ -214,27 +106,21 @@ namespace ClinicReservation.Controllers
                 ExaminationTypeIds = reserve.ReserveExaminationTypes!.Select(x => x.ExaminationTypeId).ToList(),
                 ExistingPatient = reserve.Patient
             };
-            PrepareForm(model, reserve);
-            return View(model);
+            return await FormView(model, reserve, ct);
         }
 
         [HttpPost]
         [ValidateAntiForgeryToken]
         [HasPermission(Permissions.ReservationsManage)]
-        public IActionResult Edit(ReserveFormViewModel model)
+        public async Task<IActionResult> Edit(ReserveFormViewModel model, CancellationToken ct)
         {
-            var reserve = LoadReserve(model.Id);
+            var reserve = await _queries.ReserveAsync(model.Id, ct);
             if (reserve == null) return NotFound();
-            if (!ReserveFlow.CanEdit(reserve))
-            {
-                TempData["Error"] = $"«{StatusNames.Label(reserve.Status?.Name)}» statusunda rezervasiyaya düzəliş etmək olmaz";
-                return RedirectToAction(nameof(Details), new { id = reserve.Id });
-            }
+            if (!ReserveFlow.CanEdit(reserve)) return NotEditable(reserve);
 
             // The patient is fixed on an existing reservation (edit the card itself instead).
             foreach (var key in new[] { nameof(model.PinCode), nameof(model.Name), nameof(model.Surname), nameof(model.Phone), nameof(model.Birthday) })
                 ModelState.Remove(key);
-
             // After check-in only the examinations may change.
             if (!ReserveFlow.CanReschedule(reserve))
             {
@@ -245,47 +131,15 @@ namespace ClinicReservation.Controllers
                     ModelState.Remove(key);
             }
 
-            var examTypes = ValidateForm(model, reserve, out var start, out var slot);
-            if (!ModelState.IsValid)
+            var r = await _reservations.UpdateAsync(reserve, model, FormErrors(), ct);
+            if (r.Ok)
             {
-                model.ExistingPatient = reserve.Patient;
-                PrepareForm(model, reserve);
-                return View(model);
+                TempData["Success"] = r.Message;
+                return RedirectToAction(nameof(Details), new { id = reserve.Id });
             }
-
-            var changes = new List<string>();
-            if (reserve.AppointmentAt != start || reserve.DoctorId != model.DoctorId)
-            {
-                changes.Add($"vaxt {Fmt.DateTime(reserve.AppointmentAt)} → {Fmt.DateTime(start)}");
-                reserve.AppointmentAt = start;
-                if (reserve.DoctorId != model.DoctorId)
-                    changes.Add("həkim dəyişdi");
-                reserve.DoctorId = model.DoctorId;
-                if (slot != null)
-                {
-                    reserve.RoomId = slot.RoomId;
-                    reserve.DurationMinutes = slot.SlotMinutes;
-                }
-            }
-
-            // Keep the locked price of examinations that stay; new ones get today's price.
-            var selectedIds = examTypes.Select(e => e.Id).ToHashSet();
-            var items = reserve.ReserveExaminationTypes!;
-            var removed = items.Where(i => !selectedIds.Contains(i.ExaminationTypeId)).ToList();
-            _context.ReserveExaminationTypes.RemoveRange(removed);
-            var existingIds = items.Select(i => i.ExaminationTypeId).ToHashSet();
-            var added = examTypes.Where(e => !existingIds.Contains(e.Id)).ToList();
-            foreach (var e in added)
-                items.Add(new ReserveExaminationType { ExaminationTypeId = e.Id, Price = e.Price });
-            if (removed.Count > 0) changes.Add("çıxarıldı: " + string.Join(", ", removed.Select(r => r.ExaminationType.Name)));
-            if (added.Count > 0) changes.Add("əlavə edildi: " + string.Join(", ", added.Select(a => a.Name)));
-
-            _context.SaveChanges();
-            _audit.Log("Rezervasiya dəyişdirildi", AuditEntities.Reservation, reserve.Id,
-                $"{reserve.Patient.FullName}: " + (changes.Count > 0 ? string.Join("; ", changes) : "dəyişiklik yoxdur"));
-
-            TempData["Success"] = "Rezervasiya yeniləndi";
-            return RedirectToAction(nameof(Details), new { id = reserve.Id });
+            ShowErrors(r);
+            model.ExistingPatient = reserve.Patient;
+            return await FormView(model, reserve, ct);
         }
 
         // ---------- Status changes ----------
@@ -293,50 +147,23 @@ namespace ClinicReservation.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [HasPermission(Permissions.ReservationsManage, Permissions.ReservationsStatus)]
-        public IActionResult Transition(int id, string to, string? returnTo, [FromServices] StockService stock)
+        public async Task<IActionResult> Transition(int id, string to, string? returnTo, CancellationToken ct)
         {
-            var res = _context.Reserves.Include(r => r.Status).Include(r => r.Patient).FirstOrDefault(rs => rs.Id == id);
-            if (res == null)
-                return NotFound();
-
-            var now = ClinicTime.Now;
-            if (!ReserveFlow.IsAllowed(res, to, User, now))
+            var outcome = await _reservations.TransitionAsync(id, to, User, ct);
+            if (outcome == null) return NotFound();
+            var (r, doctorId) = outcome.Value;
+            if (r.Ok)
             {
-                TempData["Error"] = $"«{StatusNames.Label(res.Status?.Name)}» statusundan «{StatusNames.Label(to)}» statusuna keçmək olmaz";
+                TempData["Success"] = r.Message;
+                if (r.Warning != null) TempData["Error"] = r.Warning;
             }
-            else
-            {
-                var from = res.Status?.Name;
-                res.Status = _context.ReserveStatuses.First(rs => rs.Name == to);
-                switch (to)
-                {
-                    case StatusNames.Confirmed: res.ConfirmDate = now; break;
-                    case StatusNames.Arrived:
-                        res.ArrivedAt = now;
-                        _queue.AssignTicket(res, now);
-                        break;
-                    case StatusNames.InProgress: res.StartedAt = now; res.ArrivedAt ??= now; break;
-                    case StatusNames.Completed: res.CompletedAt = now; res.StartedAt ??= now; res.ArrivedAt ??= now; break;
-                }
-                _context.SaveChanges();
-                _audit.Log("Status dəyişdi", AuditEntities.Reservation, res.Id,
-                    $"{res.Patient.FullName}: {StatusNames.Label(from)} → {StatusNames.Label(to)}"
-                    + (to == StatusNames.Arrived ? $", talon {res.QueueTicket}" : ""));
-                TempData["Success"] = to == StatusNames.Arrived
-                    ? $"{res.Patient.FullName} — gəldi. Növbə talonu: {res.QueueTicket}"
-                    : $"{res.Patient.FullName} — {StatusNames.Label(to)}";
-                if (to == StatusNames.Completed)
-                {
-                    var warn = StockService.Warning(stock.ConsumeForReserve(res.Id, false, User.Identity?.Name));
-                    if (warn != null) TempData["Error"] = warn;
-                }
-            }
+            else TempData["Error"] = r.ErrorText;
 
             return returnTo switch
             {
                 "details" => RedirectToAction(nameof(Details), new { id }),
                 "home" => RedirectToAction("Index", "Home"),
-                "workspace" => RedirectToAction("Index", "Workspace", new { doctorId = res.DoctorId }),
+                "workspace" => RedirectToAction("Index", "Workspace", new { doctorId }),
                 "record" when to == StatusNames.InProgress => RedirectToAction("Edit", "Record", new { reserveId = id }),
                 _ => RedirectToAction(nameof(Index), new { period = Request.Form["period"].ToString() })
             };
@@ -345,49 +172,27 @@ namespace ClinicReservation.Controllers
         [HttpPost]
         [ValidateAntiForgeryToken]
         [HasPermission(Permissions.ReservationsManage)]
-        public IActionResult Cancel(CancelReserveViewModel model)
+        public async Task<IActionResult> Cancel(CancelReserveViewModel model, CancellationToken ct)
         {
-            var res = LoadReserve(model.Id);
-            if (res == null)
-                return NotFound();
-
-            if (!ReserveFlow.CanCancel(res))
-            {
-                TempData["Error"] = $"«{StatusNames.Label(res.Status?.Name)}» statusunda rezervasiyanı ləğv etmək olmaz";
-                return RedirectToAction(nameof(Details), new { id = res.Id });
-            }
-
-            res.CancelDate = ClinicTime.Now;
-            res.CancelReason = string.IsNullOrWhiteSpace(model.Reason) ? null : model.Reason.Trim();
-            res.Status = _context.ReserveStatuses.First(rs => rs.Name == StatusNames.Cancelled);
-            _context.SaveChanges();
-            _audit.Log("Rezervasiya ləğv edildi", AuditEntities.Reservation, res.Id,
-                $"{res.Patient.FullName}" + (res.CancelReason == null ? "" : $" — səbəb: {res.CancelReason}"));
-
-            TempData["Success"] = res.Paid > 0
-                ? $"Rezervasiya ləğv edildi. Xəstəyə {Fmt.Money(res.Paid)} qaytarılmalıdır — Kassada qeyd edin."
-                : "Rezervasiya ləğv edildi";
-            return RedirectToAction(nameof(Details), new { id = res.Id });
+            var r = await _reservations.CancelAsync(model.Id, model.Reason, ct);
+            if (r == null) return NotFound();
+            TempData[r.Ok ? "Success" : "Error"] = r.Ok ? r.Message : r.ErrorText;
+            return RedirectToAction(nameof(Details), new { id = model.Id });
         }
 
-        public IActionResult Details(int id, [FromServices] LabService lab)
+        public async Task<IActionResult> Details(int id, [FromServices] LabQueries lab, [FromServices] StockQueries stock, CancellationToken ct)
         {
-            var res = LoadReserve(id);
-            if (res == null)
-                return NotFound();
+            var res = await _queries.ReserveAsync(id, ct);
+            if (res == null) return NotFound();
             if (User.CanAny(Permissions.StockView, Permissions.StockIssue, Permissions.StockManage))
             {
-                ViewBag.StockDocs = _context.StockDocuments.Include(d => d.Movements).ThenInclude(m => m.StockItem)
-                    .Include(d => d.FromWarehouse)
-                    .Where(d => d.ReserveId == id).OrderBy(d => d.CreatedAt).ToList();
+                ViewBag.StockDocs = await stock.ForReserveAsync(id, ct);
                 // Completed, but some service's materials were never taken (e.g. stock failed at that moment).
-                ViewBag.StockPending = res.Status?.Name == StatusNames.Completed
-                    && _context.ReserveExaminationTypes.Any(x => x.ReserveId == id && x.StockConsumedAt == null && x.ExaminationType.Materials.Any());
+                ViewBag.StockPending = res.Status?.Name == StatusNames.Completed && await stock.HasPendingMaterialsAsync(id, ct);
             }
             if (User.CanAny(Permissions.LabView, Permissions.LabWork))
             {
-                ViewBag.LabOrders = _context.LabOrders.Include(o => o.Results).ThenInclude(r => r.LabTest)
-                    .Where(o => o.ReserveId == id).OrderBy(o => o.CollectedAt).ToList();
+                ViewBag.LabOrders = await lab.OrdersForReserveAsync(id, ct);
                 ViewBag.LabPending = lab.PendingTests(id);
             }
             return View(res);
@@ -397,7 +202,7 @@ namespace ClinicReservation.Controllers
         [HttpGet]
         public IActionResult Slots(int doctorId, DateTime date, int? exclude)
         {
-            var result = _slots.GetSlots(doctorId, date, exclude);
+            var result = _queries.Slots(doctorId, date, exclude);
             return Json(new
             {
                 message = result.Message,
@@ -407,99 +212,35 @@ namespace ClinicReservation.Controllers
 
         // ---------- Helpers ----------
 
-        private int? MyDoctorId()
+        private async Task<IActionResult> FormView(ReserveFormViewModel model, Reserve? existing, CancellationToken ct)
         {
-            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
-            return userId == null ? null : _context.Doctors.Where(d => d.UserId == userId).Select(d => (int?)d.Id).FirstOrDefault();
+            var data = await _queries.FormDataAsync(model, existing, ct);
+            ViewBag.ExaminationTypes = data.ExaminationTypes;
+            ViewBag.Doctors = data.Doctors;
+            ViewBag.Slots = data.Slots;
+            ViewBag.LockedPrices = data.LockedPrices;
+            return View(model);
         }
 
-        private Reserve? LoadReserve(int id) =>
-            _context.Reserves
-                .Include(rs => rs.Status)
-                .Include(rs => rs.Patient)
-                .Include(rs => rs.Doctor).ThenInclude(d => d!.Department)
-                .Include(rs => rs.Room)
-                .Include(rs => rs.Payments)
-                .Include(rs => rs.MedicalRecord)
-                .Include(rs => rs.ReserveExaminationTypes!).ThenInclude(rs => rs.ExaminationType)
-                .AsSplitQuery()
-                .FirstOrDefault(rs => rs.Id == id);
-
-        private void PrepareForm(ReserveFormViewModel model, Reserve? existing = null)
+        private IActionResult NotEditable(Reserve reserve)
         {
-            ViewBag.ExaminationTypes = _context.ExaminationTypes.Include(e => e.Department)
-                .OrderBy(e => e.Department == null ? "" : e.Department.Name).ThenBy(e => e.Name).ToList();
-
-            var doctors = _context.Doctors.Include(d => d.Department)
-                .Where(d => d.IsActive || (existing != null && d.Id == existing.DoctorId))
-                .OrderBy(d => d.Department == null ? "" : d.Department.Name).ThenBy(d => d.FullName)
-                .ToList();
-            ViewBag.Doctors = doctors;
-
-            var slots = new SlotResult();
-            if (model.DoctorId != null && model.AppointmentDate.HasValue)
-                slots = _slots.GetSlots(model.DoctorId.Value, model.AppointmentDate.Value, existing?.Id);
-
-            // Keep the reservation's own time selectable even if it is off the grid
-            // (older reservations, or the doctor's hours changed since booking).
-            if (existing != null && model.DoctorId == existing.DoctorId && model.AppointmentDate == existing.AppointmentAt.Date)
-            {
-                var own = existing.AppointmentAt.ToString("HH:mm");
-                if (slots.Slots.All(s => s.Time != own))
-                {
-                    slots.Slots.Add(new SlotViewModel { Time = own, Capacity = 1 });
-                    slots.Slots.Sort((a, b) => string.CompareOrdinal(a.Time, b.Time));
-                }
-            }
-            ViewBag.Slots = slots;
-
-            ViewBag.LockedPrices = existing?.ReserveExaminationTypes?
-                .ToDictionary(x => x.ExaminationTypeId, x => x.Price) ?? new Dictionary<int, decimal>();
-            model.HasPayments = existing?.Payments?.Any() == true;
-            model.CanReschedule = existing == null || ReserveFlow.CanReschedule(existing);
+            TempData["Error"] = $"«{StatusNames.Label(reserve.Status?.Name)}» statusunda rezervasiyaya düzəliş etmək olmaz";
+            return RedirectToAction(nameof(Details), new { id = reserve.Id });
         }
 
-        private List<ExaminationType> ValidateForm(ReserveFormViewModel model, Reserve? existing, out DateTime start, out SlotResult? slot)
+        /// <summary>The form's own errors (DataAnnotations), handed to the use case so all problems show together.</summary>
+        private List<(string? Field, string Message)> FormErrors() =>
+            ModelState.SelectMany(kv => kv.Value!.Errors.Select(e => ((string?)kv.Key, e.ErrorMessage))).ToList();
+
+        /// <summary>Adds the use case's own errors (the form's are already in ModelState, with what was typed).</summary>
+        private void ShowErrors(Result r)
         {
-            start = existing?.AppointmentAt ?? default;
-            slot = null;
-
-            var selectedIds = (model.ExaminationTypeIds ?? new()).Distinct().ToList();
-            var examTypes = _context.ExaminationTypes.Where(e => selectedIds.Contains(e.Id)).ToList();
-            if (examTypes.Count == 0)
-                ModelState.AddModelError(nameof(model.ExaminationTypeIds), "Ən azı bir müayinə növü seçin");
-
-            if (model.Birthday.HasValue && ModelState.ContainsKey(nameof(model.Birthday)))
+            foreach (var (field, message) in r.Errors)
             {
-                if (model.Birthday.Value.Date > ClinicTime.Today)
-                    ModelState.AddModelError(nameof(model.Birthday), "Doğum tarixi gələcəkdə ola bilməz");
-                else if (model.Birthday.Value.Year < 1900)
-                    ModelState.AddModelError(nameof(model.Birthday), "Doğum tarixi düzgün deyil");
+                var key = field ?? "";
+                if (ModelState.TryGetValue(key, out var entry) && entry.Errors.Any(e => e.ErrorMessage == message)) continue;
+                ModelState.AddModelError(key, message);
             }
-
-            if (model.DoctorId != null && model.AppointmentDate.HasValue && !string.IsNullOrEmpty(model.AppointmentTime))
-            {
-                var requested = model.AppointmentDate.Value.Date
-                    + (TimeSpan.TryParse(model.AppointmentTime, out var t) ? t : TimeSpan.Zero);
-
-                // An unchanged appointment stays valid even if it is in the past or off the grid.
-                var unchanged = existing != null
-                    && model.DoctorId == existing.DoctorId
-                    && requested == TruncateToMinute(existing.AppointmentAt);
-
-                if (!unchanged)
-                {
-                    var error = _slots.Validate(model.DoctorId.Value, model.AppointmentDate.Value, model.AppointmentTime, existing?.Id, out start, out var s);
-                    slot = s;
-                    if (error != null)
-                        ModelState.AddModelError(nameof(model.AppointmentTime), error);
-                }
-            }
-
-            return examTypes;
         }
-
-        private static DateTime TruncateToMinute(DateTime d) =>
-            new(d.Year, d.Month, d.Day, d.Hour, d.Minute, 0, d.Kind);
     }
 }

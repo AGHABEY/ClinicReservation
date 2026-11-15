@@ -1,4 +1,4 @@
-namespace ClinicReservation.ViewModels
+namespace ClinicReservation.Modules.Scheduling
 {
     /// <summary>One bookable time in a doctor's day (returned by SlotService).</summary>
     public class SlotViewModel

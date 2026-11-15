@@ -88,9 +88,11 @@ builder.Services.AddScoped<ClinicReservation.Services.ICurrentUser, ClinicReserv
 builder.Services.AddScoped<ClinicReservation.Services.IDistributedLock, PgDistributedLock>();
 builder.Services.AddSingleton<ClinicReservation.Services.IClock, ClinicReservation.Services.ClinicClock>();
 
-builder.Services.AddScoped<ClinicReservation.Services.SlotService>();
+builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.SlotService>();
+builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.ReservationQueries>();
+builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.Reservations>();
 builder.Services.AddScoped<ClinicReservation.Services.AuditService>();
-builder.Services.AddScoped<ClinicReservation.Services.QueueService>();
+builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.QueueService>();
 builder.Services.AddScoped<ClinicReservation.Modules.Lab.LabService>();
 builder.Services.AddScoped<ClinicReservation.Modules.Lab.LabQueries>();
 builder.Services.AddScoped<ClinicReservation.Modules.Lab.LabWork>();

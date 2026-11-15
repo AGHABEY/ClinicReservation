@@ -2,7 +2,7 @@ using ClinicReservation.Data;
 using ClinicReservation.Models;
 using Microsoft.EntityFrameworkCore;
 
-namespace ClinicReservation.Services
+namespace ClinicReservation.Modules.Scheduling
 {
     /// <summary>Queue tickets ("A-017") handed out at check-in.</summary>
     public class QueueService

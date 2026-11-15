@@ -75,6 +75,17 @@ namespace ClinicReservation.Tests.Infrastructure
             return r;
         }
 
+        /// <summary>A doctor working every day 08:00–20:00 in 30-minute slots.</summary>
+        public static Doctor Doctor(AppDbContext db, int? departmentId = null)
+        {
+            var d = new Doctor { FullName = Unique("Həkim "), DepartmentId = departmentId, SlotMinutes = 30 };
+            foreach (var day in Enum.GetValues<DayOfWeek>())
+                d.WorkHours.Add(new DoctorWorkHours { Day = day, Start = TimeSpan.FromHours(8), End = TimeSpan.FromHours(20) });
+            db.Doctors.Add(d);
+            db.SaveChanges();
+            return d;
+        }
+
         public static Ward Ward(AppDbContext db, int beds, decimal price = 40, int? departmentId = null, WardGender gender = WardGender.Mixed)
         {
             var w = new Ward { Name = Unique("Palata"), DailyPrice = price, DepartmentId = departmentId, Gender = gender };

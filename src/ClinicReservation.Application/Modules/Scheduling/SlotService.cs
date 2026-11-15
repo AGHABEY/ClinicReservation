@@ -1,10 +1,9 @@
 using ClinicReservation.Data;
 using ClinicReservation.Helpers;
 using ClinicReservation.Models;
-using ClinicReservation.ViewModels;
 using Microsoft.EntityFrameworkCore;
 
-namespace ClinicReservation.Services
+namespace ClinicReservation.Modules.Scheduling
 {
     /// <summary>
     /// Builds a doctor's bookable slots for a day from their weekly hours, breaks

@@ -1,6 +1,7 @@
 using ClinicReservation.Authorization;
 using ClinicReservation.Data;
 using ClinicReservation.Models;
+using ClinicReservation.Modules.Scheduling;
 using ClinicReservation.Services;
 using Microsoft.AspNetCore.Mvc;
 using Microsoft.EntityFrameworkCore;

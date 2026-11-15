@@ -49,6 +49,14 @@ namespace ClinicReservation.Modules.Lab
                 .AsSplitQuery()
                 .FirstOrDefaultAsync(o => o.Id == id, ct);
 
+        /// <summary>Samples of one visit (lab card on the reservation page).</summary>
+        public Task<List<LabOrder>> OrdersForReserveAsync(int reserveId, CancellationToken ct = default) =>
+            _db.LabOrders.Include(o => o.Results).ThenInclude(r => r.LabTest)
+                .Where(o => o.ReserveId == reserveId).OrderBy(o => o.CollectedAt).ToListAsync(ct);
+
+        /// <summary>Tests of a visit still waiting for a sample.</summary>
+        public List<LabTest> PendingTests(int reserveId) => _lab.PendingTests(reserveId);
+
         public LabOrderViewModel OrderPage(LabOrder order, bool canEdit) => new()
         {
             Order = order,
