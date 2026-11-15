@@ -1,7 +1,7 @@
 using System.ComponentModel.DataAnnotations;
 using ClinicReservation.Models;
 
-namespace ClinicReservation.ViewModels
+namespace ClinicReservation.Modules.Emr
 {
     public class RecordFormViewModel
     {
