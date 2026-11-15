@@ -39,5 +39,6 @@ onlayn yazılış = D mərhələsində. Sıra: A → B → E → C → D → F.
 - [x] D3. Qəbuldan sonra qiymətləndirmə (1–5, şərh; SMS ilə dəvət, 14 gün; rəhbərlik üçün «Qiymətləndirmələr»)
 
 ## F. Hesabatlar
-- [ ] F1. Doluluq, gəlməmə, ləğv səbəbləri, yazılışdan qəbula müddət, yeni / təkrar xəstə,
-      mənbə, kampaniya və endirim effekti, orta gözləmə
+- [x] F1. Doluluq, gəlməmə, ləğv səbəbləri, yazılışdan qəbula müddət, yeni / təkrar xəstə,
+      mənbə, kampaniya və endirim effekti, orta gözləmə — «Hesabatlar → Qəbul hesabatı», şöbə filtri,
+      həkim üzrə doluluq / faktiki / gecikmə / qiymət, Excel (CSV)

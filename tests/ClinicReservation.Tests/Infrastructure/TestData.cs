@@ -68,7 +68,7 @@ namespace ClinicReservation.Tests.Infrastructure
                 AppointmentAt = ClinicTime.Today.AddHours(10),
                 AddedDate = ClinicTime.Now,
                 Status = db.ReserveStatuses.First(s => s.Name == status),
-                ReserveExaminationTypes = exams.Select(e => new ReserveExaminationType { ExaminationTypeId = e.Id, Price = e.Price }).ToList()
+                ReserveExaminationTypes = exams.Select(e => new ReserveExaminationType { ExaminationTypeId = e.Id, ListPrice = e.Price, Price = e.Price }).ToList()
             };
             db.Reserves.Add(r);
             db.SaveChanges();

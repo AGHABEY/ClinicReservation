@@ -8,6 +8,7 @@
         <h2>Maliyyə hesabatı</h2>
         <p>@Fmt.Date(Model.From) — @Fmt.Date(Model.To)</p>
     </div>
+    <a class="btn btn-light" asp-action="Visits" asp-route-from="@Model.From.ToString("yyyy-MM-dd")" asp-route-to="@Model.To.ToString("yyyy-MM-dd")"><i class="bi bi-calendar2-check"></i> Qəbul hesabatı</a>
 </div>
 
 <!-- Date filter -->

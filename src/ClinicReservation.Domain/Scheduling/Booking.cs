@@ -52,7 +52,8 @@ namespace ClinicReservation.Models
             ReserveSource.Online => "Onlayn",
             ReserveSource.Referral => "Həkim göndərişi",
             ReserveSource.Campaign => "Kampaniya",
-            _ => "Digər"
+            ReserveSource.Other => "Digər",
+            _ => "Qeyd olunmayıb" // bookings made before the source was recorded
         };
 
         public static string Party(CancelledBy? p) => p switch

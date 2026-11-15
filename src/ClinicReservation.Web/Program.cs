@@ -111,6 +111,7 @@ builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.DeskQueries>();
 builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.Kiosk>();
 builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.OnlineBooking>();
 builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.RatingQueries>();
+builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.SchedulingReportQueries>();
 builder.Services.Configure<ClinicReservation.Models.SchedulingOptions>(builder.Configuration.GetSection("Scheduling"));
 builder.Services.AddHostedService<ClinicReservation.Modules.Scheduling.NoShowWorker>();
 builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.WaitlistQueries>();

@@ -1,0 +1,135 @@
+@model SchedulingReportView
+@{
+    ViewData["Title"] = "Qəbul hesabatı";
+    var from = Model.From.ToString("yyyy-MM-dd");
+    var to = Model.To.ToString("yyyy-MM-dd");
+    var today = ClinicTime.Today;
+    int Pct(int part, int whole) => whole == 0 ? 0 : (int)Math.Round(part * 100.0 / whole);
+    var maxCancel = Model.CancelReasons.Select(x => x.Count).DefaultIfEmpty(1).Max();
+    var maxSource = Model.Sources.Select(x => x.Count).DefaultIfEmpty(1).Max();
+    var maxLead = Model.LeadTimes.Select(x => x.Count).DefaultIfEmpty(1).Max();
+    var visits = Model.NewPatients + Model.ReturningPatients;
+}
+
+<div class="page-head">
+    <div>
+        <h2>Qəbul hesabatı</h2>
+        <p>@Fmt.Date(Model.From) — @Fmt.Date(Model.To)@(Model.DepartmentId != null ? " · " + Model.Departments.FirstOrDefault(d => d.Id == Model.DepartmentId)?.Name : "")</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-light" asp-action="Index" asp-route-from="@from" asp-route-to="@to"><i class="bi bi-cash-coin"></i> Maliyyə hesabatı</a>
+        <a class="btn btn-light" asp-action="VisitsCsv" asp-route-from="@from" asp-route-to="@to" asp-route-departmentId="@Model.DepartmentId"><i class="bi bi-filetype-csv"></i> Excel (CSV)</a>
+    </div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-pad">
+        <form method="get" class="filter-bar">
+            <div class="seg" style="align-self:flex-end;">
+                <a asp-action="Visits" asp-route-from="@today.AddDays(-6).ToString("yyyy-MM-dd")" asp-route-to="@today.ToString("yyyy-MM-dd")" asp-route-departmentId="@Model.DepartmentId">7 gün</a>
+                <a asp-action="Visits" asp-route-departmentId="@Model.DepartmentId">30 gün</a>
+                <a asp-action="Visits" asp-route-from="@(new DateTime(today.Year, today.Month, 1).ToString("yyyy-MM-dd"))" asp-route-to="@today.ToString("yyyy-MM-dd")" asp-route-departmentId="@Model.DepartmentId">Bu ay</a>
+                <a asp-action="Visits" asp-route-from="@today.ToString("yyyy-MM-dd")" asp-route-to="@today.AddDays(13).ToString("yyyy-MM-dd")" asp-route-departmentId="@Model.DepartmentId">Növbəti 2 həftə</a>
+            </div>
+            <div class="field" style="margin:0;"><label>Başlanğıc</label><input type="date" name="from" value="@from" class="form-control" /></div>
+            <div class="field" style="margin:0;"><label>Son</label><input type="date" name="to" value="@to" class="form-control" /></div>
+            <div class="field" style="margin:0;"><label>Şöbə</label>
+                <select name="departmentId" class="form-select"><option value="">Bütün şöbələr</option>@foreach (var d in Model.Departments) { <option value="@d.Id" selected="@(Model.DepartmentId == d.Id)">@d.Name</option> }</select></div>
+            <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i> Filtrlə</button>
+        </form>
+    </div>
+</div>
+
+<div class="stat-grid">
+    <div class="stat"><div class="icon teal"><i class="bi bi-calendar2-check"></i></div><div><div class="value">@Model.Booked</div><div class="label">Yazılış · @Model.Completed tamamlanıb</div></div></div>
+    <div class="stat"><div class="icon amber"><i class="bi bi-person-x"></i></div><div><div class="value">@Model.NoShowPercent%</div><div class="label">Gəlməmə · @Model.NoShows (@Model.NoShowsAuto avtomatik)</div></div></div>
+    <div class="stat"><div class="icon red"><i class="bi bi-x-circle"></i></div><div><div class="value">@Model.CancelPercent%</div><div class="label">Ləğv · @Model.Cancelled</div></div></div>
+    <div class="stat"><div class="icon blue"><i class="bi bi-hourglass-split"></i></div><div><div class="value">@(Model.AvgWaitMinutes?.ToString() ?? "—") dəq</div><div class="label">Orta gözləmə (gəldi → qəbul)</div></div></div>
+    <div class="stat"><div class="icon violet"><i class="bi bi-star-half"></i></div><div><div class="value">@(Model.Rating?.ToString("0.0#") ?? "—")</div><div class="label">Orta qiymət · @Model.Ratings rəy</div></div></div>
+</div>
+
+<div class="card mb-3">
+    <div class="card-head"><h3 class="card-title"><i class="bi bi-speedometer2"></i> Həkimlərin doluluğu</h3></div>
+    @if (Model.Doctors.Any())
+    {
+        <div class="table-wrap" style="border:0; border-radius:0;">
+            <table class="data" id="loadTable">
+                <thead><tr><th>Həkim</th><th>Doluluq</th><th>Faktiki</th><th>Qəbul</th><th>Gəlməmə</th><th>Gözləmə</th><th>Gecikmə</th><th>Qiymət</th></tr></thead>
+                <tbody>
+                    @foreach (var d in Model.Doctors)
+                    {
+                        <tr>
+                            <td><b>@d.Doctor</b><div class="hint-text">@(d.WorkMinutes / 60) saat iş vaxtı</div></td>
+                            <td style="min-width:160px;"><div class="bar-track"><div class="bar-fill" style="width:@Math.Min(100, d.BookedPercent)%; background:@(d.BookedPercent > 100 ? "var(--bad)" : "var(--brand)");"></div></div><div class="hint-text">@d.BookedPercent% (@(d.BookedMinutes / 60) saat)</div></td>
+                            <td>@d.AttendedPercent%</td>
+                            <td>@d.Visits</td>
+                            <td style="color:@(d.NoShowPercent >= 15 ? "var(--bad)" : "inherit");">@d.NoShowPercent% <span class="hint-text">(@d.NoShows)</span></td>
+                            <td>@(d.AvgWaitMinutes?.ToString() ?? "—") dəq</td>
+                            <td>@(d.AvgLateMinutes?.ToString() ?? "—") dəq</td>
+                            <td>@(d.Rating?.ToString("0.0#") ?? "—")</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+        <p class="hint-text" style="padding:0 20px 16px;">Doluluq — yazılmış qəbulların müddəti / iş vaxtı (fasilə və məzuniyyət çıxılmaqla); faktiki — gəlmiş xəstələr. Gecikmə — qəbulun başlanması yazılış saatından nə qədər sonra.</p>
+    }
+    else { <div class="card-pad"><p class="hint-text">Məlumat yoxdur.</p></div> }
+</div>
+
+<div class="report-grid">
+    <div class="card card-pad">
+        <h3 class="card-title"><i class="bi bi-x-octagon"></i> Ləğv səbəbləri</h3>
+        @foreach (var x in Model.CancelReasons)
+        {
+            <div class="bar-row" style="grid-template-columns: minmax(120px, 1.2fr) 1fr 50px;"><span class="bar-label">@x.Label</span><div class="bar-track"><div class="bar-fill" style="width:@Pct(x.Count, maxCancel)%; background:var(--bad);"></div></div><span class="bar-val">@x.Count</span></div>
+        }
+        @if (Model.CancelParties.Any()) { <p class="hint-text" style="margin:10px 0 0;">Kim ləğv edib: @string.Join(", ", Model.CancelParties.Select(p => $"{p.Label} {p.Count}"))</p> }
+        @if (!Model.CancelReasons.Any()) { <p class="hint-text">Ləğv yoxdur.</p> }
+    </div>
+    <div class="card card-pad">
+        <h3 class="card-title"><i class="bi bi-signpost-2"></i> Yazılış mənbəyi</h3>
+        @foreach (var x in Model.Sources)
+        {
+            <div class="bar-row" style="grid-template-columns: minmax(110px, 1fr) 1fr 70px;"><span class="bar-label">@x.Label</span><div class="bar-track"><div class="bar-fill" style="width:@Pct(x.Count, maxSource)%;"></div></div><span class="bar-val">@x.Count · @Pct(x.Count, Model.Booked)%</span></div>
+        }
+        <p class="hint-text" style="margin:10px 0 0;">Göndərişlə: @Model.Referrals · gözləmə siyahısından: @Model.FromWaitlist · kontrol qəbulu: @Model.FollowUps · araya salınan: @Model.Overbooked</p>
+    </div>
+    <div class="card card-pad">
+        <h3 class="card-title"><i class="bi bi-clock-history"></i> Yazılışdan qəbula</h3>
+        @foreach (var x in Model.LeadTimes)
+        {
+            <div class="bar-row" style="grid-template-columns: 90px 1fr 50px;"><span class="bar-label">@x.Label</span><div class="bar-track"><div class="bar-fill" style="width:@Pct(x.Count, maxLead)%;"></div></div><span class="bar-val">@x.Count</span></div>
+        }
+        <p class="hint-text" style="margin:10px 0 0;">Orta: @(Model.AvgLeadDays?.ToString("0.#") ?? "—") gün</p>
+    </div>
+    <div class="card card-pad">
+        <h3 class="card-title"><i class="bi bi-people"></i> Yeni / təkrar xəstə</h3>
+        <div class="bar-row" style="grid-template-columns: 90px 1fr 80px;"><span class="bar-label">Yeni</span><div class="bar-track"><div class="bar-fill" style="width:@Pct(Model.NewPatients, visits)%;"></div></div><span class="bar-val">@Model.NewPatients · @Pct(Model.NewPatients, visits)%</span></div>
+        <div class="bar-row" style="grid-template-columns: 90px 1fr 80px;"><span class="bar-label">Təkrar</span><div class="bar-track"><div class="bar-fill" style="width:@Pct(Model.ReturningPatients, visits)%; background:var(--violet);"></div></div><span class="bar-val">@Model.ReturningPatients · @Pct(Model.ReturningPatients, visits)%</span></div>
+        <p class="hint-text" style="margin:10px 0 0;">Yeni — bu qəbula qədər tamamlanmış vizit olmayan xəstə.</p>
+    </div>
+</div>
+
+<div class="card mb-3" style="margin-top:20px;">
+    <div class="card-head"><h3 class="card-title"><i class="bi bi-tags"></i> Endirimlərin effekti</h3>
+        <span class="hint-text">Qiymət siyahısı @Fmt.Money(Model.ListTotal) · endirim @Fmt.Money(Model.DiscountTotal) (@(Model.ListTotal == 0 ? 0 : Math.Round(Model.DiscountTotal * 100 / Model.ListTotal, 1))%)</span></div>
+    <div class="card-pad">
+        @if (Model.DiscountsByKind.Any())
+        {
+            <table class="data compact">
+                <thead><tr><th>Növ</th><th>Xidmət</th><th>Endirim</th><th>Ödəniləcək</th></tr></thead>
+                <tbody>@foreach (var x in Model.DiscountsByKind) { <tr><td>@x.Label</td><td>@x.Lines</td><td class="money">@Fmt.Money(x.Discount)</td><td class="money">@Fmt.Money(x.Revenue)</td></tr> }</tbody>
+            </table>
+        }
+        else { <p class="hint-text">Bu dövrdə endirim olmayıb.</p> }
+        @if (Model.Campaigns.Any())
+        {
+            <h4 class="hint-text" style="margin:16px 0 6px; font-weight:600; text-transform:uppercase; letter-spacing:.04em;">Kampaniyalar və promo kodlar</h4>
+            <table class="data compact">
+                <thead><tr><th>Kampaniya</th><th>Xidmət</th><th>Endirim</th><th>Gəlir</th></tr></thead>
+                <tbody>@foreach (var x in Model.Campaigns) { <tr><td>@x.Label</td><td>@x.Lines</td><td class="money">@Fmt.Money(x.Discount)</td><td class="money">@Fmt.Money(x.Revenue)</td></tr> }</tbody>
+            </table>
+        }
+    </div>
+</div>
