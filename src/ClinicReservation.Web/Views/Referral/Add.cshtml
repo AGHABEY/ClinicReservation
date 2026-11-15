@@ -1,0 +1,33 @@
+@model ReferralFormViewModel
+@{
+    ViewData["Title"] = "Kənar göndəriş";
+}
+
+<div class="page-head">
+    <div>
+        <h2>Kənar göndəriş</h2>
+        <p>Başqa poliklinikadan / həkimdən gələn göndərişi qeyd edin; sonra «Göndərişlər» siyahısından rezerv edilir.</p>
+    </div>
+    <a class="btn btn-light" asp-action="Index"><i class="bi bi-arrow-left"></i> Siyahıya qayıt</a>
+</div>
+
+<form asp-action="Add" method="post" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+    <div class="card card-pad" style="max-width:860px;">
+        <div class="form-grid">
+            <div class="field">
+                <label asp-for="PinCode">Xəstənin FİN kodu</label>
+                <input lang="en" asp-for="PinCode" class="form-control" maxlength="7" style="text-transform:uppercase;" autocomplete="off" autofocus />
+                <span asp-validation-for="PinCode" class="text-danger"></span>
+            </div>
+            <div class="field">
+                <label asp-for="ExternalFrom">Göndərən (müəssisə, həkim)</label>
+                <input asp-for="ExternalFrom" class="form-control" maxlength="200" placeholder="məs: 5 saylı poliklinika, Dr. Əliyev" />
+                <span asp-validation-for="ExternalFrom" class="text-danger"></span>
+            </div>
+        </div>
+        <h3 class="card-title mt-3"><i class="bi bi-signpost-split"></i> Hara</h3>
+        <partial name="_ReferralFields" model="Model" view-data="@(new ViewDataDictionary(ViewData) { ["Departments"] = ViewBag.Departments, ["Doctors"] = ViewBag.Doctors, ["Exams"] = ViewBag.Exams })" />
+        <button type="submit" class="btn btn-primary mt-3"><i class="bi bi-check2"></i> Qeyd et</button>
+    </div>
+</form>

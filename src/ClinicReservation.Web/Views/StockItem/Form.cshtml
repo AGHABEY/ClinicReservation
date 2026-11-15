@@ -1,0 +1,71 @@
+@model StockItem
+@{
+    var isNew = Model.Id == 0;
+    ViewData["Title"] = isNew ? "Yeni məhsul" : Model.Name;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+}
+
+<div class="page-head">
+    <div>
+        <h2>@(isNew ? "Yeni məhsul" : Model.DisplayName)</h2>
+        <p>Dərman, sərf materialı və ya reagent</p>
+    </div>
+    <a class="btn btn-light" asp-action="Index"><i class="bi bi-arrow-left"></i> Kataloq</a>
+</div>
+
+<div class="card" style="max-width:760px;">
+    <div class="card-pad">
+        <form asp-action="Save" method="post" novalidate>
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+            <input type="hidden" asp-for="Id" />
+            <div class="form-grid">
+                <div class="field">
+                    <label asp-for="Name">Ad</label>
+                    <input asp-for="Name" class="form-control" maxlength="200" placeholder="Deksametazon 4 mq/ml" />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Form">Forma / qablaşdırma</label>
+                    <input asp-for="Form" class="form-control" maxlength="100" placeholder="ampul 1 ml" />
+                </div>
+                <div class="field">
+                    <label asp-for="Kind">Növ</label>
+                    <select asp-for="Kind" class="form-select">
+                        @foreach (var k in Enum.GetValues<StockItemKind>()) { <option value="@k">@StockLabels.Kind(k)</option> }
+                    </select>
+                    <span class="hint-text">Dərman və reagent üçün mədaxildə son istifadə tarixi tələb olunur</span>
+                </div>
+                <div class="field">
+                    <label asp-for="Code">Kod və ya barkod <span class="hint-text">(istəyə görə)</span></label>
+                    <input lang="en" asp-for="Code" class="form-control" maxlength="50" style="text-transform:uppercase;" />
+                    <span asp-validation-for="Code" class="text-danger"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Unit">Uçot vahidi</label>
+                    <input asp-for="Unit" class="form-control" maxlength="20" list="units" />
+                    <datalist id="units">@foreach (var u in StockLabels.Units) { <option value="@u"></option> }</datalist>
+                    <span asp-validation-for="Unit" class="text-danger"></span>
+                </div>
+                <div class="field">
+                    <label for="MinQuantity">Minimum qalıq</label>
+                    <input id="MinQuantity" name="MinQuantity" value="@Model.MinQuantity.ToString("0.###", inv)" type="number" step="any" min="0" class="form-control" />
+                    <span class="hint-text">Bütün anbarlarda bundan az qalanda «Az qalıb» göstərilir</span>
+                    <span asp-validation-for="MinQuantity" class="text-danger"></span>
+                </div>
+            </div>
+            <div class="field mt-3">
+                <label asp-for="Note">Qeyd</label>
+                <textarea asp-for="Note" class="form-control" rows="2" maxlength="500"></textarea>
+            </div>
+            <div class="field mt-3">
+                <label style="display:flex; align-items:center; gap:8px; font-weight:500;">
+                    <input type="checkbox" name="IsActive" value="true" checked="@Model.IsActive" /><input type="hidden" name="IsActive" value="false" /> Aktiv (sənədlərdə seçmək olar)
+                </label>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Yadda saxla</button>
+                <a class="btn btn-light" asp-action="Index">İmtina</a>
+            </div>
+        </form>
+    </div>
+</div>

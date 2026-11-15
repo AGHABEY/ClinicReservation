@@ -1,0 +1,9 @@
+@{
+    Layout = "~/Views/Public/_PublicLayout.cshtml";
+    ViewData["Title"] = "Onlayn yazılış";
+    ViewData["Foot"] = "";
+}
+<div class="pub-card">
+    <div class="pub-result bad"><i class="bi bi-hourglass-bottom"></i> @(ViewBag.Error as string ?? "Kodun vaxtı bitib və ya artıq istifadə olunub.")</div>
+    <a class="btn btn-primary" style="width:100%; height:48px;" href="@Url.Action("Index")">Yenidən başla</a>
+</div>

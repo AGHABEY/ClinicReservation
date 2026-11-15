@@ -1,0 +1,237 @@
+@model CalendarView
+@{
+    ViewData["Title"] = "Təqvim";
+    const double px = 1.4; // pixels per minute
+    var from = Model.From.TotalMinutes;
+    var height = (Model.To - Model.From).TotalMinutes * px;
+    var canManage = User.Can(Permissions.ReservationsManage);
+    var week = Model.Mode == "week";
+    var today = ClinicTime.Today;
+    var now = ClinicTime.Now;
+    var stepDays = week ? 7 : 1;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    string Px(double minutes) => (minutes * px).ToString("0.#", inv) + "px";
+    string Top(TimeSpan t) => Px(t.TotalMinutes - from);
+    var title = week ? $"{Fmt.Date(Model.Date)} – {Fmt.Date(Model.Date.AddDays(6))}" : Fmt.Long(Model.Date);
+    var colWidth = week ? "minmax(130px, 1fr)" : "minmax(170px, 1fr)";
+    string Css(string? s) => "st-" + (s ?? StatusNames.Waiting);
+}
+
+<div class="page-head">
+    <div>
+        <h2>Təqvim</h2>
+        <p>@title@(week && Model.Columns.Any() ? $" · {Model.Doctors.FirstOrDefault(d => d.Id == Model.DoctorId)?.FullName}" : "")</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-light" asp-controller="Reservation" asp-action="Index"><i class="bi bi-list-ul"></i> Siyahı</a>
+    </div>
+</div>
+
+<form method="get" class="toolbar" id="calFilter">
+    <div class="seg">
+        <a class="@(week ? "" : "on")" asp-route-mode="day" asp-route-date="@Model.Date.ToString("yyyy-MM-dd")" asp-route-departmentId="@Model.DepartmentId" asp-route-doctorId="@(week ? null : Model.DoctorId)">Gün</a>
+        <a class="@(week ? "on" : "")" asp-route-mode="week" asp-route-date="@Model.Date.ToString("yyyy-MM-dd")" asp-route-departmentId="@Model.DepartmentId" asp-route-doctorId="@Model.DoctorId">Həftə</a>
+    </div>
+    <input type="hidden" name="mode" value="@Model.Mode" />
+    <div class="seg">
+        <a asp-route-mode="@Model.Mode" asp-route-date="@Model.Date.AddDays(-stepDays).ToString("yyyy-MM-dd")" asp-route-departmentId="@Model.DepartmentId" asp-route-doctorId="@Model.DoctorId" aria-label="Əvvəlki"><i class="bi bi-chevron-left"></i></a>
+        <a asp-route-mode="@Model.Mode" asp-route-date="@today.ToString("yyyy-MM-dd")" asp-route-departmentId="@Model.DepartmentId" asp-route-doctorId="@Model.DoctorId">Bu gün</a>
+        <a asp-route-mode="@Model.Mode" asp-route-date="@Model.Date.AddDays(stepDays).ToString("yyyy-MM-dd")" asp-route-departmentId="@Model.DepartmentId" asp-route-doctorId="@Model.DoctorId" aria-label="Növbəti"><i class="bi bi-chevron-right"></i></a>
+    </div>
+    <div class="toolbar-right">
+        <input type="date" name="date" value="@Model.Date.ToString("yyyy-MM-dd")" class="form-control" aria-label="Tarix" onchange="this.form.submit()" style="width:auto;" />
+        <select name="departmentId" class="form-select" aria-label="Şöbə" onchange="this.form.doctorId.value=''; this.form.submit()" style="width:auto; max-width:220px;">
+            <option value="">Bütün şöbələr</option>
+            @foreach (var d in Model.Departments) { <option value="@d.Id" selected="@(Model.DepartmentId == d.Id)">@d.Name</option> }
+        </select>
+        <select name="doctorId" class="form-select" aria-label="Həkim" onchange="this.form.submit()" style="width:auto; max-width:240px;">
+            @if (!week) { <option value="">Bütün həkimlər</option> }
+            @foreach (var d in Model.Doctors.Where(d => Model.DepartmentId == null || d.DepartmentId == Model.DepartmentId))
+            {
+                <option value="@d.Id" selected="@(Model.DoctorId == d.Id)">@d.FullName</option>
+            }
+        </select>
+    </div>
+</form>
+
+@if (!Model.Columns.Any())
+{
+    <div class="card"><div class="empty-state"><i class="bi bi-calendar3"></i><p>Bu seçimə uyğun aktiv həkim yoxdur</p></div></div>
+}
+else
+{
+    @Html.AntiForgeryToken()
+    <div class="cal-wrap">
+        <div class="cal" style="grid-template-columns: 56px repeat(@Model.Columns.Count, @colWidth);">
+            <div class="cal-head" style="grid-row:1; grid-column:1;"></div>
+            @for (var i = 0; i < Model.Columns.Count; i++)
+            {
+                var c = Model.Columns[i];
+                <div class="cal-head @(c.Date == today && week ? "today" : "")" style="grid-row:1; grid-column:@(i + 2);">
+                    @if (week)
+                    {
+                        <a asp-route-mode="day" asp-route-date="@c.Date.ToString("yyyy-MM-dd")" asp-route-departmentId="@Model.DepartmentId" style="color:inherit; text-decoration:none;">@c.Title</a>
+                    }
+                    else
+                    {
+                        <a asp-route-mode="week" asp-route-date="@c.Date.ToString("yyyy-MM-dd")" asp-route-doctorId="@c.DoctorId" style="color:inherit; text-decoration:none;" title="Həkimin həftəsi">@c.Title</a>
+                    }
+                    <small>@c.Subtitle · @c.Items.Count(x => x.Status != StatusNames.NoShow) qəbul</small>
+                </div>
+            }
+
+            <div class="cal-axis" style="grid-row:2; grid-column:1; height:@Px(height / px);">
+                @for (var h = Model.From; h < Model.To; h += TimeSpan.FromHours(1))
+                {
+                    <span style="top:@Top(h);@(h == Model.From ? " transform:none; margin-top:4px;" : "")">@h.ToString(@"hh\:mm")</span>
+                }
+            </div>
+
+            @for (var i = 0; i < Model.Columns.Count; i++)
+            {
+                var c = Model.Columns[i];
+                <div class="cal-col" style="grid-row:2; grid-column:@(i + 2); height:@Px(height / px);"
+                     data-doctor="@c.DoctorId" data-date="@c.Date.ToString("yyyy-MM-dd")" data-step="@c.Step"
+                     data-start="@(c.Start?.TotalMinutes)" data-end="@(c.End?.TotalMinutes)"
+                     data-bstart="@(c.BreakStart?.TotalMinutes)" data-bend="@(c.BreakEnd?.TotalMinutes)">
+                    @if (c.Start != null && c.End != null)
+                    {
+                        <div class="work" style="top:@Top(c.Start.Value); height:@Px((c.End.Value - c.Start.Value).TotalMinutes);"></div>
+                        @if (c.BreakStart != null && c.BreakEnd != null)
+                        {
+                            <div class="break" style="top:@Top(c.BreakStart.Value); height:@Px((c.BreakEnd.Value - c.BreakStart.Value).TotalMinutes);"><span>Fasilə</span></div>
+                        }
+                    }
+                    else
+                    {
+                        <div class="off">@c.Off</div>
+                    }
+                    @for (var h = Model.From + TimeSpan.FromHours(1); h < Model.To; h += TimeSpan.FromHours(1))
+                    {
+                        <div class="hour" style="top:@Top(h);"></div>
+                    }
+                    @if (c.Date == today && now.TimeOfDay > Model.From && now.TimeOfDay < Model.To)
+                    {
+                        <div class="cal-now" style="top:@Top(now.TimeOfDay);" title="İndi @Fmt.Time(now)"></div>
+                    }
+                    <div class="cal-add"></div>
+                    @foreach (var item in c.Items)
+                    {
+                        var drag = canManage && item.Movable;
+                        <a class="cal-item @Css(item.Status) @(item.Overbooked ? "extra" : "")" asp-controller="Reservation" asp-action="Details" asp-route-id="@item.Id"
+                           style="top:@Top(item.Start.TimeOfDay); height:@Px(Math.Max(18 / px, item.Minutes) - 2 / px); left:calc(4px + (100% - 8px) * @item.Lane / @item.Lanes); right:auto; width:calc((100% - 8px) / @item.Lanes - 2px);"
+                           draggable="@(drag ? "true" : "false")" data-id="@item.Id" data-minutes="@item.Minutes"
+                           title="@Fmt.Time(item.Start) · @item.Patient · @StatusNames.Label(item.Status)@(item.Services.Length > 0 ? " · " + item.Services : "")@(item.Overbooked ? " · əlavə qəbul" : "")@(drag ? " — köçürmək üçün sürüşdürün" : "")">
+                            <b><span class="t">@Fmt.Time(item.Start)</span> @item.Patient@if (item.Overbooked) {<span class="tag">Əlavə</span>}</b>
+                            @if (item.Minutes >= 30) { <span class="s">@item.Services</span> }
+                        </a>
+                    }
+                </div>
+            }
+        </div>
+    </div>
+    <div class="cal-legend">
+        <span><i style="background:var(--warn-bg); border:1px solid var(--warn);"></i>Gözləyir</span>
+        <span><i style="background:var(--ok-bg); border:1px solid var(--ok);"></i>Təsdiqləndi</span>
+        <span><i style="background:var(--info-bg); border:1px solid var(--info);"></i>Gəldi</span>
+        <span><i style="background:var(--violet-bg); border:1px solid var(--violet);"></i>Qəbulda</span>
+        <span><i style="background:var(--brand-soft); border:1px solid var(--brand-dark);"></i>Tamamlandı</span>
+        <span><i style="background:var(--orange-bg); border:1px solid var(--orange);"></i>Gəlmədi</span>
+        @if (canManage) { <span><i class="bi bi-arrows-move" style="width:auto; height:auto;"></i>Gələcək qəbulu sürüşdürüb başqa saata / həkimə köçürün; boş saata klikləyib yeni qəbul yazın</span> }
+    </div>
+    <div class="cal-toast" id="calToast" hidden></div>
+}
+
+@if (canManage && Model.Columns.Any())
+{
+    <script>
+        (function () {
+            const PX = @px.ToString(inv), FROM = @from.ToString(inv);
+            const token = document.querySelector('input[name="__RequestVerificationToken"]').value;
+            const addUrl = '@Url.Action("Add", "Reservation")', moveUrl = '@Url.Action("Move", "Calendar")';
+            const today = '@today.ToString("yyyy-MM-dd")', nowMin = @((int)now.TimeOfDay.TotalMinutes);
+            const hhmm = m => String(Math.floor(m / 60)).padStart(2, '0') + ':' + String(m % 60).padStart(2, '0');
+
+            // Minute of the column's grid under the pointer, or null outside working time / in the break.
+            function snap(col, clientY, length) {
+                const start = parseFloat(col.dataset.start), end = parseFloat(col.dataset.end), step = parseFloat(col.dataset.step);
+                if (isNaN(start) || isNaN(end)) return null;
+                const y = clientY - col.getBoundingClientRect().top;
+                const m = FROM + y / PX;
+                let t = start + Math.floor((m - start) / step) * step;
+                if (t < start || t + Math.max(length, step) > end) return null;
+                const bs = parseFloat(col.dataset.bstart), be = parseFloat(col.dataset.bend);
+                if (!isNaN(bs) && t < be && t + Math.max(length, step) > bs) return null;
+                if (col.dataset.date < today || (col.dataset.date === today && t <= nowMin)) return null;
+                return t;
+            }
+            function ghost(col, t, length, text) {
+                const g = col.querySelector('.cal-add');
+                if (t === null) { g.style.display = 'none'; return; }
+                g.style.display = 'flex';
+                g.style.top = ((t - FROM) * PX) + 'px';
+                g.style.height = (Math.max(length, parseFloat(col.dataset.step)) * PX - 2) + 'px';
+                g.textContent = text + ' ' + hhmm(t);
+            }
+            function toast(ok, text) {
+                const el = document.getElementById('calToast');
+                el.className = 'cal-toast alert ' + (ok ? 'alert-success' : 'alert-danger');
+                el.textContent = text;
+                el.hidden = false;
+                clearTimeout(el._t);
+                el._t = setTimeout(() => el.hidden = true, 5000);
+            }
+
+            const cols = document.querySelectorAll('.cal-col');
+            let dragging = null;
+            cols.forEach(col => {
+                // Hover an empty time → "+ new visit" there.
+                col.addEventListener('mousemove', e => {
+                    if (dragging || e.target.closest('.cal-item')) { ghost(col, null); return; }
+                    ghost(col, snap(col, e.clientY, 0), 0, '+ Yeni qəbul');
+                });
+                col.addEventListener('mouseleave', () => { if (!dragging) ghost(col, null); });
+                col.addEventListener('click', e => {
+                    if (e.target.closest('.cal-item')) return;
+                    const t = snap(col, e.clientY, 0);
+                    if (t === null) return;
+                    location.href = addUrl + '?' + new URLSearchParams({ doctorId: col.dataset.doctor, date: col.dataset.date, time: hhmm(t) });
+                });
+                col.addEventListener('dragover', e => {
+                    if (!dragging) return;
+                    const t = snap(col, e.clientY, dragging.minutes);
+                    ghost(col, t, dragging.minutes, 'Köçür:');
+                    if (t !== null) { e.preventDefault(); col.classList.add('drop-ok'); } else col.classList.remove('drop-ok');
+                });
+                col.addEventListener('dragleave', e => { if (!col.contains(e.relatedTarget)) { col.classList.remove('drop-ok'); ghost(col, null); } });
+                col.addEventListener('drop', async e => {
+                    e.preventDefault();
+                    col.classList.remove('drop-ok');
+                    ghost(col, null);
+                    const t = snap(col, e.clientY, dragging.minutes);
+                    if (t === null) return;
+                    const body = new URLSearchParams({ id: dragging.id, doctorId: col.dataset.doctor, date: col.dataset.date, time: hhmm(t), __RequestVerificationToken: token });
+                    try {
+                        const res = await fetch(moveUrl, { method: 'POST', body, headers: { 'Accept': 'application/json' } });
+                        const data = await res.json();
+                        toast(data.ok, data.message);
+                        if (data.ok) setTimeout(() => location.reload(), 700);
+                    } catch (err) { toast(false, 'Köçürmə alınmadı — səhifəni yeniləyin'); }
+                });
+            });
+            document.querySelectorAll('.cal-item[draggable="true"]').forEach(item => {
+                item.addEventListener('dragstart', e => {
+                    dragging = { id: item.dataset.id, minutes: parseFloat(item.dataset.minutes) };
+                    item.classList.add('dragging');
+                    e.dataTransfer.effectAllowed = 'move';
+                    e.dataTransfer.setData('text/plain', item.dataset.id);
+                });
+                item.addEventListener('dragend', () => {
+                    item.classList.remove('dragging');
+                    dragging = null;
+                    cols.forEach(c => { c.classList.remove('drop-ok'); ghost(c, null); });
+                });
+            });
+        })();
+    </script>
+}

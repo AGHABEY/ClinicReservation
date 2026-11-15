@@ -1,0 +1,268 @@
+@model WorkspaceViewModel
+@{
+    ViewData["Title"] = "İş masası";
+    var now = ClinicTime.Now;
+    var d = Model.Doctor;
+    var current = Model.Current;
+    var queue = Model.Queue;
+    var canRecord = User.Can(Permissions.RecordsEdit);
+    var canSeeRecord = User.Can(Permissions.RecordsView);
+
+    string WaitCss(int minutes) => minutes >= 40 ? "very-long" : minutes >= 20 ? "long" : "";
+    int WaitMinutes(Reserve r) => r.ArrivedAt == null ? 0 : (int)Math.Max(0, (now - r.ArrivedAt.Value).TotalMinutes);
+}
+
+<div class="page-head">
+    <div>
+        <h2>@(d == null ? "Həkimin iş masası" : Model.IsOwnDesk ? "Mənim iş masam" : d.FullName)</h2>
+        <p>
+            @if (d != null)
+            {
+                <text>@(d.Specialty ?? d.Department?.Name ?? "Həkim")@(d.Room == null ? "" : $" · {d.Room.Name}") · @Fmt.Long(ClinicTime.Today)</text>
+            }
+            else
+            {
+                @:Həkimi seçin — günün növbəsi, cari xəstə və tibbi qeydlər burada görünür.
+            }
+        </p>
+    </div>
+    <div class="page-actions">
+        @if (!Model.IsOwnDesk || Model.Doctors.Count > 1)
+        {
+            <form method="get" class="inline-form">
+                <select name="doctorId" class="form-select" aria-label="Həkim" onchange="this.form.submit()">
+                    <option value="">Həkim seçin…</option>
+                    @foreach (var doc in Model.Doctors)
+                    {
+                        <option value="@doc.Id" selected="@(doc.Id == d?.Id)">@doc.FullName</option>
+                    }
+                </select>
+                <noscript><button class="btn btn-light" type="submit">Aç</button></noscript>
+            </form>
+        }
+        @if (User.Can(Permissions.QueueView))
+        {
+            <a class="btn btn-light" asp-controller="Queue" asp-action="Screen" target="_blank" rel="noopener"><i class="bi bi-tv"></i> Növbə ekranı</a>
+        }
+        @if (d != null && queue.Any(r => r.CalledAt == null))
+        {
+            <form asp-action="CallNext" method="post">
+                <input type="hidden" name="doctorId" value="@d.Id" />
+                <button type="submit" class="btn btn-primary"><i class="bi bi-megaphone"></i> Növbəti xəstəni çağır</button>
+            </form>
+        }
+    </div>
+</div>
+
+@if (d == null)
+{
+    <div class="card">
+        <div class="empty-state">
+            <i class="bi bi-person-badge"></i>
+            <p>@(Model.Doctors.Any() ? "Yuxarıdan həkimi seçin" : "Hələ həkim əlavə edilməyib")</p>
+            <p class="hint-text" style="margin-top:6px;">Həkimin öz istifadəçisi varsa (Həkimlər → istifadəçi bağla), iş masası avtomatik açılır.</p>
+        </div>
+    </div>
+}
+else
+{
+    <div class="stat-grid">
+        <div class="stat"><div class="icon teal"><i class="bi bi-calendar2-event"></i></div><div><div class="value">@Model.Today.Count(r => r.Status?.Name != StatusNames.NoShow)</div><div class="label">Bu günkü qəbul</div></div></div>
+        <div class="stat"><div class="icon blue"><i class="bi bi-hourglass-split"></i></div><div><div class="value">@queue.Count</div><div class="label">Növbədə gözləyir</div></div></div>
+        <div class="stat"><div class="icon green"><i class="bi bi-check2-all"></i></div><div><div class="value">@Model.Today.Count(r => r.Status?.Name == StatusNames.Completed)</div><div class="label">Tamamlandı</div></div></div>
+        <div class="stat"><div class="icon amber"><i class="bi bi-stopwatch"></i></div><div><div class="value">@(Model.AverageWaitMinutes == null ? "—" : $"{Model.AverageWaitMinutes} dəq")</div><div class="label">Orta gözləmə</div></div></div>
+    </div>
+
+    <div class="ws-grid">
+        <div class="stack">
+            @if (current != null)
+            {
+                var p = current.Patient;
+                <div class="card card-pad ws-current">
+                    <div class="flex-between">
+                        <span class="next-label">Hazırda qəbulda</span>
+                        <span class="hint-text">@(current.StartedAt == null ? "" : $"{(int)(now - current.StartedAt.Value).TotalMinutes} dəq əvvəl başlayıb")</span>
+                    </div>
+                    <div class="who" style="margin-top:14px;">
+                        @if (current.QueueTicket != null) { <span class="ticket lg">@current.QueueTicket</span> }
+                        <div style="min-width:0;">
+                            <div class="name">@p.FullName</div>
+                            <div class="hint-text">@Fmt.Age(p.Birthday) yaş · FİN @p.PinCode · @p.Phone</div>
+                        </div>
+                    </div>
+                    @if (!string.IsNullOrWhiteSpace(p.Allergies))
+                    {
+                        <div class="med-alert" style="margin-top:14px;"><i class="bi bi-exclamation-octagon-fill"></i><span><strong>Allergiya:</strong> @p.Allergies</span></div>
+                    }
+                    @if (!string.IsNullOrWhiteSpace(p.ChronicConditions))
+                    {
+                        <div class="med-alert chronic" style="margin-top:8px;"><i class="bi bi-heart-pulse-fill"></i><span><strong>Xroniki:</strong> @p.ChronicConditions</span></div>
+                    }
+                    <div class="facts">
+                        <span>Vaxt: <strong>@Fmt.Time(current.AppointmentAt)</strong></span>
+                        <span>Müayinə: <strong>@string.Join(", ", current.ReserveExaminationTypes!.Select(x => x.ExaminationType.Name))</strong></span>
+                        @if (current.MedicalRecord?.Diagnosis != null)
+                        {
+                            <span>Diaqnoz: <strong>@current.MedicalRecord.IcdCode @current.MedicalRecord.Diagnosis</strong></span>
+                        }
+                    </div>
+                    <div class="ws-actions">
+                        @if (canRecord)
+                        {
+                            <a class="btn btn-primary" asp-controller="Record" asp-action="Edit" asp-route-reserveId="@current.Id">
+                                <i class="bi bi-file-earmark-medical"></i> @(current.MedicalRecord == null ? "Tibbi qeyd yaz" : "Tibbi qeydi davam et")
+                            </a>
+                        }
+                        @if (ReserveFlow.IsAllowed(current, StatusNames.Completed, User, now))
+                        {
+                            <form asp-controller="Reservation" asp-action="Transition" asp-route-id="@current.Id" method="post"
+                                  data-confirm="@(current.MedicalRecord == null && canRecord ? "Tibbi qeyd yazılmayıb. Qəbul yenə də tamamlansın?" : null)">
+                                <input type="hidden" name="to" value="@StatusNames.Completed" />
+                                <input type="hidden" name="returnTo" value="workspace" />
+                                <button type="submit" class="btn btn-success"><i class="bi bi-check2-all"></i> Qəbulu bitir</button>
+                            </form>
+                        }
+                        <form asp-action="Call" asp-route-id="@current.Id" method="post">
+                            <button type="submit" class="btn btn-light"><i class="bi bi-megaphone"></i> Təkrar çağır</button>
+                        </form>
+                        <a class="btn btn-ghost" asp-controller="Patient" asp-action="Details" asp-route-id="@p.Id"><i class="bi bi-person-vcard"></i> Xəstə kartı</a>
+                    </div>
+                </div>
+            }
+
+            <div class="card">
+                <div class="card-head">
+                    <h3 class="card-title"><i class="bi bi-people"></i> Növbə</h3>
+                    <span class="hint-text">@queue.Count xəstə gözləmə zalında</span>
+                </div>
+                @if (queue.Any())
+                {
+                    <div class="queue-list">
+                        @foreach (var r in queue)
+                        {
+                            var wait = WaitMinutes(r);
+                            <div class="queue-item @(r.CalledAt != null ? "called" : "")">
+                                <span class="ticket">@(r.QueueTicket ?? "—")</span>
+                                <div class="who">
+                                    @if (r.Priority != QueuePriority.None) { <span class="badge-soft badge-failed" style="margin-right:4px;">@QueueLabels.Priority(r.Priority)</span> }
+                                    <a asp-controller="Reservation" asp-action="Details" asp-route-id="@r.Id">@r.Patient.FullName</a>
+                                    @if (r.Patient.HasMedicalAlerts)
+                                    {
+                                        <i class="bi bi-exclamation-octagon-fill med-flag" title="@(r.Patient.Allergies != null ? "Allergiya: " + r.Patient.Allergies : "Xroniki: " + r.Patient.ChronicConditions)"></i>
+                                    }
+                                    <div class="meta">
+                                        <span>Qəbul @Fmt.Time(r.AppointmentAt)</span>
+                                        <span class="wait @WaitCss(wait)">@wait dəq gözləyir</span>
+                                        @if (r.CalledAt != null)
+                                        {
+                                            <span><i class="bi bi-megaphone"></i> @Fmt.Time(r.CalledAt.Value) çağırıldı</span>
+                                        }
+                                    </div>
+                                </div>
+                                <div class="acts">
+                                    <form asp-action="Call" asp-route-id="@r.Id" method="post">
+                                        <button type="submit" class="btn btn-sm @(r.CalledAt == null ? "btn-light" : "btn-ghost")"><i class="bi bi-megaphone"></i> @(r.CalledAt == null ? "Çağır" : "Təkrar")</button>
+                                    </form>
+                                    @if (ReserveFlow.IsAllowed(r, StatusNames.InProgress, User, now))
+                                    {
+                                        <form asp-controller="Reservation" asp-action="Transition" asp-route-id="@r.Id" method="post">
+                                            <input type="hidden" name="to" value="@StatusNames.InProgress" />
+                                            <input type="hidden" name="returnTo" value="@(canRecord ? "record" : "workspace")" />
+                                            <button type="submit" class="btn btn-sm btn-success"><i class="bi bi-play-circle"></i> Qəbula başla</button>
+                                        </form>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <div class="empty-state" style="padding:36px 20px;">
+                        <i class="bi bi-cup-hot"></i>
+                        <p>Növbədə xəstə yoxdur</p>
+                        <p class="hint-text" style="margin-top:4px;">Resepsiya xəstəni «Gəldi» kimi qeyd edəndə burada görünür.</p>
+                    </div>
+                }
+            </div>
+        </div>
+
+        <div class="stack">
+            <div class="card card-pad">
+                <h3 class="card-title"><i class="bi bi-calendar-event"></i> Gözlənilən qəbullar</h3>
+                @if (Model.Upcoming.Any())
+                {
+                    <div class="line-list simple-list">
+                        @foreach (var r in Model.Upcoming)
+                        {
+                            <div class="line-item">
+                                <span style="display:flex; align-items:center; gap:10px; min-width:0;">
+                                    <span class="time-pill">@Fmt.Time(r.AppointmentAt)</span>
+                                    <a asp-controller="Reservation" asp-action="Details" asp-route-id="@r.Id">@r.Patient.FullName</a>
+                                </span>
+                                <partial name="_StatusBadge" model="r.Status?.Name" />
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="hint-text" style="margin:0;">Bu gün başqa gözlənilən qəbul yoxdur.</p>
+                }
+            </div>
+
+            <div class="card card-pad">
+                <h3 class="card-title"><i class="bi bi-check2-all"></i> Bu gün bitənlər</h3>
+                @if (Model.Done.Any())
+                {
+                    <div class="line-list simple-list">
+                        @foreach (var r in Model.Done)
+                        {
+                            <div class="line-item">
+                                <span style="min-width:0;">
+                                    <a asp-controller="Reservation" asp-action="Details" asp-route-id="@r.Id">@r.Patient.FullName</a>
+                                    <span class="hint-text" style="display:block;">
+                                        @if (r.Status?.Name == StatusNames.NoShow)
+                                        {
+                                            @:Gəlmədi · @Fmt.Time(r.AppointmentAt)
+                                        }
+                                        else if (r.MedicalRecord?.Diagnosis != null)
+                                        {
+                                            <text>@r.MedicalRecord.IcdCode @r.MedicalRecord.Diagnosis</text>
+                                        }
+                                        else
+                                        {
+                                            @:Tibbi qeyd yoxdur
+                                        }
+                                    </span>
+                                </span>
+                                @if (r.MedicalRecord != null && canSeeRecord)
+                                {
+                                    <a class="btn btn-ghost btn-sm" asp-controller="Record" asp-action="Show" asp-route-id="@r.MedicalRecord.Id">Qeyd</a>
+                                }
+                                else if (r.Status?.Name == StatusNames.Completed && canRecord)
+                                {
+                                    <a class="btn btn-ghost btn-sm" asp-controller="Record" asp-action="Edit" asp-route-reserveId="@r.Id">Yaz</a>
+                                }
+                            </div>
+                        }
+                    </div>
+                }
+                else
+                {
+                    <p class="hint-text" style="margin:0;">Hələ bitmiş qəbul yoxdur.</p>
+                }
+            </div>
+        </div>
+    </div>
+}
+
+@section Scripts {
+    <script>
+        // Refresh the queue every 30 s unless the user is typing or a dialog is open.
+        setInterval(() => {
+            const busy = document.activeElement && ['INPUT', 'SELECT', 'TEXTAREA'].includes(document.activeElement.tagName);
+            if (!busy && document.visibilityState === 'visible' && !document.querySelector('dialog[open]')) location.reload();
+        }, 30000);
+    </script>
+}

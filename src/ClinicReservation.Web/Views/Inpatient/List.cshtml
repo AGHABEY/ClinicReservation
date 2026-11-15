@@ -1,0 +1,66 @@
+@model InpatientListViewModel
+@{
+    ViewData["Title"] = Model.Status == "active" ? "Stasionardakılar" : "Çıxarılanlar";
+    var now = ClinicTime.Now;
+}
+
+<div class="page-head">
+    <div>
+        <h2>Stasionar</h2>
+        <p>@(Model.Status == "active" ? "Hazırda yatan xəstələr" : $"{Fmt.Date(Model.From)} – {Fmt.Date(Model.To)} arasında çıxarılan xəstələr")</p>
+    </div>
+    @if (User.Can(Permissions.InpatientManage))
+    {
+        <div class="page-actions"><a class="btn btn-primary" asp-action="Admit"><i class="bi bi-plus-lg"></i> Yerləşdir</a></div>
+    }
+</div>
+
+<partial name="_InpatientNav" />
+
+<form method="get" class="toolbar">
+    <input type="hidden" name="status" value="@Model.Status" />
+    <div class="toolbar-right stock-filters" style="justify-content:flex-start;">
+        <input type="search" name="q" value="@Model.Query" class="form-control" placeholder="Ad, FİN və ya ST nömrəsi" aria-label="Axtarış" style="max-width:260px;" />
+        @if (Model.Status != "active")
+        {
+            <input type="date" name="from" value="@Model.From.ToString("yyyy-MM-dd")" class="form-control" style="max-width:170px;" aria-label="Başlanğıc" />
+            <input type="date" name="to" value="@Model.To.ToString("yyyy-MM-dd")" class="form-control" style="max-width:170px;" aria-label="Son" />
+        }
+        <button type="submit" class="btn btn-light">Axtar</button>
+    </div>
+</form>
+
+<div class="card">
+    @if (Model.Admissions.Any())
+    {
+        <div class="table-scroll">
+            <table class="data">
+                <thead><tr><th>№</th><th>Xəstə</th><th>Şöbə / çarpayı</th><th>Diaqnoz</th><th>Həkim</th><th>@(Model.Status == "active" ? "Daxil olub" : "Müddət")</th>@if (Model.Status != "active") { <th>Nəticə</th> }</tr></thead>
+                <tbody>
+                    @foreach (var a in Model.Admissions)
+                    {
+                        <tr class="@(a.Status == AdmissionStatus.Cancelled ? "row-muted" : "")">
+                            <td><a asp-action="Details" asp-route-id="@a.Id" class="link-strong">@a.Number</a>@if (a.Type == AdmissionType.Emergency) { <div class="hint-text" style="color:var(--bad);">Təcili</div> }</td>
+                            <td><a asp-action="Details" asp-route-id="@a.Id" class="link-strong">@a.Patient.FullName</a><div class="hint-text">@Fmt.Age(a.Patient.Birthday) yaş · @a.Patient.PinCode</div></td>
+                            <td class="text-muted">@(a.Department?.Name ?? "—")@if (a.Bed != null) { <div class="hint-text">@a.Bed.Label</div> }</td>
+                            <td class="wrap">@if ((a.FinalIcdCode ?? a.AdmitIcdCode) is { } icd) { <span class="icd">@icd</span> } @(a.FinalDiagnosis ?? a.AdmitDiagnosis)</td>
+                            <td class="text-muted">@(a.Doctor?.FullName ?? "—")</td>
+                            <td style="white-space:nowrap;">
+                                @if (Model.Status == "active") { <span>@Fmt.Date(a.AdmittedAt)</span><div class="hint-text">@Fmt.Ordinal(a.Day(now)) gün</div> }
+                                else { <span>@Fmt.Date(a.AdmittedAt) – @Fmt.Date(a.DischargedAt)</span><div class="hint-text">@a.Day(now) gün</div> }
+                            </td>
+                            @if (Model.Status != "active")
+                            {
+                                <td>@if (a.Status == AdmissionStatus.Cancelled) { <span class="badge-soft badge-cancelled">Ləğv edilib</span> } else { <span class="@(a.Outcome == DischargeOutcome.Died ? "text-danger" : "text-muted")">@InpatientLabels.Outcome(a.Outcome)</span> }</td>
+                            }
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state"><i class="bi bi-hospital"></i><p>@(Model.Status == "active" ? "Hazırda stasionarda xəstə yoxdur" : "Bu dövrdə çıxarılan xəstə yoxdur")</p></div>
+    }
+</div>

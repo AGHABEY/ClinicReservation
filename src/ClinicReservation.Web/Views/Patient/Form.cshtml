@@ -1,0 +1,71 @@
+@model PatientFormViewModel
+@{
+    ViewData["Title"] = Model.IsEdit ? "Xəstə məlumatları" : "Yeni xəstə";
+}
+
+<div class="page-head">
+    <div>
+        <h2>@(Model.IsEdit ? $"{Model.Name} {Model.Surname}" : "Yeni xəstə kartı")</h2>
+        <p>@(Model.IsEdit ? "Xəstə məlumatlarını yeniləyin" : "Xəstə kartı adətən ilk rezervasiya ilə avtomatik yaranır")</p>
+    </div>
+    @if (Model.IsEdit)
+    {
+        <a class="btn btn-light" asp-action="Details" asp-route-id="@Model.Id"><i class="bi bi-arrow-left"></i> Karta qayıt</a>
+    }
+    else
+    {
+        <a class="btn btn-light" asp-action="Index"><i class="bi bi-arrow-left"></i> Siyahıya qayıt</a>
+    }
+</div>
+
+<div class="card" style="max-width:760px;">
+    <div class="card-pad">
+        <form asp-action="Save" method="post" novalidate>
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+            <input type="hidden" asp-for="Id" />
+            <div class="form-grid">
+                <div class="field">
+                    <label asp-for="Name">Ad</label>
+                    <input asp-for="Name" class="form-control" autocomplete="off" />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Surname">Soyad</label>
+                    <input asp-for="Surname" class="form-control" autocomplete="off" />
+                    <span asp-validation-for="Surname" class="text-danger"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="PinCode">FİN kod</label>
+                    <input lang="en" asp-for="PinCode" class="form-control" maxlength="7" style="text-transform:uppercase;" autocomplete="off" />
+                    <span asp-validation-for="PinCode" class="text-danger"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Phone">Telefon</label>
+                    <input asp-for="Phone" type="tel" class="form-control" placeholder="050 123 45 67" autocomplete="off" />
+                    <span asp-validation-for="Phone" class="text-danger"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Birthday">Doğum tarixi</label>
+                    <input asp-for="Birthday" type="date" class="form-control" value="@Model.Birthday?.ToString("yyyy-MM-dd")" max="@ClinicTime.Today.ToString("yyyy-MM-dd")" min="1900-01-01" />
+                    <span asp-validation-for="Birthday" class="text-danger"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Gender">Cins <span class="hint-text">(analiz normaları üçün)</span></label>
+                    <select asp-for="Gender" class="form-select">
+                        <option value="">— Qeyd edilməyib —</option>
+                        <option value="@Gender.Male">Kişi</option>
+                        <option value="@Gender.Female">Qadın</option>
+                    </select>
+                </div>
+            </div>
+            <div class="field mt-3">
+                <label asp-for="Notes">Qeyd <span class="hint-text">(personal üçün, məs: «səhər saatlarını üstün tutur»)</span></label>
+                <textarea asp-for="Notes" class="form-control" rows="3" maxlength="500"></textarea>
+                <span asp-validation-for="Notes" class="text-danger"></span>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Yadda saxla</button>
+            </div>
+        </form>
+    </div>
+</div>

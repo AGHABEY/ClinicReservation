@@ -1,0 +1,55 @@
+@model CampaignFormViewModel
+@{
+    ViewData["Title"] = Model.Id == 0 ? "Yeni kampaniya" : "Kampaniya";
+    var departments = (List<Department>)ViewBag.Departments;
+    var exams = (List<ExaminationType>)ViewBag.Exams;
+    var chosen = Model.ExamIds ?? new List<int>();
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+}
+
+<div class="page-head">
+    <div>
+        <h2>@(Model.Id == 0 ? "Yeni kampaniya" : Model.Name)</h2>
+        <p>Kod boş qalsa, kampaniya şərtlərə uyğun hər rezervasiyaya özü tətbiq olunur; kod yazılsa — yalnız xəstə kodu deyəndə (promo kod).</p>
+    </div>
+    <a class="btn btn-light" asp-action="Index" asp-route-tab="campaigns"><i class="bi bi-arrow-left"></i> Siyahıya qayıt</a>
+</div>
+
+<form asp-action="Campaign" method="post" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+    <input type="hidden" asp-for="Id" />
+    <div class="detail-grid">
+        <div class="card card-pad">
+            <div class="form-grid">
+                <div class="field"><label asp-for="Name">Ad</label><input asp-for="Name" class="form-control" placeholder="məs: Payız check-up" /><span asp-validation-for="Name" class="text-danger"></span></div>
+                <div class="field"><label asp-for="Code">Promo kod <span class="hint-text">(istəyə görə)</span></label><input lang="en" asp-for="Code" class="form-control" style="text-transform:uppercase;" placeholder="məs: PAYIZ20" /><span asp-validation-for="Code" class="text-danger"></span></div>
+                <div class="field"><label asp-for="Type">Növ</label>
+                    <select asp-for="Type" class="form-select"><option value="Percent">Faiz</option><option value="Amount">Məbləğ (hər xidmətə, ₼)</option></select></div>
+                <div class="field"><label asp-for="Value">Endirim</label><input asp-for="Value" type="number" min="0" step="0.01" class="form-control" value="@Model.Value.ToString("0.##", inv)" /><span asp-validation-for="Value" class="text-danger"></span></div>
+                <div class="field"><label asp-for="StartsOn">Başlanğıc</label><input asp-for="StartsOn" type="date" class="form-control" value="@Model.StartsOn?.ToString("yyyy-MM-dd")" /><span asp-validation-for="StartsOn" class="text-danger"></span></div>
+                <div class="field"><label asp-for="EndsOn">Son</label><input asp-for="EndsOn" type="date" class="form-control" value="@Model.EndsOn?.ToString("yyyy-MM-dd")" /><span asp-validation-for="EndsOn" class="text-danger"></span></div>
+                <div class="field"><label asp-for="MaxUses">Ümumi limit <span class="hint-text">(vizit)</span></label><input asp-for="MaxUses" type="number" min="1" class="form-control" placeholder="limitsiz" /><span asp-validation-for="MaxUses" class="text-danger"></span></div>
+                <div class="field"><label asp-for="MaxUsesPerPatient">Bir xəstəyə</label><input asp-for="MaxUsesPerPatient" type="number" min="1" class="form-control" placeholder="limitsiz" /><span asp-validation-for="MaxUsesPerPatient" class="text-danger"></span></div>
+            </div>
+            <label class="mt-3" style="display:flex; gap:8px; align-items:center;"><input asp-for="NewPatientsOnly" type="checkbox" /> Yalnız yeni xəstələr (əvvəl vizit tamamlamamış)</label>
+            <label class="mt-3" style="display:flex; gap:8px; align-items:center;"><input asp-for="IsActive" type="checkbox" /> Aktiv</label>
+            <div class="field mt-3"><label asp-for="Note">Qeyd</label><input asp-for="Note" class="form-control" maxlength="300" /></div>
+        </div>
+        <div class="card card-pad">
+            <h3 class="card-title"><i class="bi bi-funnel"></i> Hansı xidmətlərə</h3>
+            <div class="field">
+                <label asp-for="DepartmentId">Şöbə (kateqoriya)</label>
+                <select asp-for="DepartmentId" class="form-select"><option value="">Bütün şöbələr</option>
+                    @foreach (var d in departments) { <option value="@d.Id">@d.Name</option> }</select>
+            </div>
+            <p class="hint-text">Heç bir xidmət seçilməsə — şöbənin (və ya bütün) xidmətlərinə aiddir.</p>
+            <div class="chip-group">
+                @foreach (var e in exams)
+                {
+                    <label class="chip"><input type="checkbox" name="ExamIds" value="@e.Id" checked="@chosen.Contains(e.Id)" /> @e.Name <span class="price">@Fmt.Money(e.Price)</span></label>
+                }
+            </div>
+            <button type="submit" class="btn btn-primary mt-3"><i class="bi bi-check2"></i> Saxla</button>
+        </div>
+    </div>
+</form>

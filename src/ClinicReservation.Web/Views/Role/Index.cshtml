@@ -1,0 +1,55 @@
+@model List<ClinicReservation.Controllers.RoleRow>
+@{
+    ViewData["Title"] = "Rollar və icazələr";
+}
+
+<div class="page-head">
+    <div>
+        <h2>Rollar və icazələr</h2>
+        <p>Hər rolun nə edə biləcəyini seçin. Dəyişiklik istifadəçilərə 1 dəqiqə ərzində tətbiq olunur.</p>
+    </div>
+    <a class="btn btn-light" asp-controller="Account" asp-action="CreateRole"><i class="bi bi-shield-plus"></i> Yeni rol</a>
+</div>
+
+<div class="role-grid">
+    @foreach (var row in Model)
+    {
+        var isAdmin = row.Role.Name == AppRoles.Admin;
+        <form asp-action="Save" method="post" class="card role-card">
+            <input type="hidden" name="roleId" value="@row.Role.Id" />
+            <div class="card-head">
+                <div>
+                    <h3 class="card-title">@AppRoles.Label(row.Role.Name)</h3>
+                    <span class="hint-text">@row.UserCount istifadəçi</span>
+                </div>
+                @if (!isAdmin)
+                {
+                    <button type="submit" class="btn btn-primary btn-sm">Saxla</button>
+                }
+            </div>
+            <div class="card-pad">
+                @if (isAdmin)
+                {
+                    <p class="hint-text" style="margin:0 0 12px;"><i class="bi bi-lock"></i> Administratorun hər şeyə icazəsi var və dəyişdirilmir.</p>
+                }
+                <label class="perm-row" style="gap:10px; margin-bottom:12px;">
+                    <span>Əl ilə endirim limiti, %</span>
+                    <input type="number" name="discountLimit" min="0" max="100" value="@(isAdmin ? 100 : row.DiscountLimit)" class="form-control" style="width:90px;" disabled="@isAdmin" />
+                </label>
+                @foreach (var g in Permissions.All.GroupBy(p => p.Group))
+                {
+                    <div class="perm-group">
+                        <div class="perm-group-title">@g.Key</div>
+                        @foreach (var p in g)
+                        {
+                            <label class="perm-row">
+                                <input type="checkbox" name="permissions" value="@p.Code" checked="@(isAdmin || row.Permissions.Contains(p.Code))" disabled="@isAdmin" />
+                                <span>@p.Label</span>
+                            </label>
+                        }
+                    </div>
+                }
+            </div>
+        </form>
+    }
+</div>

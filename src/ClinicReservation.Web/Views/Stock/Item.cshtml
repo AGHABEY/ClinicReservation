@@ -1,0 +1,113 @@
+@model StockItemDetailsViewModel
+@{
+    var item = Model.Item;
+    ViewData["Title"] = item.DisplayName;
+    var today = ClinicTime.Today;
+    var total = Model.Lots.Sum(b => b.Quantity);
+}
+
+<div class="page-head">
+    <div>
+        <h2>@item.Name</h2>
+        <p>@StockLabels.Kind(item.Kind)@(item.Form != null ? " · " + item.Form : "")@(item.Code != null ? " · " + item.Code : "")@(item.IsActive ? "" : " · deaktiv")</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-light" asp-action="Index"><i class="bi bi-arrow-left"></i> Qalıqlar</a>
+        @if (User.Can(Permissions.StockManage))
+        {
+            <a class="btn btn-light" asp-controller="StockItem" asp-action="Edit" asp-route-id="@item.Id"><i class="bi bi-pencil"></i> Düzəliş</a>
+        }
+    </div>
+</div>
+
+<div class="detail-grid">
+    <div class="stack">
+        <div class="card">
+            <div class="card-head"><h3 class="card-title"><i class="bi bi-boxes"></i> Partiyalar</h3><span class="hint-text">Cəmi: <strong style="color:var(--ink);">@StockService.Qty(total) @item.Unit</strong></span></div>
+            @if (Model.Lots.Any())
+            {
+                <div class="table-scroll">
+                    <table class="data">
+                        <thead><tr><th>Anbar</th><th>Seriya</th><th>Son tarix</th><th class="num">Qalıq</th>@if (Model.ShowCosts) { <th class="num">Alış qiyməti</th> }</tr></thead>
+                        <tbody>
+                            @foreach (var b in Model.Lots)
+                            {
+                                var expired = b.ExpiryDate < today;
+                                <tr>
+                                    <td>@b.Warehouse.Name</td>
+                                    <td class="text-muted">@(b.BatchNo ?? "—")</td>
+                                    <td style="@(expired ? "color:var(--bad); font-weight:600;" : "")">@Fmt.Date(b.ExpiryDate)@(expired ? " · keçib" : "")</td>
+                                    <td class="num"><strong>@StockService.Qty(b.Quantity)</strong> <span class="hint-text">@item.Unit</span></td>
+                                    @if (Model.ShowCosts) { <td class="num money">@Fmt.Money(b.UnitCost)</td> }
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="empty-state"><i class="bi bi-inbox"></i><p>Anbarda qalıq yoxdur</p></div>
+            }
+        </div>
+
+        <div class="card">
+            <div class="card-head"><h3 class="card-title"><i class="bi bi-clock-history"></i> Hərəkətlər</h3><span class="hint-text">son 100</span></div>
+            @if (Model.Movements.Any())
+            {
+                <div class="table-scroll">
+                    <table class="data">
+                        <thead><tr><th>Tarix</th><th>Sənəd</th><th>Anbar</th><th class="num">Miqdar</th><th>Kim</th></tr></thead>
+                        <tbody>
+                            @foreach (var m in Model.Movements)
+                            {
+                                var d = m.StockDocument;
+                                <tr class="@(d.Status == StockDocStatus.Cancelled ? "row-muted" : "")">
+                                    <td style="white-space:nowrap;">@Fmt.DateTime(m.At)</td>
+                                    <td>
+                                        <a asp-controller="StockDoc" asp-action="Details" asp-route-id="@d.Id" class="link-strong">@d.Number</a>
+                                        <div class="hint-text">@(m.IsReversal ? "Ləğv" : StockLabels.Doc(d.Type))@(d.Reason != null && d.Type == StockDocType.WriteOff ? " · " + d.Reason : "")@(d.Patient != null ? " · " + d.Patient.FullName : "")</div>
+                                    </td>
+                                    <td class="text-muted">@m.Warehouse.Name</td>
+                                    <td class="num" style="font-weight:600; color:@(m.Quantity > 0 ? "var(--ok)" : "var(--bad)");">@(m.Quantity > 0 ? "+" : "−")@StockService.Qty(Math.Abs(m.Quantity))</td>
+                                    <td class="text-muted">@d.CreatedBy</td>
+                                </tr>
+                            }
+                        </tbody>
+                    </table>
+                </div>
+            }
+            else
+            {
+                <div class="empty-state"><i class="bi bi-clock-history"></i><p>Hələ hərəkət yoxdur</p></div>
+            }
+        </div>
+    </div>
+
+    <div class="stack">
+        <div class="card card-pad">
+            <h3 class="card-title"><i class="bi bi-info-circle"></i> Məlumat</h3>
+            <dl class="detail-list">
+                <div class="detail-row"><dt>Vahid</dt><dd>@item.Unit</dd></div>
+                <div class="detail-row"><dt>Minimum qalıq</dt><dd>@(item.MinQuantity > 0 ? $"{StockService.Qty(item.MinQuantity)} {item.Unit}" : "—")</dd></div>
+                @if (item.Note != null)
+                {
+                    <div class="detail-row"><dt>Qeyd</dt><dd>@item.Note</dd></div>
+                }
+            </dl>
+        </div>
+        <div class="card card-pad">
+            <h3 class="card-title"><i class="bi bi-clipboard2-pulse"></i> İstifadə olunduğu xidmətlər</h3>
+            @if (Model.UsedIn.Any())
+            {
+                <div class="line-list">
+                    @foreach (var e in Model.UsedIn) { <div class="line-item"><span>@e.Name</span></div> }
+                </div>
+            }
+            else
+            {
+                <p class="hint-text" style="margin:0;">Heç bir müayinəyə bağlanmayıb. Müayinə səhifəsində «Sərf materialları» bölməsindən əlavə edin.</p>
+            }
+        </div>
+    </div>
+</div>

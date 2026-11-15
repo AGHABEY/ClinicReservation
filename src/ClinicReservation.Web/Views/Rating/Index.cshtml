@@ -1,0 +1,70 @@
+@model List<VisitRating>
+@{
+    ViewData["Title"] = "Qiymətləndirmələr";
+    var from = (DateTime)ViewBag.From;
+    var to = (DateTime)ViewBag.To;
+    var doctorId = ViewBag.DoctorId as int?;
+    var low = (bool)ViewBag.Low;
+    var byDoctor = (List<DoctorRating>)ViewBag.ByDoctor;
+    string Stars(int n) => new string('★', n) + new string('☆', 5 - n);
+}
+
+<div class="page-head">
+    <div>
+        <h2>Qiymətləndirmələr</h2>
+        <p>Xəstələrin qəbuldan sonra SMS linki ilə verdiyi qiymət (1–5) və rəylər · @Fmt.Date(from) – @Fmt.Date(to)</p>
+    </div>
+</div>
+
+<form method="get" class="toolbar">
+    <div class="seg">
+        <a class="@(low ? "" : "on")" asp-route-from="@from.ToString("yyyy-MM-dd")" asp-route-to="@to.ToString("yyyy-MM-dd")" asp-route-doctorId="@doctorId">Hamısı</a>
+        <a class="@(low ? "on" : "")" asp-route-from="@from.ToString("yyyy-MM-dd")" asp-route-to="@to.ToString("yyyy-MM-dd")" asp-route-doctorId="@doctorId" asp-route-low="true">Aşağı (1–2)</a>
+    </div>
+    <input type="hidden" name="low" value="@(low ? "true" : "false")" />
+    <input type="hidden" name="doctorId" value="@doctorId" />
+    <div class="toolbar-right">
+        <input type="date" name="from" value="@from.ToString("yyyy-MM-dd")" class="form-control" style="width:auto;" aria-label="Başlanğıc" />
+        <input type="date" name="to" value="@to.ToString("yyyy-MM-dd")" class="form-control" style="width:auto;" aria-label="Son" />
+        <button type="submit" class="btn btn-light">Göstər</button>
+    </div>
+</form>
+
+<div class="detail-grid">
+    <div class="card card-pad">
+        <h3 class="card-title"><i class="bi bi-chat-quote"></i> Rəylər</h3>
+        @if (Model.Any())
+        {
+            @foreach (var r in Model)
+            {
+                <div style="padding:12px 0; border-top:1px solid var(--line-2);">
+                    <div class="flex-between"><span style="color:@(r.Score <= 2 ? "var(--bad)" : "#B54708"); font-size:1.1rem; letter-spacing:.05em;">@Stars(r.Score)</span>
+                        <span class="hint-text">@Fmt.DateTime(r.UpdatedAt ?? r.CreatedAt)</span></div>
+                    <div class="hint-text"><a asp-controller="Reservation" asp-action="Details" asp-route-id="@r.ReserveId">@r.Reserve.Patient.FullName</a> · @(r.Doctor?.FullName ?? "—") · @Fmt.Date(r.Reserve.AppointmentAt)</div>
+                    @if (!string.IsNullOrEmpty(r.Comment)) { <p style="margin:6px 0 0; white-space:pre-line;">@r.Comment</p> }
+                </div>
+            }
+        }
+        else { <p class="hint-text">Bu dövrdə qiymətləndirmə yoxdur.</p> }
+    </div>
+    <div class="card card-pad">
+        <h3 class="card-title"><i class="bi bi-person-badge"></i> Həkimlər üzrə</h3>
+        @if (byDoctor.Any())
+        {
+            <table class="data compact">
+                <thead><tr><th>Həkim</th><th>Orta</th><th>Say</th><th>1–2</th></tr></thead>
+                <tbody>
+                    @foreach (var d in byDoctor)
+                    {
+                        <tr class="@(doctorId == d.DoctorId ? "row-selected" : "")">
+                            <td><a asp-route-doctorId="@d.DoctorId" asp-route-from="@from.ToString("yyyy-MM-dd")" asp-route-to="@to.ToString("yyyy-MM-dd")">@d.Doctor</a></td>
+                            <td><b>@d.Average.ToString("0.0#")</b></td><td>@d.Count</td><td style="color:@(d.Low > 0 ? "var(--bad)" : "inherit");">@d.Low</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+            @if (doctorId != null) { <a class="btn btn-light btn-sm mt-3" asp-route-from="@from.ToString("yyyy-MM-dd")" asp-route-to="@to.ToString("yyyy-MM-dd")">Bütün həkimlər</a> }
+        }
+        else { <p class="hint-text">Məlumat yoxdur.</p> }
+    </div>
+</div>

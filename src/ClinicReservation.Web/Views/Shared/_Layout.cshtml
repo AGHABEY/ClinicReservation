@@ -1,0 +1,360 @@
+@{
+    var controller = ViewContext.RouteData.Values["controller"]?.ToString();
+    string Active(string c) => controller == c ? "active" : "";
+    string? Current(string c) => controller == c ? "page" : null;
+    var isAdmin = User.IsInRole(AppRoles.Admin);
+    var isAuthenticated = User.Identity?.IsAuthenticated == true;
+    var userName = User.Identity?.Name ?? "";
+    var initial = string.IsNullOrEmpty(userName) ? "?" : userName.Substring(0, 1).ToUpper();
+    var roleLabel = AppRoles.Label(AppRoles.BuiltIn.FirstOrDefault(r => User.IsInRole(r))
+        ?? User.FindAll(System.Security.Claims.ClaimTypes.Role).Select(c => c.Value).FirstOrDefault());
+    if (roleLabel == "—") { roleLabel = ""; }
+    var success = TempData["Success"] as string;
+    var error = TempData["Error"] as string;
+    var warning = TempData["Warning"] as string;
+}
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>@ViewData["Title"] · MedClinic</title>
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230d9488'/%3E%3Cpath d='M6 17h5l2-5 4 10 3-7h6' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <link rel="preconnect" href="https://fonts.googleapis.com">
+    <link rel="preconnect" href="https://fonts.gstatic.com" crossorigin>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
+    <link rel="stylesheet" href="~/lib/bootstrap-icons/bootstrap-icons.min.css">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true">
+    @await RenderSectionAsync("Styles", required: false)
+</head>
+<body>
+    <div class="app-shell">
+        <aside class="sidebar" id="sidebar" aria-label="Əsas menyu">
+            <a class="sidebar-brand" asp-controller="Home" asp-action="Index">
+                <span class="logo"><i class="bi bi-heart-pulse-fill"></i></span>
+                <span>MedClinic<small>Klinika idarəetməsi</small></span>
+            </a>
+
+            @if (isAuthenticated)
+            {
+                <nav class="sidebar-scroll">
+                    <div class="nav-section">Ümumi</div>
+                    <ul class="sidebar-nav">
+                        <li>
+                            <a class="@Active("Home")" aria-current="@Current("Home")" asp-controller="Home" asp-action="Index">
+                                <i class="bi bi-grid-1x2-fill"></i> İdarə paneli
+                            </a>
+                        </li>
+                        @if (User.Can(Permissions.ReservationsView))
+                        {
+                            <li>
+                                <a class="@Active("Reservation")" aria-current="@Current("Reservation")" asp-controller="Reservation" asp-action="Index">
+                                    <i class="bi bi-calendar2-check-fill"></i> Rezervasiyalar
+                                </a>
+                            </li>
+                            <li>
+                                <a class="@Active("Calendar")" aria-current="@Current("Calendar")" asp-controller="Calendar" asp-action="Index">
+                                    <i class="bi bi-calendar3-week"></i> Təqvim
+                                </a>
+                            </li>
+                            <li>
+                                <a class="@Active("Referral")" aria-current="@Current("Referral")" asp-controller="Referral" asp-action="Index">
+                                    <i class="bi bi-signpost-split"></i> Göndərişlər
+                                </a>
+                            </li>
+                            <li>
+                                <a class="@Active("FollowUp")" aria-current="@Current("FollowUp")" asp-controller="FollowUp" asp-action="Index">
+                                    <i class="bi bi-arrow-repeat"></i> Kontrol qəbulları
+                                </a>
+                            </li>
+                            <li>
+                                <a class="@Active("Waitlist")" aria-current="@Current("Waitlist")" asp-controller="Waitlist" asp-action="Index">
+                                    <i class="bi bi-hourglass-split"></i> Gözləmə siyahısı
+                                </a>
+                            </li>
+                        }
+                        @if (User.Can(Permissions.DeskServe))
+                        {
+                            <li>
+                                <a class="@Active("Desk")" aria-current="@Current("Desk")" asp-controller="Desk" asp-action="Index">
+                                    <i class="bi bi-window-stack"></i> Pəncərə (növbə)
+                                </a>
+                            </li>
+                        }
+                        @if (User.Can(Permissions.QueueCall))
+                        {
+                            <li>
+                                <a class="@Active("Workspace") @Active("Record")" aria-current="@(Current("Workspace") ?? Current("Record"))" asp-controller="Workspace" asp-action="Index">
+                                    <i class="bi bi-clipboard2-heart-fill"></i> İş masası
+                                </a>
+                            </li>
+                        }
+                        @if (User.CanAny(Permissions.LabView, Permissions.LabWork, Permissions.LabValidate))
+                        {
+                            <li>
+                                <a class="@Active("Lab")" aria-current="@Current("Lab")" asp-controller="Lab" asp-action="Index">
+                                    <i class="bi bi-droplet-half"></i> Laboratoriya
+                                </a>
+                            </li>
+                        }
+                        @if (User.CanAny(Permissions.InpatientView, Permissions.InpatientManage, Permissions.InpatientDoctor, Permissions.InpatientNurse))
+                        {
+                            <li>
+                                <a class="@Active("Inpatient") @Active("Ward")" aria-current="@(Current("Inpatient") ?? Current("Ward"))" asp-controller="Inpatient" asp-action="Index">
+                                    <i class="bi bi-hospital"></i> Stasionar
+                                </a>
+                            </li>
+                        }
+                        @if (User.CanAny(Permissions.StockView, Permissions.StockIssue, Permissions.StockManage))
+                        {
+                            <li>
+                                <a class="@Active("Stock") @Active("StockDoc") @Active("StockItem")" aria-current="@(Current("Stock") ?? Current("StockDoc") ?? Current("StockItem"))" asp-controller="Stock" asp-action="Index">
+                                    <i class="bi bi-capsule-pill"></i> Aptek və anbar
+                                </a>
+                            </li>
+                        }
+                        @if (User.Can(Permissions.PatientsView))
+                        {
+                            <li>
+                                <a class="@Active("Patient")" aria-current="@Current("Patient")" asp-controller="Patient" asp-action="Index">
+                                    <i class="bi bi-person-vcard-fill"></i> Xəstələr
+                                </a>
+                            </li>
+                        }
+                        @if (User.CanAny(Permissions.PaymentsTake, Permissions.KassaTotals))
+                        {
+                            <li>
+                                <a class="@Active("Kassa")" aria-current="@Current("Kassa")" asp-controller="Kassa" asp-action="Index">
+                                    <i class="bi bi-cash-coin"></i> Kassa
+                                </a>
+                            </li>
+                        }
+                    </ul>
+
+                    @if (User.CanAny(Permissions.CatalogManage, Permissions.ReservationsView, Permissions.QueueView))
+                    {
+                        <div class="nav-section">Klinika</div>
+                        <ul class="sidebar-nav">
+                            @if (User.CanAny(Permissions.PatientsView, Permissions.LoyaltyManage))
+                            {
+                                <li>
+                                    <a class="@Active("Loyalty")" aria-current="@Current("Loyalty")" asp-controller="Loyalty" asp-action="Index">
+                                        <i class="bi bi-credit-card-2-front-fill"></i> Loyallıq və endirimlər
+                                    </a>
+                                </li>
+                            }
+                            @if (User.CanAny(Permissions.CatalogManage, Permissions.ReservationsView))
+                            {
+                                <li>
+                                    <a class="@Active("Doctor")" aria-current="@Current("Doctor")" asp-controller="Doctor" asp-action="Index">
+                                        <i class="bi bi-person-badge-fill"></i> Həkimlər
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="@Active("ExaminationType")" aria-current="@Current("ExaminationType")" asp-controller="ExaminationType" asp-action="Index">
+                                        <i class="bi bi-clipboard2-pulse-fill"></i> Müayinələr
+                                    </a>
+                                </li>
+                            }
+                            @if (User.Can(Permissions.CatalogManage))
+                            {
+                                <li>
+                                    <a class="@Active("LabTest")" aria-current="@Current("LabTest")" asp-controller="LabTest" asp-action="Index">
+                                        <i class="bi bi-list-check"></i> Analiz kataloqu
+                                    </a>
+                                </li>
+                            }
+                            @if (User.Can(Permissions.QueueView))
+                            {
+                                <li>
+                                    <a asp-controller="Queue" asp-action="Screen" target="_blank" rel="noopener">
+                                        <i class="bi bi-tv-fill"></i> Növbə ekranı <i class="bi bi-box-arrow-up-right" style="margin-left:auto; font-size:.75rem; opacity:.6;"></i>
+                                    </a>
+                                </li>
+                            }
+                            @if (User.Can(Permissions.CatalogManage))
+                            {
+                                <li>
+                                    <a class="@Active("Department")" aria-current="@Current("Department")" asp-controller="Department" asp-action="Index">
+                                        <i class="bi bi-building"></i> Şöbə və kabinetlər
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    }
+
+                    @if (User.CanAny(Permissions.ReportsView, Permissions.UsersManage, Permissions.AuditView, Permissions.SmsManage))
+                    {
+                        <div class="nav-section">İdarəetmə</div>
+                        <ul class="sidebar-nav">
+                            @if (User.Can(Permissions.ReportsView))
+                            {
+                                <li>
+                                    <a class="@Active("Report")" aria-current="@Current("Report")" asp-controller="Report" asp-action="Index">
+                                        <i class="bi bi-bar-chart-line-fill"></i> Hesabatlar
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="@Active("Rating")" aria-current="@Current("Rating")" asp-controller="Rating" asp-action="Index">
+                                        <i class="bi bi-star-half"></i> Qiymətləndirmələr
+                                    </a>
+                                </li>
+                            }
+                            @if (User.Can(Permissions.UsersManage))
+                            {
+                                <li>
+                                    <a class="@Active("Account")" aria-current="@Current("Account")" asp-controller="Account" asp-action="Index">
+                                        <i class="bi bi-people-fill"></i> İstifadəçilər
+                                    </a>
+                                </li>
+                                <li>
+                                    <a class="@Active("Role")" aria-current="@Current("Role")" asp-controller="Role" asp-action="Index">
+                                        <i class="bi bi-shield-lock-fill"></i> Rollar və icazələr
+                                    </a>
+                                </li>
+                            }
+                            @if (User.Can(Permissions.SmsManage))
+                            {
+                                <li>
+                                    <a class="@Active("Sms")" aria-current="@Current("Sms")" asp-controller="Sms" asp-action="Index">
+                                        <i class="bi bi-chat-dots-fill"></i> SMS xatırlatmaları
+                                    </a>
+                                </li>
+                            }
+                            @if (User.Can(Permissions.AuditView))
+                            {
+                                <li>
+                                    <a class="@Active("Audit")" aria-current="@Current("Audit")" asp-controller="Audit" asp-action="Index">
+                                        <i class="bi bi-journal-text"></i> Audit jurnalı
+                                    </a>
+                                </li>
+                            }
+                        </ul>
+                    }
+                </nav>
+
+                <div class="sidebar-user">
+                    <span class="avatar">@initial</span>
+                    <span class="user-meta">
+                        <span class="user-name">@userName</span>
+                        @if (!string.IsNullOrEmpty(roleLabel))
+                        {
+                            <span class="user-role">@roleLabel</span>
+                        }
+                    </span>
+                    <button type="button" class="icon-btn-dark" id="userChip" aria-label="Hesab menyusu" aria-haspopup="true" aria-expanded="false" aria-controls="userMenu">
+                        <i class="bi bi-three-dots-vertical"></i>
+                    </button>
+                    <div class="dropdown-panel" id="userMenu" hidden>
+                        <a class="dropdown-item" asp-controller="Account" asp-action="ChangePassword">
+                            <i class="bi bi-key"></i> Şifrəni dəyiş
+                        </a>
+                        <form asp-controller="Account" asp-action="Logout" method="post">
+                            <button type="submit" class="dropdown-item danger">
+                                <i class="bi bi-box-arrow-right"></i> Çıxış
+                            </button>
+                        </form>
+                    </div>
+                </div>
+            }
+        </aside>
+        <div class="backdrop" id="backdrop"></div>
+
+        <div class="main">
+            <header class="topbar">
+                <div class="topbar-left">
+                    <button class="menu-toggle" id="menuToggle" type="button" aria-label="Menyunu aç" aria-controls="sidebar" aria-expanded="false"><i class="bi bi-list"></i></button>
+                    @if (isAuthenticated && (User.Can(Permissions.PatientsView) || User.Can(Permissions.ReservationsView)))
+                    {
+                        var searchPatients = User.Can(Permissions.PatientsView);
+                        <form class="topbar-search" method="get" role="search"
+                              action="@(searchPatients ? Url.Action("Index", "Patient") : Url.Action("Index", "Reservation"))">
+                            <i class="bi bi-search"></i>
+                            @if (!searchPatients)
+                            {
+                                <input type="hidden" name="period" value="all" />
+                            }
+                            <input type="search" name="q" class="form-control" placeholder="Xəstə, FİN və ya telefon axtar…" aria-label="Axtarış" />
+                        </form>
+                    }
+                </div>
+                <div class="topbar-right">
+                    <span class="topbar-date">@Fmt.Long(ClinicTime.Today)</span>
+                    @if (isAuthenticated && User.Can(Permissions.ReservationsManage))
+                    {
+                        <a class="btn btn-primary" asp-controller="Reservation" asp-action="Add">
+                            <i class="bi bi-plus-lg"></i><span class="label-text">Yeni rezervasiya</span>
+                        </a>
+                    }
+                </div>
+            </header>
+
+            <main class="content">
+                @if (!string.IsNullOrEmpty(success))
+                {
+                    <div class="alert alert-success flash" role="status">
+                        <i class="bi bi-check-circle-fill"></i> <span>@success</span>
+                        <button type="button" class="flash-close" aria-label="Bağla" onclick="this.parentElement.remove()"><i class="bi bi-x-lg"></i></button>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(error))
+                {
+                    <div class="alert alert-danger flash" role="alert">
+                        <i class="bi bi-exclamation-circle-fill"></i> <span>@error</span>
+                        <button type="button" class="flash-close" aria-label="Bağla" onclick="this.parentElement.remove()"><i class="bi bi-x-lg"></i></button>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(warning))
+                {
+                    <div class="alert alert-warning flash" role="status">
+                        <i class="bi bi-exclamation-triangle-fill"></i> <span>@warning</span>
+                        <button type="button" class="flash-close" aria-label="Bağla" onclick="this.parentElement.remove()"><i class="bi bi-x-lg"></i></button>
+                    </div>
+                }
+                @RenderBody()
+            </main>
+        </div>
+    </div>
+
+    <script>
+        (function () {
+            // Mobile sidebar
+            const sb = document.getElementById('sidebar');
+            const bd = document.getElementById('backdrop');
+            const toggle = document.getElementById('menuToggle');
+            function setSidebar(open) {
+                sb.classList.toggle('open', open);
+                bd.classList.toggle('show', open);
+                toggle?.setAttribute('aria-expanded', open);
+            }
+            toggle?.addEventListener('click', () => setSidebar(!sb.classList.contains('open')));
+            bd?.addEventListener('click', () => setSidebar(false));
+
+            // User menu
+            const chip = document.getElementById('userChip');
+            const menu = document.getElementById('userMenu');
+            function setMenu(open) {
+                if (!menu) return;
+                menu.hidden = !open;
+                chip.setAttribute('aria-expanded', open);
+            }
+            chip?.addEventListener('click', (e) => { e.stopPropagation(); setMenu(menu.hidden); });
+            document.addEventListener('click', (e) => { if (menu && !menu.contains(e.target)) setMenu(false); });
+            document.addEventListener('keydown', (e) => { if (e.key === 'Escape') { setMenu(false); setSidebar(false); } });
+
+            // Confirm dialogs for destructive / state-changing forms
+            document.querySelectorAll('form[data-confirm]').forEach(f =>
+                f.addEventListener('submit', (e) => { if (!confirm(f.dataset.confirm)) e.preventDefault(); }));
+
+            // Prevent double submits
+            document.querySelectorAll('form').forEach(f => f.addEventListener('submit', (e) => {
+                if (e.defaultPrevented) return;
+                f.querySelectorAll('button[type=submit]').forEach(b => { b.disabled = true; });
+            }));
+            window.addEventListener('pageshow', () =>
+                document.querySelectorAll('button[type=submit]').forEach(b => { b.disabled = false; }));
+        })();
+    </script>
+    @await RenderSectionAsync("Scripts", required: false)
+</body>
+</html>

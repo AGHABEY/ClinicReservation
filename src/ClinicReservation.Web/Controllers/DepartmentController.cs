@@ -1,0 +1,59 @@
+using ClinicReservation.Authorization;
+using ClinicReservation.Models;
+using ClinicReservation.Modules;
+using ClinicReservation.Modules.Catalog;
+using Microsoft.AspNetCore.Mvc;
+
+namespace ClinicReservation.Controllers
+{
+    /// <summary>Şöbələr və kabinetlər.</summary>
+    [HasPermission(Permissions.CatalogManage)]
+    public class DepartmentController : Controller
+    {
+        private readonly ClinicSettings _settings;
+        public DepartmentController(ClinicSettings settings) => _settings = settings;
+
+        public async Task<IActionResult> Index(CancellationToken ct)
+        {
+            var (departments, rooms) = await _settings.DepartmentsPageAsync(ct);
+            ViewBag.Departments = departments;
+            ViewBag.Rooms = rooms;
+            var (equipment, reasons) = await _settings.SchedulingCatalogsAsync(ct);
+            ViewBag.Equipment = equipment;
+            ViewBag.Reasons = reasons;
+            ViewBag.Windows = await _settings.WindowsAsync(ct);
+            return View();
+        }
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveDepartment(int id, string? name, string? queuePrefix, CancellationToken ct, bool isActive = true) =>
+            Back(await _settings.SaveDepartmentAsync(id, name, queuePrefix, isActive, ct));
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveRoom(int id, string? name, CancellationToken ct, bool isActive = true) =>
+            Back(await _settings.SaveRoomAsync(id, name, isActive, ct));
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveEquipment(int id, string? name, int? roomId, CancellationToken ct, bool isActive = true) =>
+            Back(await _settings.SaveEquipmentAsync(id, name, roomId, isActive, ct));
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveReason(int id, string? name, CancelledBy party, int sortOrder, CancellationToken ct, bool isActive = true) =>
+            Back(await _settings.SaveCancellationReasonAsync(id, name, party, sortOrder, isActive, ct));
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveWindow(int id, string? name, DeskKind kind, CancellationToken ct, bool isActive = true) =>
+            Back(await _settings.SaveWindowAsync(id, name, kind, isActive, ct));
+
+        private IActionResult Back(Result r)
+        {
+            TempData[r.Ok ? "Success" : "Error"] = r.Ok ? r.Message : r.ErrorText;
+            return RedirectToAction(nameof(Index));
+        }
+    }
+}

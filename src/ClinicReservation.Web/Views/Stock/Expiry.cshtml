@@ -1,0 +1,84 @@
+@model StockExpiryViewModel
+@{
+    ViewData["Title"] = "Son istifadə tarixi";
+    var today = ClinicTime.Today;
+}
+
+<div class="page-head">
+    <div>
+        <h2>Son istifadə tarixi</h2>
+        <p>Vaxtı keçmiş və @Model.Days gün ərzində bitəcək partiyalar — birinci bunları istifadə edin</p>
+    </div>
+    <div class="page-actions"><partial name="_StockActions" /></div>
+</div>
+
+<partial name="_StockNav" />
+
+<div class="toolbar">
+    <div></div>
+    <form method="get" class="toolbar-right stock-filters">
+        <select name="days" class="form-select" aria-label="Müddət" onchange="this.form.submit()" style="max-width:170px;">
+            @foreach (var d in new[] { 30, 60, 90, 180, 365 })
+            {
+                <option value="@d" selected="@(Model.Days == d)">@d gün</option>
+            }
+        </select>
+        <select name="warehouseId" class="form-select" aria-label="Anbar" onchange="this.form.submit()" style="max-width:200px;">
+            <option value="">Bütün anbarlar</option>
+            @foreach (var w in Model.Warehouses)
+            {
+                <option value="@w.Id" selected="@(Model.WarehouseId == w.Id)">@w.Name</option>
+            }
+        </select>
+    </form>
+</div>
+
+<div class="card">
+    @if (Model.Lots.Any())
+    {
+        <div class="table-scroll">
+            <table class="data">
+                <thead><tr><th>Son tarix</th><th>Məhsul</th><th>Seriya</th><th>Anbar</th><th class="num">Qalıq</th>@if (Model.ShowCosts) { <th class="num">Dəyər</th> }<th></th></tr></thead>
+                <tbody>
+                    @foreach (var b in Model.Lots)
+                    {
+                        var days = (b.ExpiryDate!.Value.Date - today).Days;
+                        var expired = days < 0;
+                        <tr>
+                            <td style="white-space:nowrap;">
+                                <span style="font-weight:600; @(expired ? "color:var(--bad);" : "")">@Fmt.Date(b.ExpiryDate)</span>
+                                <div class="hint-text">@(expired ? $"{-days} gün əvvəl keçib" : days == 0 ? "bu gün bitir" : $"{days} gün qalıb")</div>
+                            </td>
+                            <td><a asp-action="Item" asp-route-id="@b.StockItemId" class="link-strong">@b.StockItem.Name</a><div class="hint-text">@b.StockItem.Form</div></td>
+                            <td class="text-muted">@(b.BatchNo ?? "—")</td>
+                            <td class="text-muted">@b.Warehouse.Name</td>
+                            <td class="num" style="white-space:nowrap;"><span style="font-weight:600;">@StockService.Qty(b.Quantity)</span> <span class="hint-text">@b.StockItem.Unit</span></td>
+                            @if (Model.ShowCosts) { <td class="num money">@Fmt.Money(b.Quantity * b.UnitCost)</td> }
+                            <td class="actions">
+                                @if (expired)
+                                {
+                                    <span class="badge-soft badge-unpaid">Vaxtı keçib</span>
+                                    @if (User.CanAny(Permissions.StockIssue, Permissions.StockManage))
+                                    {
+                                        <a class="btn btn-ghost btn-sm" asp-controller="StockDoc" asp-action="WriteOff" asp-route-warehouseId="@b.WarehouseId" asp-route-reason="Vaxtı keçib">Sil</a>
+                                    }
+                                }
+                                else
+                                {
+                                    <span class="badge-soft @(days <= 30 ? "badge-partial" : "badge-waiting")">Vaxtı bitir</span>
+                                }
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            <i class="bi bi-calendar-check"></i>
+            <p>@Model.Days gün ərzində vaxtı bitən partiya yoxdur</p>
+        </div>
+    }
+</div>

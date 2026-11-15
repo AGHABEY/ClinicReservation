@@ -1,0 +1,125 @@
+@model LabTest
+@{
+    var isNew = Model.Id == 0;
+    ViewData["Title"] = isNew ? "Yeni analiz" : Model.Name;
+    var dec = System.Globalization.CultureInfo.InvariantCulture;
+    string D(decimal? v) => v?.ToString("0.###", dec) ?? "";
+}
+
+<div class="page-head">
+    <div>
+        <h2>@(isNew ? "Yeni analiz" : Model.Name)</h2>
+        <p>Nəticə növü, vahid və norma aralığı</p>
+    </div>
+    <a class="btn btn-light" asp-action="Index"><i class="bi bi-arrow-left"></i> Kataloq</a>
+</div>
+
+<div class="card" style="max-width:860px;">
+    <div class="card-pad">
+        <form asp-action="Save" method="post" novalidate>
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+            <input type="hidden" asp-for="Id" />
+            <div class="form-grid">
+                <div class="field">
+                    <label asp-for="Code">Kod</label>
+                    <input lang="en" asp-for="Code" class="form-control" maxlength="20" placeholder="HGB" style="text-transform:uppercase;" />
+                    <span asp-validation-for="Code" class="text-danger"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Name">Ad</label>
+                    <input asp-for="Name" class="form-control" maxlength="150" placeholder="Hemoqlobin" />
+                    <span asp-validation-for="Name" class="text-danger"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="Category">Bölmə <span class="hint-text">(blankda başlıq)</span></label>
+                    <input asp-for="Category" class="form-control" maxlength="100" list="cats" placeholder="Ümumi qan analizi" />
+                    <datalist id="cats"><option value="Ümumi qan analizi"></option><option value="Biokimya"></option><option value="Hormonlar"></option><option value="Ümumi sidik analizi"></option><option value="Seroloji"></option></datalist>
+                </div>
+                <div class="field">
+                    <label asp-for="SampleType">Nümunə</label>
+                    <select asp-for="SampleType" class="form-select">
+                        @foreach (var s in LabCatalog.SampleTypes) { <option value="@s">@s</option> }
+                    </select>
+                </div>
+                <div class="field">
+                    <label asp-for="ResultType">Nəticə növü</label>
+                    <select asp-for="ResultType" class="form-select" id="resultType">
+                        <option value="@LabResultType.Numeric">Rəqəm (norma aralığı ilə)</option>
+                        <option value="@LabResultType.Choice">Siyahıdan seçim (Mənfi / Müsbət …)</option>
+                        <option value="@LabResultType.Text">Sərbəst mətn</option>
+                    </select>
+                </div>
+                <div class="field">
+                    <label asp-for="Unit">Vahid</label>
+                    <input asp-for="Unit" class="form-control" maxlength="30" placeholder="q/L, mmol/L, %" />
+                </div>
+            </div>
+
+            <div data-for="1" class="mt-3">
+                <div class="form-grid">
+                    <div class="field"><label for="RefMin">Norma: aşağı hədd</label><input id="RefMin" name="RefMin" value="@D(Model.RefMin)" class="form-control" inputmode="decimal" /></div>
+                    <div class="field"><label for="RefMax">Norma: yuxarı hədd</label><input id="RefMax" name="RefMax" value="@D(Model.RefMax)" class="form-control" inputmode="decimal" /><span asp-validation-for="RefMax" class="text-danger"></span></div>
+                    <div class="field"><label for="RefMinFemale">Qadınlar üçün: aşağı <span class="hint-text">(fərqlidirsə)</span></label><input id="RefMinFemale" name="RefMinFemale" value="@D(Model.RefMinFemale)" class="form-control" inputmode="decimal" /></div>
+                    <div class="field"><label for="RefMaxFemale">Qadınlar üçün: yuxarı</label><input id="RefMaxFemale" name="RefMaxFemale" value="@D(Model.RefMaxFemale)" class="form-control" inputmode="decimal" /><span asp-validation-for="RefMaxFemale" class="text-danger"></span></div>
+                    <div class="field"><label for="CriticalMin">Kritik: bundan aşağı</label><input id="CriticalMin" name="CriticalMin" value="@D(Model.CriticalMin)" class="form-control" inputmode="decimal" /></div>
+                    <div class="field"><label for="CriticalMax">Kritik: bundan yuxarı</label><input id="CriticalMax" name="CriticalMax" value="@D(Model.CriticalMax)" class="form-control" inputmode="decimal" /></div>
+                </div>
+                <p class="hint-text" style="margin:8px 0 0;">Yalnız bir hədd varsa digərini boş saxlayın (məs. xolesterin: yuxarı hədd 5.2). Ondalıq üçün nöqtə yazın. Kritik dəyər təsdiq zamanı ayrıca yoxlanılır.</p>
+            </div>
+            <div data-for="2" class="mt-3">
+                <div class="form-grid">
+                    <div class="field">
+                        <label asp-for="Choices">Variantlar <span class="hint-text">(; ilə ayırın)</span></label>
+                        <input asp-for="Choices" class="form-control" maxlength="300" placeholder="Mənfi;Müsbət" />
+                        <span asp-validation-for="Choices" class="text-danger"></span>
+                    </div>
+                    <div class="field">
+                        <label for="RefTextChoice">Normal dəyər</label>
+                        <input id="RefTextChoice" name="RefText" value="@Model.RefText" class="form-control" maxlength="150" placeholder="Mənfi" />
+                        <span asp-validation-for="RefText" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+            <div data-for="3" class="mt-3">
+                <div class="field">
+                    <label for="RefTextText">Norma (mətn) <span class="hint-text">(blankda göstərilir)</span></label>
+                    <input id="RefTextText" name="RefText" value="@Model.RefText" class="form-control" maxlength="150" />
+                </div>
+            </div>
+
+            <div class="form-grid mt-3">
+                <div class="field"><label asp-for="SortOrder">Sıra</label><input asp-for="SortOrder" type="number" class="form-control" /></div>
+                <div class="field" style="justify-content:flex-end;">
+                    <label style="display:flex; align-items:center; gap:8px; font-weight:500;">
+                        <input type="checkbox" name="IsActive" value="true" checked="@Model.IsActive" /><input type="hidden" name="IsActive" value="false" /> Aktiv
+                    </label>
+                </div>
+            </div>
+
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Yadda saxla</button>
+                <a class="btn btn-light" asp-action="Index">İmtina</a>
+            </div>
+        </form>
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            const sel = document.getElementById('resultType');
+            const map = { Numeric: '1', Choice: '2', Text: '3' };
+            function show() {
+                const v = map[sel.value] || sel.value;
+                document.querySelectorAll('[data-for]').forEach(el => {
+                    const on = el.dataset.for === v;
+                    el.hidden = !on;
+                    // Only the visible section's fields are posted (two inputs share the name RefText).
+                    el.querySelectorAll('input, select').forEach(i => i.disabled = !on);
+                });
+            }
+            sel.addEventListener('change', show);
+            show();
+        })();
+    </script>
+}

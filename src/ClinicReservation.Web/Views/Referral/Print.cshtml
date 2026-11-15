@@ -1,0 +1,48 @@
+@model Referral
+@{
+    Layout = null;
+    var p = Model.Patient;
+}
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Göndəriş — @p.FullName — @Fmt.Date(Model.CreatedAt)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; }
+        body { margin: 0; background: #F4F5F7; color: #101828; font-size: 13px; line-height: 1.55; }
+        .sheet { width: 148mm; min-height: 200mm; margin: 24px auto; padding: 14mm; background: #fff; box-shadow: 0 12px 32px rgba(16,24,40,.12); }
+        header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 10px; border-bottom: 2px solid #0E7C74; }
+        .brand { font-size: 18px; font-weight: 700; color: #0E7C74; }
+        h1 { margin: 0; font-size: 16px; text-align: right; }
+        h1 span { display: block; color: #475467; font-size: 12px; font-weight: 500; }
+        .row { display: grid; grid-template-columns: 120px 1fr; gap: 4px 12px; padding: 8px 0; border-bottom: 1px solid #F2F4F7; }
+        .row span { color: #475467; }
+        .row strong { font-weight: 600; }
+        .urgent { display: inline-block; padding: 2px 8px; border-radius: 4px; background: #FEE4E2; color: #B42318; font-weight: 700; font-size: 11px; margin-left: 6px; }
+        .sign { display: flex; justify-content: space-between; margin-top: 40px; color: #475467; }
+        .sign div { border-top: 1px solid #98A2B3; padding-top: 4px; width: 45%; text-align: center; }
+        .bar { text-align: center; margin: 16px auto; }
+        .bar button { font: inherit; padding: 8px 16px; border-radius: 8px; border: 1px solid #0E7C74; background: #0E7C74; color: #fff; cursor: pointer; }
+        @@media print { body { background: #fff; } .sheet { margin: 0; box-shadow: none; } .bar { display: none; } }
+    </style>
+</head>
+<body>
+    <div class="bar"><button onclick="window.print()">Çap et</button></div>
+    <div class="sheet">
+        <header>
+            <div class="brand">MedClinic</div>
+            <h1>Göndəriş № @Model.Id<span>@Fmt.Date(Model.CreatedAt)</span></h1>
+        </header>
+        <div class="row"><span>Xəstə</span><strong>@p.FullName</strong></div>
+        <div class="row"><span>FİN · doğum</span><strong>@p.PinCode · @Fmt.Date(p.Birthday)</strong></div>
+        <div class="row"><span>Hara</span><strong>@ReferralFlow.Target(Model)@if (Model.Priority == ReferralPriority.Urgent) {<span class="urgent">TƏCİLİ</span>}</strong></div>
+        <div class="row"><span>Diaqnoz / səbəb</span><strong>@(Model.IcdCode != null ? Model.IcdCode + " — " : "")@Model.Reason</strong></div>
+        <div class="row"><span>Göndərən</span><strong>@(Model.FromDoctor?.FullName ?? Model.ExternalFrom)</strong></div>
+        <div class="row"><span>Etibarlıdır</span><strong>@Fmt.Date(Model.ValidUntil) tarixinədək</strong></div>
+        <div class="sign"><div>Həkimin imzası</div><div>Möhür</div></div>
+    </div>
+</body>
+</html>

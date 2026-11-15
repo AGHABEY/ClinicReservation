@@ -1,0 +1,77 @@
+@model Admission
+@{
+    Layout = null;
+    var a = Model;
+    var p = a.Patient;
+    var (_, days, _) = InpatientRules.BedDays(a, ClinicTime.Now);
+}
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="utf-8">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230E7C74'/%3E%3Cpath d='M6 17h5l2-5 4 10 3-7h6' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Epikriz @a.Number · @p.FullName</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; }
+        body { margin: 0; background: #F4F5F7; color: #101828; font-size: 13px; line-height: 1.5; }
+        .sheet { width: 210mm; min-height: 297mm; margin: 24px auto; padding: 16mm 16mm; background: #fff; }
+        .head { display: flex; justify-content: space-between; border-bottom: 2px solid #101828; padding-bottom: 10px; }
+        .brand { font-weight: 700; font-size: 16px; }
+        h1 { text-align: center; font-size: 18px; margin: 18px 0 2px; letter-spacing: .04em; }
+        .sub { text-align: center; color: #475467; margin-bottom: 16px; }
+        .grid { display: grid; grid-template-columns: 1fr 1fr; gap: 4px 24px; margin-bottom: 14px; }
+        .grid span { color: #475467; margin-right: 6px; }
+        h2 { font-size: 13px; text-transform: uppercase; letter-spacing: .05em; margin: 16px 0 4px; color: #344054; border-bottom: 1px solid #EAECF0; padding-bottom: 3px; }
+        .text { white-space: pre-line; }
+        .icd { font-weight: 700; margin-right: 6px; }
+        .cancel { border: 2px solid #B42318; color: #B42318; padding: 8px; text-align: center; font-weight: 700; margin: 10px 0; }
+        .signs { display: grid; grid-template-columns: 1fr 1fr; gap: 40px; margin-top: 48px; }
+        .signs div { border-top: 1px solid #101828; padding-top: 4px; color: #475467; }
+        .tools { text-align: center; margin: 0 0 24px; display: flex; gap: 8px; justify-content: center; }
+        .tools button, .tools a { font: 600 14px Inter, sans-serif; height: 40px; padding: 0 16px; border-radius: 10px; border: 1px solid #D0D5DD; background: #fff; color: #101828; cursor: pointer; text-decoration: none; display: inline-flex; align-items: center; }
+        .tools button { background: #0E7C74; border-color: #0E7C74; color: #fff; }
+        @@media print { @@page { size: A4; margin: 0; } body { background: #fff; } .sheet { margin: 0; } .tools { display: none; } }
+    </style>
+</head>
+<body>
+    <div class="sheet">
+        <div class="head"><div class="brand">MedClinic</div><div>@(a.Department?.Name)</div></div>
+        <h1>EPİKRİZ</h1>
+        <div class="sub">Xəstəlik tarixi № @a.Number</div>
+        @if (a.Status == AdmissionStatus.Cancelled) { <div class="cancel">YERLƏŞDİRMƏ LƏĞV EDİLİB: @a.CancelReason</div> }
+        else if (a.Status == AdmissionStatus.Active) { <div class="cancel">XƏSTƏ HƏLƏ STASİONARDADIR — epikriz çıxarışdan sonra tamamlanır</div> }
+        <div class="grid">
+            <div><span>Xəstə:</span><strong>@p.FullName</strong></div>
+            <div><span>Doğum tarixi:</span>@Fmt.Date(p.Birthday) (@Fmt.Age(p.Birthday) yaş)</div>
+            <div><span>FİN:</span>@p.PinCode</div>
+            <div><span>Cins:</span>@Fmt.Gender(p.Gender)</div>
+            <div><span>Daxil olub:</span>@Fmt.DateTime(a.AdmittedAt) (@InpatientLabels.Type(a.Type).ToLower(Fmt.Az))</div>
+            <div><span>Çıxıb:</span>@Fmt.DateTime(a.DischargedAt)</div>
+            <div><span>Yataq-gün:</span>@days</div>
+            <div><span>Nəticə:</span>@InpatientLabels.Outcome(a.Outcome)</div>
+        </div>
+        @if (!string.IsNullOrWhiteSpace(p.Allergies)) { <div><strong>Allergiya:</strong> @p.Allergies</div> }
+
+        <h2>Daxilolma diaqnozu</h2>
+        <div>@if (a.AdmitIcdCode != null) { <span class="icd">@a.AdmitIcdCode</span> }@a.AdmitDiagnosis</div>
+        <h2>Yekun diaqnoz</h2>
+        <div>@if (a.FinalIcdCode != null) { <span class="icd">@a.FinalIcdCode</span> }@(a.FinalDiagnosis ?? "—")</div>
+        @if (a.AdmitNote != null) { <h2>Daxilolma səbəbi, şikayətlər</h2><div class="text">@a.AdmitNote</div> }
+        @if (a.Course != null) { <h2>Xəstəliyin gedişi</h2><div class="text">@a.Course</div> }
+        @if (a.TreatmentSummary != null) { <h2>Aparılmış müalicə</h2><div class="text">@a.TreatmentSummary</div> }
+        @if (a.Recommendations != null) { <h2>Tövsiyələr</h2><div class="text">@a.Recommendations</div> }
+
+        <div class="signs">
+            <div>Müalicə həkimi: @(a.Doctor != null ? Fmt.Doctor(a.Doctor.FullName) : "")</div>
+            <div>Şöbə müdiri</div>
+        </div>
+    </div>
+    <div class="tools">
+        <button type="button" onclick="window.print()">Çap et</button>
+        <a href="@Url.Action("Details", new { id = a.Id })">Xəstəlik tarixi</a>
+    </div>
+    <script>if (new URLSearchParams(location.search).has('print')) window.addEventListener('load', () => window.print());</script>
+</body>
+</html>

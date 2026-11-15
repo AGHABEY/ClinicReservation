@@ -1,0 +1,511 @@
+@model ReserveFormViewModel
+@{
+    var examTypes = (List<ExaminationType>)ViewBag.ExaminationTypes;
+    var doctors = (List<Doctor>)ViewBag.Doctors;
+    var slotResult = (SlotResult)ViewBag.Slots;
+    var shape = ViewBag.Shape as SlotService.BookingShape ?? new SlotService.BookingShape(0, null, null);
+    string ShapeText(int minutes, string? equipment) => minutes > 0 ? $"Qəbulun müddəti: {minutes} dəq" + (equipment != null ? $" · avadanlıq: {equipment}" : "") : "";
+    var locked = (Dictionary<int, decimal>)ViewBag.LockedPrices;
+    var selected = Model.ExaminationTypeIds ?? new List<int>();
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    var existing = Model.ExistingPatient;
+    var patientLocked = Model.IsEdit || existing != null;
+}
+
+<form asp-action="@(Model.IsEdit ? "Edit" : "Add")" method="post" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+    <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="WaitlistId" />
+    <input type="hidden" asp-for="ReferralId" />
+    <input type="hidden" asp-for="FollowUpId" />
+    @if (Model.FollowUpId != null)
+    {
+        <div class="alert alert-info"><i class="bi bi-arrow-repeat"></i> Kontrol qəbulu — eyni həkimə qısa müddətdə gəlirsə, işarələnmiş xidmətlərə endirim avtomatik tətbiq olunur.</div>
+    }
+    @if (ViewBag.Referral is Referral referral)
+    {
+        <div class="alert alert-info"><i class="bi bi-signpost-split"></i> Göndəriş üzrə: <b>@ReferralFlow.Target(referral)</b> — @referral.Reason
+            <span class="hint-text">(@(referral.FromDoctor?.FullName ?? referral.ExternalFrom), @Fmt.Date(referral.CreatedAt))</span></div>
+    }
+    @if (Model.WaitlistId != null)
+    {
+        <div class="alert alert-info"><i class="bi bi-hourglass-split"></i> Gözləmə siyahısından rezerv — yaradılanda qeyd «Rezerv edildi» olacaq.</div>
+    }
+
+    <div class="detail-grid">
+        <div class="stack">
+            <div class="card">
+                <div class="card-pad">
+                    <h3 class="card-title"><i class="bi bi-person-vcard"></i> Xəstə</h3>
+
+                    <div class="form-grid">
+                        <div class="field">
+                            <label asp-for="PinCode">FİN kod</label>
+                            <input lang="en" asp-for="PinCode" id="pinInput" class="form-control" placeholder="5ABC12D" maxlength="7"
+                                   style="text-transform:uppercase;" autocomplete="off" readonly="@Model.IsEdit" autofocus="@(!Model.IsEdit)" />
+                            <span asp-validation-for="PinCode" class="text-danger"></span>
+                            @if (!Model.IsEdit)
+                            {
+                                <span class="hint-text">FİN yazın — kartı olan xəstənin məlumatları avtomatik dolacaq</span>
+                            }
+                        </div>
+                    </div>
+
+                    <div id="patientFound" class="patient-found" hidden="@(existing == null)">
+                        <i class="bi bi-person-check-fill"></i>
+                        <span>
+                            Mövcud xəstə: <strong id="pfName">@existing?.FullName</strong>
+                            <span class="hint-text" id="pfVisits"></span>
+                        </span>
+                        <a id="pfLink" href="@(existing == null ? "#" : Url.Action("Details", "Patient", new { id = existing.Id }))" target="_blank" rel="noopener">Karta bax <i class="bi bi-box-arrow-up-right"></i></a>
+                    </div>
+                    @{ var noShowWarning = ViewBag.NoShowWarning as string; }
+                    <div id="noShowWarn" class="alert alert-warning mt-3" style="margin-bottom:0;" hidden="@(noShowWarning == null)">
+                        <i class="bi bi-person-x-fill"></i> <span>@noShowWarning</span>
+                    </div>
+
+                    <div class="form-grid mt-3">
+                        <div class="field">
+                            <label asp-for="Name">Ad</label>
+                            <input asp-for="Name" class="form-control pf-lock" placeholder="Ad" autocomplete="off" readonly="@patientLocked" />
+                            <span asp-validation-for="Name" class="text-danger"></span>
+                        </div>
+                        <div class="field">
+                            <label asp-for="Surname">Soyad</label>
+                            <input asp-for="Surname" class="form-control pf-lock" placeholder="Soyad" autocomplete="off" readonly="@patientLocked" />
+                            <span asp-validation-for="Surname" class="text-danger"></span>
+                        </div>
+                        <div class="field">
+                            <label asp-for="Phone">Əlaqə nömrəsi</label>
+                            <input asp-for="Phone" type="tel" class="form-control" placeholder="050 123 45 67" autocomplete="off" readonly="@Model.IsEdit" />
+                            <span asp-validation-for="Phone" class="text-danger"></span>
+                        </div>
+                        <div class="field">
+                            <label asp-for="Birthday">Doğum tarixi</label>
+                            <input asp-for="Birthday" type="date" class="form-control pf-lock"
+                                   value="@Model.Birthday?.ToString("yyyy-MM-dd")"
+                                   max="@ClinicTime.Today.ToString("yyyy-MM-dd")" min="1900-01-01" readonly="@patientLocked" />
+                            <span asp-validation-for="Birthday" class="text-danger"></span>
+                        </div>
+                    </div>
+                    @if (Model.IsEdit)
+                    {
+                        <p class="hint-text" style="margin:12px 0 0;"><i class="bi bi-info-circle"></i> Xəstə məlumatları <a asp-controller="Patient" asp-action="Details" asp-route-id="@Model.PatientId">xəstə kartında</a> dəyişdirilir.</p>
+                    }
+                </div>
+            </div>
+
+            <div class="card">
+                <div class="card-pad">
+                    <h3 class="card-title"><i class="bi bi-calendar-event"></i> Həkim və qəbul vaxtı</h3>
+                    @if (!Model.CanReschedule)
+                    {
+                        <div class="alert alert-warning" style="margin-bottom:14px;"><i class="bi bi-lock"></i> Xəstə artıq gəlib — həkim və vaxt dəyişdirilə bilməz, yalnız müayinələri dəyişmək olar.</div>
+                    }
+                    @if (doctors.Count == 0)
+                    {
+                        <div class="alert alert-warning" style="margin-bottom:0;">
+                            <i class="bi bi-exclamation-triangle"></i> Hələ həkim əlavə edilməyib.
+                            @if (User.Can(Permissions.CatalogManage))
+                            {
+                                <a asp-controller="Doctor" asp-action="Create">Həkim əlavə et</a>
+                            }
+                        </div>
+                    }
+                    else
+                    {
+                        <div class="form-grid">
+                            <div class="field">
+                                <label asp-for="DoctorId">Həkim</label>
+                                <select asp-for="DoctorId" id="doctorSelect" class="form-select" disabled="@(!Model.CanReschedule)">
+                                    <option value="">Həkim seçin</option>
+                                    @foreach (var g in doctors.GroupBy(d => d.Department?.Name ?? "Şöbəsiz"))
+                                    {
+                                        <optgroup label="@g.Key">
+                                            @foreach (var d in g)
+                                            {
+                                                <option value="@d.Id" selected="@(d.Id == Model.DoctorId)">@d.FullName@(string.IsNullOrEmpty(d.Specialty) ? "" : $" — {d.Specialty}")</option>
+                                            }
+                                        </optgroup>
+                                    }
+                                </select>
+                                <span asp-validation-for="DoctorId" class="text-danger"></span>
+                            </div>
+                            <div class="field">
+                                <label asp-for="AppointmentDate">Tarix</label>
+                                <input asp-for="AppointmentDate" type="date" class="form-control" id="apptDate"
+                                       value="@Model.AppointmentDate?.ToString("yyyy-MM-dd")"
+                                       min="@(Model.IsEdit ? "" : ClinicTime.Today.ToString("yyyy-MM-dd"))" readonly="@(!Model.CanReschedule)" />
+                                <span asp-validation-for="AppointmentDate" class="text-danger"></span>
+                            </div>
+                        </div>
+                        @if (!Model.CanReschedule)
+                        {
+                            <input type="hidden" name="DoctorId" value="@Model.DoctorId" />
+                            <input type="hidden" name="AppointmentTime" value="@Model.AppointmentTime" />
+                        }
+                        <div class="field mt-3">
+                            <label>Saat</label>
+                            <div class="slot-grid" id="slotGrid" data-exclude="@(Model.IsEdit ? Model.Id.ToString() : "")"
+                                 data-current="@Model.AppointmentTime" data-current-doctor="@Model.DoctorId" data-current-date="@Model.AppointmentDate?.ToString("yyyy-MM-dd")">
+                                @foreach (var s in slotResult.Slots)
+                                {
+                                    var isCurrent = s.Time == Model.AppointmentTime;
+                                    var busy = !s.Past && !s.Available;
+                                    var enabled = Model.CanReschedule && (s.Available || (Model.IsEdit && isCurrent) || (busy && Model.Overbook));
+                                    <label class="slot @(enabled || isCurrent ? "" : "disabled") @(busy ? "busy" : "")" title="@(s.Past ? "Keçmiş vaxt" : !s.Available ? "Dolu" : "Boş")">
+                                        <input type="radio" name="AppointmentTime" value="@s.Time" checked="@isCurrent" disabled="@(!enabled)" data-busy="@(busy ? "1" : "0")" />
+                                        <span>@s.Time</span>
+                                    </label>
+                                }
+                            </div>
+                            <p class="hint-text" id="slotMessage" hidden="@(string.IsNullOrEmpty(slotResult.Message) && slotResult.Slots.Count > 0)">
+                                <i class="bi bi-info-circle"></i> <span>@(slotResult.Message ?? (Model.DoctorId == null ? "Saatları görmək üçün həkim seçin" : ""))</span>
+                            </p>
+                            <span asp-validation-for="AppointmentTime" class="text-danger"></span>
+                            @if (Model.CanReschedule && User.Can(Permissions.ReservationsOverbook))
+                            {
+                                <label class="hint-text" style="display:flex; gap:8px; align-items:center; margin-top:8px;" title="Dolu saata əlavə xəstə yazmaq (həkimin gündəlik limiti daxilində)">
+                                    <input type="checkbox" name="Overbook" value="true" id="overbook" checked="@Model.Overbook" />
+                                    <span><b>Araya sal</b> — dolu saata əlavə qəbul (həkimin gündəlik limiti daxilində)</span>
+                                </label>
+                            }
+                            @if (!Model.IsEdit && User.Can(Permissions.ReservationsManage))
+                            {
+                                <p class="hint-text" style="margin:6px 0 0;">
+                                    Uyğun saat yoxdur? <a href="#" id="toWaitlist" data-url="@Url.Action("Add", "Waitlist")"><i class="bi bi-hourglass-split"></i> Gözləmə siyahısına yaz</a>
+                                </p>
+                            }
+                            <p class="hint-text" id="shapeInfo" style="margin:6px 0 0;">@ShapeText(slotResult.SlotMinutes, shape.EquipmentName)</p>
+                        </div>
+                    }
+                    @if (!Model.IsEdit)
+                    {
+                        <div class="field mt-3" style="max-width:260px;">
+                            <label asp-for="Source">Yazılış mənbəyi</label>
+                            <select asp-for="Source" class="form-select">
+                                @foreach (var src in Enum.GetValues<ReserveSource>()) { <option value="@src">@BookingLabels.Source(src)</option> }
+                            </select>
+                        </div>
+                        <div class="field mt-3" style="max-width:260px;">
+                            <label asp-for="PromoCode">Promo kod <span class="hint-text">(varsa)</span></label>
+                            <input lang="en" asp-for="PromoCode" id="promoInput" class="form-control" maxlength="30" style="text-transform:uppercase;" autocomplete="off" />
+                            <span asp-validation-for="PromoCode" class="text-danger" id="promoError"></span>
+                        </div>
+                    }
+                </div>
+            </div>
+        </div>
+
+        @if (!Model.IsEdit)
+        {
+            var week = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday };
+            var chosenDays = Model.SeriesDays ?? new List<DayOfWeek>();
+            <div class="card">
+                <div class="card-pad">
+                    <h3 class="card-title"><i class="bi bi-calendar2-range"></i> Kurs (seriya) <span class="hint-text" style="font-weight:400;">— bir neçə seans eyni saatda</span></h3>
+                    <input type="hidden" name="Step" id="seriesStep" value="" />
+                    <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end;">
+                        <div class="field" style="max-width:140px;">
+                            <label asp-for="SeriesCount">Seans sayı</label>
+                            <input asp-for="SeriesCount" type="number" min="1" max="60" class="form-control" id="seriesCount" />
+                            <span asp-validation-for="SeriesCount" class="text-danger"></span>
+                        </div>
+                        <div class="field">
+                            <label>Günlər <span class="hint-text">(boş — başlanğıc tarixin günü)</span></label>
+                            <div class="chip-group">
+                                @foreach (var d in week)
+                                {
+                                    <label class="chip"><input type="checkbox" name="SeriesDays" value="@d" checked="@chosenDays.Contains(d)" /> @Fmt.DayShortName(d)</label>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    @if (Model.SeriesPlan.Any())
+                    {
+                        <div class="table-scroll mt-3" id="seriesPlan">
+                            <table class="data">
+                                <thead><tr><th>№</th><th>Tarix</th><th>Saat</th><th></th></tr></thead>
+                                <tbody>
+                                    @{ var n = 0; }
+                                    @foreach (var item in Model.SeriesPlan)
+                                    {
+                                        <tr class="@(item.Status == SeriesPlanStatus.NoTime ? "row-muted" : "")">
+                                            <td>@(item.Time != null ? (++n).ToString() : "—")</td>
+                                            <td>@Fmt.DayShort(item.Date)</td>
+                                            <td style="font-weight:600;">@(item.Time ?? "—")</td>
+                                            <td>
+                                                @if (item.Status == SeriesPlanStatus.Ok) { <span class="badge-soft badge-confirmed">Boş</span> }
+                                                else if (item.Status == SeriesPlanStatus.Alternative) { <span class="badge-soft badge-waiting">Başqa saat</span> <span class="hint-text">@item.Note</span> }
+                                                else { <span class="badge-soft badge-cancelled">Buraxılacaq</span> <span class="hint-text">@item.Note</span> }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="hint-text" style="margin:8px 0 0;">«Kursu yarat» bu cədvəl üzrə bütün seansları yaradır. Dəyişiklik etsəniz, tarixlər yenidən yoxlanılır.</p>
+                    }
+                </div>
+            </div>
+        }
+
+        <div class="card">
+            <div class="card-pad">
+                <h3 class="card-title"><i class="bi bi-clipboard2-pulse"></i> Müayinələr</h3>
+                @if (examTypes.Count == 0)
+                {
+                    <p class="text-muted" style="font-size:.9rem;">Hələ müayinə növü yoxdur.</p>
+                }
+                else
+                {
+                    <div id="examChips" class="stack" style="gap:14px;">
+                        @foreach (var g in examTypes.GroupBy(e => e.Department?.Name ?? "Ümumi"))
+                        {
+                            <div>
+                                <div class="hint-text" style="font-weight:600; margin-bottom:6px;">@g.Key</div>
+                                <div class="chip-group">
+                                    @foreach (var item in g)
+                                    {
+                                        var price = locked.TryGetValue(item.Id, out var lp) ? lp : item.Price;
+                                        <label class="chip">
+                                            <input type="checkbox" name="ExaminationTypeIds" value="@item.Id" data-price="@price.ToString(inv)" checked="@selected.Contains(item.Id)" />
+                                            @item.Name
+                                            <span class="price">@Fmt.Money(price)</span>
+                                        </label>
+                                    }
+                                </div>
+                            </div>
+                        }
+                    </div>
+                    <span asp-validation-for="ExaminationTypeIds" class="text-danger" style="display:block; margin-top:8px;"></span>
+                    <div class="line-total">
+                        <span>Cəmi</span>
+                        <span class="money" id="examTotal">@Fmt.Money(0)</span>
+                    </div>
+                    @if (!Model.IsEdit)
+                    {
+                        <div id="discountPreview" hidden>
+                            <div class="line-total" style="font-weight:500; color:var(--ok);"><span id="discountLabel">Endirim</span><span class="money" id="discountTotal"></span></div>
+                            <div class="line-total"><span>Ödəniləcək</span><span class="money" id="payTotal"></span></div>
+                        </div>
+                        <p class="hint-text" id="promoNote" hidden></p>
+                    }
+                    @if (Model.HasPayments)
+                    {
+                        <p class="hint-text" style="margin-top:12px;"><i class="bi bi-info-circle"></i> Bu rezervasiya üzrə ödəniş var. Müayinələri dəyişsəniz, qalıq borc yenidən hesablanacaq.</p>
+                    }
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="form-actions">
+        <button type="submit" class="btn btn-primary" id="submitBtn"><i class="bi bi-check-lg"></i> <span>@(Model.IsEdit ? "Yadda saxla" : Model.SeriesPlan.Any() ? "Kursu yarat" : "Rezervasiyanı yarat")</span></button>
+        @if (Model.IsEdit)
+        {
+            <a class="btn btn-light" asp-action="Details" asp-route-id="@Model.Id">İmtina</a>
+        }
+        else
+        {
+            <a class="btn btn-light" asp-action="Index">İmtina</a>
+        }
+    </div>
+</form>
+
+<script>
+    (function () {
+        // ---- Running total (same format as the server: 1.250,00 ₼)
+        const boxes = document.querySelectorAll('#examChips input[type=checkbox]');
+        const out = document.getElementById('examTotal');
+        const fmt = n => { const [i, d] = n.toFixed(2).split('.'); return i.replace(/\B(?=(\d{3})+(?!\d))/g, '.') + ',' + d + ' ₼'; };
+        function updateTotal() {
+            let sum = 0;
+            boxes.forEach(b => { if (b.checked) sum += parseFloat(b.dataset.price) || 0; });
+            if (out) out.textContent = fmt(sum);
+        }
+        boxes.forEach(b => b.addEventListener('change', updateTotal));
+        updateTotal();
+
+        // ---- Discount preview: the server weighs the patient's discounts (best one per service).
+        const preview = document.getElementById('discountPreview');
+        const promo = document.getElementById('promoInput');
+        let quoteTimer = null, quoteSeq = 0;
+        function scheduleQuote() { clearTimeout(quoteTimer); quoteTimer = setTimeout(quote, 250); }
+        async function quote() {
+            if (!preview) return;
+            const ids = [...boxes].filter(b => b.checked).map(b => b.value);
+            const promoErr = document.getElementById('promoError'), note = document.getElementById('promoNote');
+            if (!ids.length) { preview.hidden = true; note.hidden = true; return; }
+            const p = new URLSearchParams();
+            const pinEl = document.getElementById('pinInput'), docEl = document.getElementById('doctorSelect'), dateEl = document.getElementById('apptDate');
+            if (pinEl && pinEl.value.trim()) p.set('pin', pinEl.value.trim());
+            if (docEl && docEl.value) p.set('doctorId', docEl.value);
+            if (dateEl && dateEl.value) p.set('date', dateEl.value);
+            const t = document.querySelector('input[name="AppointmentTime"]:checked');
+            if (t) p.set('time', t.value);
+            if (promo && promo.value.trim()) p.set('promo', promo.value.trim());
+            ids.forEach(i => p.append('examTypeIds', i));
+            const seq = ++quoteSeq;
+            try {
+                const res = await fetch('@Url.Action("Quote", "Reservation")?' + p, { headers: { 'Accept': 'application/json' } });
+                const q = await res.json();
+                if (seq !== quoteSeq) return;
+                preview.hidden = !(q.discount > 0);
+                if (q.discount > 0) {
+                    document.getElementById('discountTotal').textContent = '−' + fmt(q.discount);
+                    document.getElementById('payTotal').textContent = fmt(q.total);
+                    document.getElementById('discountLabel').textContent = 'Endirim: ' + [...new Set(q.lines.map(l => l.source))].join('; ');
+                }
+                if (promoErr) promoErr.textContent = q.promoError || '';
+                note.hidden = !q.promoNote;
+                note.textContent = q.promoNote || '';
+            } catch (e) { /* preview only; the server prices the booking itself */ }
+        }
+        boxes.forEach(b => b.addEventListener('change', scheduleQuote));
+        if (promo) promo.addEventListener('input', scheduleQuote);
+        document.addEventListener('change', e => { if (e.target.matches('#doctorSelect, #apptDate, input[name="AppointmentTime"]')) scheduleQuote(); });
+        scheduleQuote();
+
+        // ---- Patient lookup by FİN
+        const pin = document.getElementById('pinInput');
+        const found = document.getElementById('patientFound');
+        const lockFields = document.querySelectorAll('.pf-lock');
+        const isEdit = @(Model.IsEdit ? "true" : "false");
+        let lastPin = pin ? pin.value.trim().toUpperCase() : '';
+        async function lookup() {
+            const v = pin.value.trim().toUpperCase();
+            if (v === lastPin) return;
+            lastPin = v;
+            if (v.length !== 7) { unlock(); return; }
+            try {
+                const res = await fetch('@Url.Action("Lookup", "Patient")?pin=' + encodeURIComponent(v), { headers: { 'Accept': 'application/json' } });
+                if (!res.ok) return;
+                const p = await res.json();
+                if (!p.found) { unlock(); return; }
+                document.getElementById('Name').value = p.name;
+                document.getElementById('Surname').value = p.surname;
+                document.getElementById('Phone').value = p.phone;
+                document.getElementById('Birthday').value = p.birthday;
+                lockFields.forEach(f => f.readOnly = true);
+                document.getElementById('pfName').textContent = p.name + ' ' + p.surname;
+                document.getElementById('pfVisits').textContent = (p.visits ? '· ' + p.visits + ' tamamlanmış vizit' : '· yeni xəstə') + (p.discounts ? ' · ' + p.discounts : '');
+                scheduleQuote();
+                document.getElementById('pfLink').href = p.url;
+                found.hidden = false;
+                const warn = document.getElementById('noShowWarn');
+                warn.querySelector('span').textContent = p.noShowWarning || '';
+                warn.hidden = !p.noShowWarning;
+            } catch (e) { /* lookup is a convenience; the server re-checks */ }
+        }
+        function unlock() {
+            if (found.hidden) return;
+            found.hidden = true;
+            document.getElementById('noShowWarn').hidden = true;
+            lockFields.forEach(f => { f.readOnly = false; f.value = ''; });
+            document.getElementById('Phone').value = '';
+        }
+        if (pin && !isEdit) {
+            pin.addEventListener('input', () => { if (pin.value.trim().length === 7 || !found.hidden) lookup(); });
+            pin.addEventListener('blur', lookup);
+        }
+
+        // ---- Slots for the chosen doctor + date
+        const doctor = document.getElementById('doctorSelect');
+        const dateInput = document.getElementById('apptDate');
+        const grid = document.getElementById('slotGrid');
+        const msg = document.getElementById('slotMessage');
+        if (!doctor || !dateInput || !grid || doctor.disabled) return;
+
+        function showMessage(text) {
+            msg.hidden = !text;
+            msg.querySelector('span').textContent = text || '';
+        }
+
+        // «Araya sal»: busy (not past) times become selectable.
+        const overbook = document.getElementById('overbook');
+        const overbookOn = () => !!(overbook && overbook.checked);
+        if (overbook) overbook.addEventListener('change', () => {
+            grid.querySelectorAll('input[data-busy="1"]').forEach(i => {
+                i.disabled = !overbook.checked;
+                i.closest('label').classList.toggle('disabled', !overbook.checked);
+                if (!overbook.checked && i.checked) i.checked = false;
+            });
+        });
+
+        async function loadSlots() {
+            grid.innerHTML = '';
+            if (!doctor.value) { showMessage('Saatları görmək üçün həkim seçin'); return; }
+            if (!dateInput.value) { showMessage('Tarix seçin'); return; }
+            const params = new URLSearchParams({ doctorId: doctor.value, date: dateInput.value });
+            if (grid.dataset.exclude) params.set('exclude', grid.dataset.exclude);
+            // The visit's length and device follow the chosen services.
+            document.querySelectorAll('input[name="ExaminationTypeIds"]:checked').forEach(c => params.append('examTypeIds', c.value));
+            grid.setAttribute('aria-busy', 'true');
+            try {
+                const res = await fetch('@Url.Action("Slots", "Reservation")?' + params, { headers: { 'Accept': 'application/json' } });
+                const data = await res.json();
+                const slots = data.slots;
+                // When editing, the reservation's own slot stays selectable on its original doctor/day.
+                const keep = grid.dataset.exclude && doctor.value === grid.dataset.currentDoctor && dateInput.value === grid.dataset.currentDate
+                    ? grid.dataset.current : null;
+                if (keep && !slots.some(s => s.time === keep)) {
+                    slots.push({ time: keep, available: true, past: false });
+                    slots.sort((a, b) => a.time.localeCompare(b.time));
+                }
+                for (const s of slots) {
+                    const busy = !s.past && !s.available;
+                    const enabled = s.available || s.time === keep || (busy && overbookOn());
+                    const label = document.createElement('label');
+                    label.className = 'slot' + (enabled ? '' : ' disabled') + (busy ? ' busy' : '');
+                    label.title = s.past ? 'Keçmiş vaxt' : !s.available ? 'Dolu' : 'Boş';
+                    const input = document.createElement('input');
+                    input.type = 'radio'; input.name = 'AppointmentTime'; input.value = s.time;
+                    input.dataset.busy = busy ? '1' : '0';
+                    input.disabled = !enabled;
+                    input.checked = s.time === keep;
+                    const span = document.createElement('span');
+                    span.textContent = s.time;
+                    label.append(input, span);
+                    grid.append(label);
+                }
+                showMessage(data.message);
+                const info = document.getElementById('shapeInfo');
+                if (info) info.textContent = data.minutes ? `Qəbulun müddəti: ${data.minutes} dəq` + (data.equipment ? ` · avadanlıq: ${data.equipment}` : '') : '';
+            } finally {
+                grid.removeAttribute('aria-busy');
+            }
+        }
+        // Course: the first submit shows the dates, the second (unchanged) books them.
+        const seriesCount = document.getElementById('seriesCount'), step = document.getElementById('seriesStep');
+        if (seriesCount && step) {
+            const planShown = !!document.getElementById('seriesPlan');
+            const label = document.querySelector('#submitBtn span');
+            // initial: the page as the server sent it (a plan on screen can be confirmed); any later change re-checks.
+            const sync = initial => {
+                const isCourse = parseInt(seriesCount.value || '1', 10) > 1;
+                const confirm = isCourse && planShown && initial;
+                step.value = confirm ? 'confirm' : '';
+                label.textContent = !isCourse ? 'Rezervasiyanı yarat' : confirm ? 'Kursu yarat' : 'Tarixləri yoxla';
+            };
+            document.querySelector('form').addEventListener('change', () => sync(false));
+            seriesCount.addEventListener('input', () => sync(false));
+            sync(true);
+        }
+        // Carry what's typed so far to the waitlist form.
+        const toWaitlist = document.getElementById('toWaitlist');
+        if (toWaitlist) toWaitlist.addEventListener('click', ev => {
+            ev.preventDefault();
+            const p = new URLSearchParams();
+            if (doctor.value) p.set('doctorId', doctor.value);
+            if (dateInput.value) p.set('date', dateInput.value);
+            if (pin && pin.value.trim()) p.set('pin', pin.value.trim());
+            const exam = document.querySelector('input[name="ExaminationTypeIds"]:checked');
+            if (exam) p.set('examTypeId', exam.value);
+            location.href = toWaitlist.dataset.url + '?' + p;
+        });
+        doctor.addEventListener('change', loadSlots);
+        dateInput.addEventListener('change', loadSlots);
+        document.querySelectorAll('input[name="ExaminationTypeIds"]').forEach(c => c.addEventListener('change', loadSlots));
+    })();
+</script>

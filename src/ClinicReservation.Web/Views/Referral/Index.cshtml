@@ -1,0 +1,108 @@
+@model List<Referral>
+@{
+    ViewData["Title"] = "Göndərişlər";
+    var state = (ReferralState)ViewBag.State;
+    var departmentId = ViewBag.DepartmentId as int?;
+    var q = ViewBag.Query as string;
+    var departments = (List<Department>)ViewBag.Departments;
+    var canManage = User.Can(Permissions.ReservationsManage);
+    var today = ClinicTime.Today;
+    var tabs = new[] { ReferralState.Waiting, ReferralState.Booked, ReferralState.Done, ReferralState.NotDone };
+}
+
+<div class="page-head">
+    <div>
+        <h2>Göndərişlər</h2>
+        <p>Həkimlərin və kənar müəssisələrin göndərdiyi xəstələr. «Gözləyir» — hələ yazılmayıb; vaxtı keçən və ya ləğv olunan «İcra olunmayıb»a düşür.</p>
+    </div>
+    @if (canManage)
+    {
+        <a class="btn btn-primary" asp-action="Add"><i class="bi bi-plus-lg"></i> Kənar göndəriş</a>
+    }
+</div>
+
+<form method="get" class="toolbar" role="search">
+    <div class="seg seg-scroll">
+        @foreach (var t in tabs)
+        {
+            <a class="@(state == t ? "on" : "")" asp-action="Index" asp-route-state="@t" asp-route-departmentId="@departmentId" asp-route-q="@q">@ReferralFlow.Label(t)</a>
+        }
+    </div>
+    <input type="hidden" name="state" value="@state" />
+    <div class="toolbar-right">
+        <select name="departmentId" class="form-select" aria-label="Şöbə" onchange="this.form.submit()" style="width:auto; max-width:220px;">
+            <option value="">Bütün şöbələr</option>
+            @foreach (var d in departments) { <option value="@d.Id" selected="@(departmentId == d.Id)">@d.Name</option> }
+        </select>
+        <div class="search">
+            <i class="bi bi-search"></i>
+            <input type="search" name="q" value="@q" class="form-control" placeholder="Ad və ya FİN..." aria-label="Axtarış" />
+        </div>
+    </div>
+</form>
+
+@if (Model.Any())
+{
+    <div class="table-wrap">
+        <table class="data">
+            <thead>
+                <tr><th>Xəstə</th><th>Hara</th><th>Səbəb</th><th>Kimdən</th><th>Status</th><th class="actions">Əməliyyatlar</th></tr>
+            </thead>
+            <tbody>
+                @foreach (var r in Model)
+                {
+                    var st = ReferralFlow.State(r, today);
+                    var failed = r.Status == ReferralStatus.Booked && StatusNames.IsClosedWithoutVisit(r.Reserve?.Status?.Name);
+                    <tr data-referral="@r.Id">
+                        <td>
+                            <a asp-controller="Patient" asp-action="Details" asp-route-id="@r.PatientId" class="link-strong">@r.Patient.FullName</a>
+                            <div class="hint-text">@r.Patient.PinCode · @r.Patient.Phone</div>
+                        </td>
+                        <td>
+                            <div>@ReferralFlow.Target(r)</div>
+                            @if (r.Priority == ReferralPriority.Urgent) { <span class="badge-soft badge-failed">Təcili</span> }
+                        </td>
+                        <td style="max-width:280px; min-width:200px; white-space:normal;">
+                            @if (r.IcdCode != null) { <span class="icd">@r.IcdCode</span> }
+                            @r.Reason
+                        </td>
+                        <td>
+                            <div>@(r.FromDoctor?.FullName ?? r.ExternalFrom)</div>
+                            <div class="hint-text">@Fmt.Date(r.CreatedAt) · etibarlıdır @Fmt.Date(r.ValidUntil)-dək</div>
+                        </td>
+                        <td>
+                            <span class="badge-soft @ReferralFlow.Css(st)">@ReferralFlow.Label(st)</span>
+                            @if (r.Reserve != null && st is ReferralState.Booked or ReferralState.Done)
+                            {
+                                <div class="hint-text" style="margin-top:4px;"><a asp-controller="Reservation" asp-action="Details" asp-route-id="@r.ReserveId">@Fmt.Appointment(r.Reserve.AppointmentAt)</a></div>
+                            }
+                            @if (failed) { <div class="hint-text" style="margin-top:4px;">Yazıldığı qəbul @StatusNames.Label(r.Reserve!.Status!.Name).ToLower() — yenidən yazın</div> }
+                            @if (r.Status == ReferralStatus.Cancelled) { <div class="hint-text">Ləğv: @r.CancelReason</div> }
+                        </td>
+                        <td class="actions">
+                            <div class="actions-inner" style="flex-wrap:wrap; justify-content:flex-end;">
+                                @if (canManage && st == ReferralState.Waiting)
+                                {
+                                    <a class="btn btn-success btn-sm" asp-controller="Reservation" asp-action="Add" asp-route-referralId="@r.Id"><i class="bi bi-calendar-plus"></i> Rezerv et</a>
+                                }
+                                <a class="btn btn-light btn-sm" asp-action="Print" asp-route-id="@r.Id" target="_blank" rel="noopener" title="Göndəriş vərəqəsi" aria-label="Çap et"><i class="bi bi-printer"></i></a>
+                                @if (canManage && st == ReferralState.Waiting)
+                                {
+                                    <form asp-action="Cancel" asp-route-id="@r.Id" method="post" style="display:inline;"
+                                          onsubmit="const n = prompt('Ləğv səbəbi (məcburi):'); if (!n) return false; this.reason.value = n;">
+                                        <input type="hidden" name="reason" />
+                                        <button type="submit" class="btn btn-light btn-sm" title="Göndərişi ləğv et" aria-label="Ləğv et"><i class="bi bi-x-lg"></i></button>
+                                    </form>
+                                }
+                            </div>
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <div class="card"><div class="empty-state"><i class="bi bi-signpost-split"></i><p>Bu siyahıda göndəriş yoxdur</p></div></div>
+}
