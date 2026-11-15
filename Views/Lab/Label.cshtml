@@ -1,0 +1,53 @@
+@model List<LabOrder>
+@{
+    Layout = null;
+}
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="utf-8">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230E7C74'/%3E%3Cpath d='M6 17h5l2-5 4 10 3-7h6' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Barkod etiketi</title>
+    <style>
+        * { box-sizing: border-box; font-family: -apple-system, 'Segoe UI', Arial, sans-serif; }
+        body { margin: 0; background: #F4F5F7; color: #101828; }
+        .labels { display: flex; flex-direction: column; align-items: center; gap: 16px; padding: 24px; }
+        /* 58 × 40 mm thermal sticker */
+        .label { width: 58mm; height: 40mm; padding: 2mm 3mm; background: #fff; border: 1px dashed #D0D5DD; overflow: hidden; display: flex; flex-direction: column; }
+        .label .name { font-size: 11px; font-weight: 700; white-space: nowrap; overflow: hidden; text-overflow: ellipsis; }
+        .label .meta { font-size: 9px; display: flex; justify-content: space-between; gap: 4px; }
+        .label svg { width: 100%; height: 17mm; display: block; margin: 1mm 0 0; }
+        .label .tests { font-size: 8px; line-height: 1.2; max-height: 2.4em; overflow: hidden; }
+        .tools { text-align: center; padding-bottom: 24px; }
+        .tools button { font: 600 14px -apple-system, Arial, sans-serif; height: 40px; padding: 0 18px; border-radius: 10px; border: 0; background: #0E7C74; color: #fff; cursor: pointer; }
+        @@media print {
+            @@page { size: 58mm 40mm; margin: 0; }
+            body { background: #fff; }
+            .labels { padding: 0; gap: 0; }
+            .label { border: 0; page-break-after: always; }
+            .tools { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="labels">
+        @foreach (var o in Model)
+        {
+            <div class="label">
+                <div class="name">@o.Patient.FullName</div>
+                <div class="meta"><span>@Fmt.Date(o.Patient.Birthday) · @(o.Patient.Gender == Gender.Male ? "K" : o.Patient.Gender == Gender.Female ? "Q" : "")</span><span>@o.Results.FirstOrDefault()?.LabTest.SampleType · @Fmt.DateTime(o.CollectedAt)</span></div>
+                <svg class="bc" data-code="@o.Barcode"></svg>
+                <div class="tests">@string.Join(", ", o.Results.OrderBy(r => r.LabTest.SortOrder).Select(r => r.LabTest.Code))</div>
+            </div>
+        }
+    </div>
+    <div class="tools"><button type="button" onclick="window.print()">Çap et</button></div>
+    <script src="~/lib/jsbarcode/JsBarcode.all.min.js"></script>
+    <script>
+        document.querySelectorAll('svg.bc').forEach(el =>
+            JsBarcode(el, el.dataset.code, { format: 'CODE128', height: 50, width: 1.6, margin: 0, fontSize: 12, textMargin: 1 }));
+        if (new URLSearchParams(location.search).has('print')) window.addEventListener('load', () => setTimeout(() => window.print(), 200));
+    </script>
+</body>
+</html>

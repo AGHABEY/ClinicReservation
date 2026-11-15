@@ -2,6 +2,15 @@ using ClinicReservation.Models;
 
 namespace ClinicReservation.ViewModels
 {
+    public static class PayStatus
+    {
+        public const string Unpaid = "Unpaid";
+        public const string Partial = "Partial";
+        public const string Paid = "Paid";
+        public const string Refund = "Refund";       // paid more than is due (e.g. cancelled) — money must go back
+        public const string Cancelled = "Cancelled"; // cancelled and nothing to settle
+    }
+
     public class KassaItemViewModel
     {
         public Reserve Reserve { get; set; } = null!;
@@ -9,9 +18,12 @@ namespace ClinicReservation.ViewModels
         public decimal Paid { get; set; }
         public decimal Balance => Total - Paid;
 
-        // Unpaid / Partial / Paid
         public string PaymentStatus =>
-            Paid <= 0 ? "Unpaid" : (Paid >= Total ? "Paid" : "Partial");
+            Balance < 0 ? PayStatus.Refund
+            : StatusNames.IsClosedWithoutVisit(Reserve.Status?.Name) ? PayStatus.Cancelled
+            : Paid <= 0 ? PayStatus.Unpaid
+            : Paid >= Total ? PayStatus.Paid
+            : PayStatus.Partial;
     }
 
     public class KassaListViewModel
@@ -20,7 +32,9 @@ namespace ClinicReservation.ViewModels
         public decimal TotalExpected { get; set; }
         public decimal TotalCollected { get; set; }
         public decimal TotalOutstanding { get; set; }
+        public decimal TotalToRefund { get; set; }
         public string? Filter { get; set; }
+        public string? Query { get; set; }
     }
 
     public class PaymentViewModel

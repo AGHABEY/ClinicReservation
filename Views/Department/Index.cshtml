@@ -1,0 +1,70 @@
+@{
+    ViewData["Title"] = "Şöbə və kabinetlər";
+    var departments = (List<(Department Item, int Doctors)>)ViewBag.Departments;
+    var rooms = (List<(Room Item, int Doctors)>)ViewBag.Rooms;
+}
+
+<div class="page-head">
+    <div>
+        <h2>Şöbə və kabinetlər</h2>
+        <p>Şöbələr həkimləri və müayinələri qruplaşdırır; kabinetdə eyni anda yalnız bir qəbul ola bilər. «Talon» hərfi növbə nömrəsinin əvvəlinə yazılır (K-001); boş qalsa «A».</p>
+    </div>
+</div>
+
+<div class="report-grid">
+    <div class="card">
+        <div class="card-head"><h3 class="card-title"><i class="bi bi-diagram-3"></i> Şöbələr</h3></div>
+        <div class="card-pad">
+            <form asp-action="SaveDepartment" method="post" class="inline-form">
+                <input type="hidden" name="id" value="0" />
+                <input name="name" class="form-control" placeholder="Yeni şöbə, məs: Kardiologiya" maxlength="100" aria-label="Şöbənin adı" required />
+                <input name="queuePrefix" class="form-control prefix-input" placeholder="Talon" maxlength="3" aria-label="Talon hərfi" title="Növbə talonunun hərfi, məs: K → K-001" />
+                <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Əlavə et</button>
+            </form>
+            <div class="line-list mt-3">
+                @foreach (var (d, doctors) in departments)
+                {
+                    <form asp-action="SaveDepartment" method="post" class="line-item inline-form @(d.IsActive ? "" : "row-muted")">
+                        <input type="hidden" name="id" value="@d.Id" />
+                        <input name="name" value="@d.Name" class="form-control" maxlength="100" aria-label="Şöbənin adı" />
+                        <input name="queuePrefix" value="@d.QueuePrefix" class="form-control prefix-input" placeholder="A" maxlength="3" aria-label="Talon hərfi" title="Növbə talonunun hərfi, məs: K → K-001" />
+                        <span class="hint-text" style="white-space:nowrap;">@doctors həkim</span>
+                        <label class="hint-text" style="display:flex; gap:6px; align-items:center; white-space:nowrap;"><input type="checkbox" name="isActive" value="true" checked="@d.IsActive" /><input type="hidden" name="isActive" value="false" /> Aktiv</label>
+                        <button type="submit" class="btn btn-light btn-sm">Saxla</button>
+                    </form>
+                }
+                @if (!departments.Any())
+                {
+                    <p class="hint-text">Hələ şöbə yoxdur.</p>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head"><h3 class="card-title"><i class="bi bi-door-closed"></i> Kabinetlər və cihazlar</h3></div>
+        <div class="card-pad">
+            <form asp-action="SaveRoom" method="post" class="inline-form">
+                <input type="hidden" name="id" value="0" />
+                <input name="name" class="form-control" placeholder="Yeni kabinet, məs: Kabinet 204 və ya USM otağı" maxlength="100" aria-label="Kabinetin adı" required />
+                <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Əlavə et</button>
+            </form>
+            <div class="line-list mt-3">
+                @foreach (var (r, doctors) in rooms)
+                {
+                    <form asp-action="SaveRoom" method="post" class="line-item inline-form @(r.IsActive ? "" : "row-muted")">
+                        <input type="hidden" name="id" value="@r.Id" />
+                        <input name="name" value="@r.Name" class="form-control" maxlength="100" aria-label="Kabinetin adı" />
+                        <span class="hint-text" style="white-space:nowrap;">@doctors həkim</span>
+                        <label class="hint-text" style="display:flex; gap:6px; align-items:center; white-space:nowrap;"><input type="checkbox" name="isActive" value="true" checked="@r.IsActive" /><input type="hidden" name="isActive" value="false" /> Aktiv</label>
+                        <button type="submit" class="btn btn-light btn-sm">Saxla</button>
+                    </form>
+                }
+                @if (!rooms.Any())
+                {
+                    <p class="hint-text">Hələ kabinet yoxdur.</p>
+                }
+            </div>
+        </div>
+    </div>
+</div>

@@ -1,22 +1,47 @@
-﻿using System.ComponentModel.DataAnnotations;
 using System.ComponentModel.DataAnnotations.Schema;
-using System.Diagnostics.CodeAnalysis;
 
 namespace ClinicReservation.Models
 {
     public class Reserve : BaseModel
     {
-        [Required]
-        public string Name { get; set; }
-        [Required]
-        public string Surname { get; set; }
-        [Required]
-        public string PinCode { get; set; }
-        [Required]
-        public string Phone { get; set; }
-        public DateTime Birthday { get; set; }
+        public int PatientId { get; set; }
+        public Patient Patient { get; set; } = null!;
+
+        /// <summary>Null only for reservations made before doctors existed.</summary>
+        public int? DoctorId { get; set; }
+        public Doctor? Doctor { get; set; }
+
+        public int? RoomId { get; set; }
+        public Room? Room { get; set; }
+
+        /// <summary>When the patient is expected to come in.</summary>
+        public DateTime AppointmentAt { get; set; }
+
+        /// <summary>Length booked (the doctor's slot length at booking time).</summary>
+        public int DurationMinutes { get; set; } = 30;
+
         public DateTime? AddedDate { get; set; }
         public DateTime? ConfirmDate { get; set; }
+        public DateTime? ArrivedAt { get; set; }
+        public DateTime? StartedAt { get; set; }
+        public DateTime? CompletedAt { get; set; }
+        public DateTime? CancelDate { get; set; }
+        public string? CancelReason { get; set; }
+
+        // ----- Queue (assigned when the patient checks in) -----
+        /// <summary>Running number for the day within the ticket prefix.</summary>
+        public int? QueueNumber { get; set; }
+        /// <summary>What the patient sees on the ticket and the hall screen, e.g. "A-017".</summary>
+        public string? QueueTicket { get; set; }
+        /// <summary>Last time the doctor called this patient in (shown on the hall screen).</summary>
+        public DateTime? CalledAt { get; set; }
+
+        // ----- Reminders -----
+        public DateTime? ReminderSentAt { get; set; }
+        /// <summary>Random token for the patient's confirm/cancel link (no login needed).</summary>
+        public string? PatientToken { get; set; }
+
+        public MedicalRecord? MedicalRecord { get; set; }
 
         public List<ReserveExaminationType>? ReserveExaminationTypes { get; set; }
 
@@ -26,8 +51,20 @@ namespace ClinicReservation.Models
         public ReserveStatus? Status { get; set; }
 
         [NotMapped]
-        public List<int> ReserveExaminationTypesId { get; set; }
+        public bool IsCancelled => Status?.Name == StatusNames.Cancelled;
 
+        [NotMapped]
+        public DateTime AppointmentEnd => AppointmentAt.AddMinutes(Math.Max(1, DurationMinutes));
 
+        /// <summary>Sum of the examinations, using the prices locked in at booking time.</summary>
+        [NotMapped]
+        public decimal Total => ReserveExaminationTypes?.Sum(x => x.Price) ?? 0;
+
+        /// <summary>What the patient owes: nothing once cancelled or marked as no-show.</summary>
+        [NotMapped]
+        public decimal AmountDue => StatusNames.IsClosedWithoutVisit(Status?.Name) ? 0 : Total;
+
+        [NotMapped]
+        public decimal Paid => Payments?.Sum(p => p.Amount) ?? 0;
     }
 }

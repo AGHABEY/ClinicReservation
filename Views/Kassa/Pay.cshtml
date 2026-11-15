@@ -1,76 +1,130 @@
 @model PaymentViewModel
 @{
     ViewData["Title"] = "Ödəniş";
-    var paidFull = Model.Balance <= 0;
+    var isAdmin = User.Can(Permissions.PaymentsRefund);
+    var cancelled = StatusNames.IsClosedWithoutVisit(Model.Reserve?.Status?.Name);
+    var needsRefund = Model.Balance < 0;
+    var pct = Model.Total > 0 ? (int)Math.Clamp(Model.Paid / Model.Total * 100, 0, 100) : (Model.Paid > 0 ? 100 : 0);
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
 }
 
 <div class="page-head">
     <div>
-        <h2>Ödəniş — @Model.Reserve?.Name @Model.Reserve?.Surname</h2>
-        <p>Rezervasiya #@Model.ReserveId</p>
+        <h2>Ödəniş — @Model.Reserve?.Patient.FullName</h2>
+        <p>Rezervasiya #@Model.ReserveId · @Fmt.Appointment(Model.Reserve!.AppointmentAt) · <partial name="_StatusBadge" model="Model.Reserve.Status?.Name" /></p>
     </div>
-    <a class="btn btn-light" asp-action="Index"><i class="bi bi-arrow-left"></i> Kassaya qayıt</a>
+    <div class="page-actions">
+        <a class="btn btn-light" asp-action="Index"><i class="bi bi-arrow-left"></i> Kassa</a>
+        <a class="btn btn-light" asp-controller="Reservation" asp-action="Details" asp-route-id="@Model.ReserveId"><i class="bi bi-person-vcard"></i> Rezervasiya</a>
+    </div>
 </div>
 
-@if (TempData["Success"] != null)
-{
-    <div class="alert alert-success"><i class="bi bi-check-circle"></i> @TempData["Success"]</div>
-}
-
 <div class="report-grid">
-    <div>
-        <!-- Summary -->
-        <div class="card mb-3">
+    <div class="stack">
+        <div class="card">
             <div class="card-pad">
-                <div class="stat-grid" style="margin-bottom:0; grid-template-columns:repeat(3,1fr);">
+                <div class="summary-grid">
                     <div>
-                        <div class="label text-muted" style="font-size:.8rem;">Cəmi</div>
-                        <div class="value" style="font-size:1.4rem;">@Model.Total.ToString("0.00") ₼</div>
+                        <div class="label">Ödənilməli</div>
+                        <div class="value">@Fmt.Money(Model.Total)</div>
                     </div>
                     <div>
-                        <div class="label text-muted" style="font-size:.8rem;">Ödənilib</div>
-                        <div class="value money pos" style="font-size:1.4rem;">@Model.Paid.ToString("0.00") ₼</div>
+                        <div class="label">Ödənilib</div>
+                        <div class="value money pos">@Fmt.Money(Model.Paid)</div>
                     </div>
                     <div>
-                        <div class="label text-muted" style="font-size:.8rem;">Qalıq</div>
-                        <div class="value money @(Model.Balance > 0 ? "neg" : "")" style="font-size:1.4rem;">@Model.Balance.ToString("0.00") ₼</div>
+                        <div class="label">@(needsRefund ? "Qaytarılmalı" : "Qalıq")</div>
+                        <div class="value money @(Model.Balance != 0 ? "neg" : "")">@Fmt.Money(Math.Abs(Model.Balance))</div>
                     </div>
+                </div>
+                <div class="progress-track" role="progressbar" aria-valuenow="@pct" aria-valuemin="0" aria-valuemax="100" aria-label="Ödəniş faizi">
+                    <div class="progress-fill" style="width:@pct%"></div>
                 </div>
             </div>
         </div>
 
-        <!-- Payment form -->
         <div class="card">
             <div class="card-pad">
-                <h3 style="margin:0 0 16px; font-size:1.05rem; font-weight:700;"><i class="bi bi-cash-coin text-muted"></i> Yeni ödəniş</h3>
-                @if (paidFull)
+                @if (needsRefund)
                 {
+                    <h3 class="card-title"><i class="bi bi-arrow-counterclockwise"></i> Geri qaytarma</h3>
+                    @if (isAdmin)
+                    {
+                        <p class="text-muted" style="font-size:.9rem; margin-top:0;">
+                            @(cancelled ? $"Rezervasiya «{StatusNames.Label(Model.Reserve.Status?.Name)}» statusundadır." : "Xəstə ödənilməli məbləğdən çox ödəyib.")
+                            Xəstəyə qaytardığınız məbləği qeyd edin.
+                        </p>
+                        <form asp-action="Refund" method="post" novalidate data-confirm="Geri qaytarma qeydə alınsın?">
+                            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+                            <input type="hidden" asp-for="ReserveId" />
+                            <div class="form-grid">
+                                <div class="field">
+                                    <label asp-for="Amount">Qaytarılan məbləğ (₼)</label>
+                                    <input asp-for="Amount" type="number" step="0.01" min="0.01" max="@((-Model.Balance).ToString(inv))"
+                                           value="@Model.Amount.ToString("0.00", inv)" class="form-control" inputmode="decimal" />
+                                    <span asp-validation-for="Amount" class="text-danger"></span>
+                                    <span class="hint-text">Maksimum: @Fmt.Money(-Model.Balance)</span>
+                                </div>
+                                <div class="field">
+                                    <label asp-for="Method">Üsul</label>
+                                    <select asp-for="Method" class="form-select">
+                                        <option value="@((int)PaymentMethod.Cash)">Nağd</option>
+                                        <option value="@((int)PaymentMethod.Card)">Kart</option>
+                                    </select>
+                                </div>
+                            </div>
+                            <div class="field mt-3">
+                                <label asp-for="Note">Qeyd</label>
+                                <input asp-for="Note" class="form-control" placeholder="Məs: ləğv səbəbilə qaytarıldı" maxlength="250" />
+                            </div>
+                            <div class="form-actions">
+                                <button type="submit" class="btn btn-danger-solid"><i class="bi bi-arrow-counterclockwise"></i> Qaytarmanı qeyd et</button>
+                            </div>
+                        </form>
+                    }
+                    else
+                    {
+                        <div class="alert alert-warning" style="margin-bottom:0;"><i class="bi bi-exclamation-triangle"></i> Xəstəyə @Fmt.Money(-Model.Balance) qaytarılmalıdır. Geri qaytarmanı səlahiyyətli işçi (kassir və ya administrator) qeyd edir.</div>
+                    }
+                }
+                else if (cancelled)
+                {
+                    <h3 class="card-title"><i class="bi bi-x-circle"></i> Rezervasiya «@StatusNames.Label(Model.Reserve.Status?.Name)»</h3>
+                    <p class="text-muted" style="margin:0;">Bu rezervasiyaya ödəniş qəbul edilmir.</p>
+                }
+                else if (Model.Balance <= 0)
+                {
+                    <h3 class="card-title"><i class="bi bi-cash-coin"></i> Yeni ödəniş</h3>
                     <div class="alert alert-success" style="margin-bottom:0;"><i class="bi bi-check-circle"></i> Bu rezervasiya tam ödənilib.</div>
                 }
                 else
                 {
-                    <form asp-action="Pay" method="post">
-                        <div asp-validation-summary="All" class="alert alert-danger" style="display:@(ViewData.ModelState.IsValid ? "none" : "block")"></div>
+                    <h3 class="card-title"><i class="bi bi-cash-coin"></i> Yeni ödəniş</h3>
+                    <form asp-action="Pay" method="post" novalidate>
+                        <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
                         <input type="hidden" asp-for="ReserveId" />
                         <div class="form-grid">
                             <div class="field">
                                 <label asp-for="Amount">Məbləğ (₼)</label>
-                                <input asp-for="Amount" type="number" step="0.01" min="0" class="form-control" />
+                                <input asp-for="Amount" type="number" step="0.01" min="0.01" max="@Model.Balance.ToString(inv)"
+                                       value="@Model.Amount.ToString("0.00", inv)" class="form-control" inputmode="decimal" />
                                 <span asp-validation-for="Amount" class="text-danger"></span>
+                                <span class="hint-text">Maksimum: @Fmt.Money(Model.Balance)</span>
                             </div>
                             <div class="field">
                                 <label asp-for="Method">Ödəniş üsulu</label>
                                 <select asp-for="Method" class="form-select">
-                                    <option value="0">Nağd</option>
-                                    <option value="1">Kart</option>
+                                    <option value="@((int)PaymentMethod.Cash)">Nağd</option>
+                                    <option value="@((int)PaymentMethod.Card)">Kart</option>
                                 </select>
+                                <span asp-validation-for="Method" class="text-danger"></span>
                             </div>
                         </div>
                         <div class="field mt-3">
                             <label asp-for="Note">Qeyd</label>
-                            <input asp-for="Note" class="form-control" placeholder="İstəyə bağlı" />
+                            <input asp-for="Note" class="form-control" placeholder="İstəyə bağlı" maxlength="250" />
                         </div>
-                        <div class="mt-3">
+                        <div class="form-actions">
                             <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Ödənişi qeyd et</button>
                         </div>
                     </form>
@@ -79,19 +133,18 @@
         </div>
     </div>
 
-    <div>
-        <!-- Examinations -->
-        <div class="card mb-3">
+    <div class="stack">
+        <div class="card">
             <div class="card-pad">
-                <h3 style="margin:0 0 14px; font-size:1.05rem; font-weight:700;"><i class="bi bi-clipboard2-pulse text-muted"></i> Müayinələr</h3>
-                @if (Model.Reserve?.ReserveExaminationTypes != null && Model.Reserve.ReserveExaminationTypes.Any())
+                <h3 class="card-title"><i class="bi bi-clipboard2-pulse"></i> Müayinələr</h3>
+                @if (Model.Reserve.ReserveExaminationTypes != null && Model.Reserve.ReserveExaminationTypes.Any())
                 {
-                    <div style="display:flex; flex-direction:column; gap:8px;">
+                    <div class="line-list">
                         @foreach (var ex in Model.Reserve.ReserveExaminationTypes)
                         {
-                            <div style="display:flex; justify-content:space-between; padding:10px 12px; background:#f8fafc; border-radius:10px;">
+                            <div class="line-item">
                                 <span>@ex.ExaminationType.Name</span>
-                                <span class="money">@ex.ExaminationType.Price.ToString("0.00") ₼</span>
+                                <span class="money" style="@(cancelled ? "text-decoration:line-through; color:var(--muted);" : "")">@Fmt.Money(ex.Price)</span>
                             </div>
                         }
                     </div>
@@ -103,30 +156,36 @@
             </div>
         </div>
 
-        <!-- Payment history -->
         <div class="card">
             <div class="card-pad">
-                <h3 style="margin:0 0 14px; font-size:1.05rem; font-weight:700;"><i class="bi bi-clock-history text-muted"></i> Ödəniş tarixçəsi</h3>
+                <h3 class="card-title"><i class="bi bi-clock-history"></i> Ödəniş tarixçəsi</h3>
                 @if (Model.Payments.Any())
                 {
-                    <table class="data" style="margin:-8px 0;">
-                        <tbody>
-                            @foreach (var p in Model.Payments)
-                            {
-                                <tr>
-                                    <td>
-                                        <div style="font-weight:600;">@p.Amount.ToString("0.00") ₼</div>
-                                        <div class="text-muted" style="font-size:.78rem;">@p.PaidAt.ToString("dd.MM.yyyy HH:mm")</div>
-                                    </td>
-                                    <td style="text-align:right;">
-                                        <span class="badge-soft @(p.Method == PaymentMethod.Cash ? "badge-cash" : "badge-card")">
-                                            @(p.Method == PaymentMethod.Cash ? "Nağd" : "Kart")
-                                        </span>
-                                    </td>
-                                </tr>
-                            }
-                        </tbody>
-                    </table>
+                    <div class="table-scroll">
+                        <table class="data compact">
+                            <tbody>
+                                @foreach (var p in Model.Payments)
+                                {
+                                    var refund = p.Amount < 0;
+                                    <tr>
+                                        <td class="wrap">
+                                            <div class="money @(refund ? "neg" : "")">@(refund ? "−" : "")@Fmt.Money(Math.Abs(p.Amount))</div>
+                                            <div class="text-muted" style="font-size:.78rem;">@Fmt.DateTime(p.PaidAt)@(string.IsNullOrEmpty(p.Note) ? "" : " · " + p.Note)</div>
+                                        </td>
+                                        <td class="actions">
+                                            @if (refund)
+                                            {
+                                                <span class="badge-soft badge-refund">Qaytarma</span>
+                                            }
+                                            <span class="badge-soft @(p.Method == PaymentMethod.Cash ? "badge-cash" : "badge-card")">
+                                                @(p.Method == PaymentMethod.Cash ? "Nağd" : "Kart")
+                                            </span>
+                                        </td>
+                                    </tr>
+                                }
+                            </tbody>
+                        </table>
+                    </div>
                 }
                 else
                 {

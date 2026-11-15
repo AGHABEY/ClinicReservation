@@ -1,0 +1,26 @@
+@model List<LabOrder>
+@{
+    Layout = "_PublicLayout";
+    ViewData["Title"] = "Analiz nəticələri";
+}
+<partial name="~/Views/Lab/_LabReportStyles.cshtml" />
+<style>
+    .pub { max-width: 820px; }
+    @@media print { .pub-brand, .pub-foot, .pub-print { display: none; } .pub-card { border: 0; padding: 0; } body { background: #fff; } }
+</style>
+
+<div class="pub-card">
+    @if (Model.Any())
+    {
+        <div class="flex-between">
+            <h1 style="font-size:18px; margin:0;">Analiz nəticələri</h1>
+            <button type="button" class="btn btn-light btn-sm pub-print" onclick="window.print()"><i class="bi bi-printer"></i> Çap / PDF</button>
+        </div>
+        <partial name="~/Views/Lab/_LabReport.cshtml" model="Model" />
+    }
+    else
+    {
+        <p class="pub-hello">Nəticələriniz hələ hazır deyil.</p>
+        <p class="pub-note" style="margin:0;">Hazır olanda sizə SMS göndəriləcək.</p>
+    }
+</div>

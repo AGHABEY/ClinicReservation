@@ -1,0 +1,72 @@
+@{
+    var items = ViewBag.StockItems as List<StockItem> ?? new();
+    var rows = ViewBag.Materials as List<ClinicReservation.ViewModels.MaterialInput> ?? new();
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+}
+<div class="field mt-3">
+    <label>Sərf materialları <span class="hint-text">(qəbul tamamlananda anbardan avtomatik silinir)</span></label>
+    @if (items.Any())
+    {
+        <div class="mat-rows" id="matRows">
+            @for (var i = 0; i < rows.Count; i++)
+            {
+                <div class="mat-row">
+                    <select name="materialRows[@i].StockItemId" class="form-select" aria-label="Material">
+                        <option value="">— seçin —</option>
+                        @foreach (var it in items)
+                        {
+                            <option value="@it.Id" data-unit="@it.Unit" selected="@(rows[i].StockItemId == it.Id)">@it.DisplayName</option>
+                        }
+                    </select>
+                    <input name="materialRows[@i].Quantity" value="@rows[i].Quantity?.ToString("0.###", inv)" type="number" step="any" min="0" class="form-control" aria-label="Miqdar" />
+                    <span class="mat-unit hint-text"></span>
+                    <button type="button" class="btn btn-ghost btn-sm mat-del" aria-label="Sil"><i class="bi bi-x-lg"></i></button>
+                </div>
+            }
+        </div>
+        <template id="matTpl">
+            <div class="mat-row">
+                <select data-name="StockItemId" class="form-select" aria-label="Material">
+                    <option value="">— seçin —</option>
+                    @foreach (var it in items) { <option value="@it.Id" data-unit="@it.Unit">@it.DisplayName</option> }
+                </select>
+                <input data-name="Quantity" value="1" type="number" step="any" min="0" class="form-control" aria-label="Miqdar" />
+                <span class="mat-unit hint-text"></span>
+                <button type="button" class="btn btn-ghost btn-sm mat-del" aria-label="Sil"><i class="bi bi-x-lg"></i></button>
+            </div>
+        </template>
+        <button type="button" class="btn btn-light btn-sm" id="matAdd" style="margin-top:8px; align-self:flex-start;"><i class="bi bi-plus-lg"></i> Material əlavə et</button>
+        <script>
+            (function () {
+                const box = document.getElementById('matRows'), tpl = document.getElementById('matTpl');
+                function unit(row) {
+                    const o = row.querySelector('select').selectedOptions[0];
+                    row.querySelector('.mat-unit').textContent = o && o.dataset.unit ? o.dataset.unit : '';
+                }
+                function renumber() {
+                    box.querySelectorAll('.mat-row').forEach((row, i) => {
+                        row.querySelector('select').name = `materialRows[${i}].StockItemId`;
+                        row.querySelector('input').name = `materialRows[${i}].Quantity`;
+                    });
+                }
+                box.addEventListener('change', e => { if (e.target.tagName === 'SELECT') unit(e.target.closest('.mat-row')); });
+                box.addEventListener('click', e => {
+                    const b = e.target.closest('.mat-del');
+                    if (b) { b.closest('.mat-row').remove(); renumber(); }
+                });
+                document.getElementById('matAdd').addEventListener('click', () => {
+                    const row = tpl.content.firstElementChild.cloneNode(true);
+                    box.appendChild(row);
+                    renumber();
+                    row.querySelector('select').focus();
+                });
+                box.querySelectorAll('.mat-row').forEach(unit);
+                box.closest('form').addEventListener('submit', renumber);
+            })();
+        </script>
+    }
+    else
+    {
+        <p class="hint-text" style="margin:0;">Məhsul kataloqu boşdur. @if (User.Can(Permissions.StockManage)) { <a asp-controller="StockItem" asp-action="Index">Kataloqu doldurun</a> }</p>
+    }
+</div>

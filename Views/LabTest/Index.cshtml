@@ -1,0 +1,65 @@
+@model List<LabTest>
+@{
+    ViewData["Title"] = "Analiz kataloqu";
+}
+
+<div class="page-head">
+    <div>
+        <h2>Analiz kataloqu</h2>
+        <p>Analizlər, vahidlər və norma aralıqları (@Model.Count). Analizi xəstəyə yazmaq üçün onu müayinəyə bağlayın.</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-light" asp-controller="Lab" asp-action="Index"><i class="bi bi-arrow-left"></i> Laboratoriya</a>
+        <form asp-action="ImportDefaults" method="post" data-confirm="Standart analizlər (31 ədəd) kataloqa əlavə edilsin? Kodu artıq olanlar dəyişmir.">
+            <button type="submit" class="btn btn-light"><i class="bi bi-download"></i> Standart analizləri əlavə et</button>
+        </form>
+        <a class="btn btn-primary" asp-action="Create"><i class="bi bi-plus-lg"></i> Yeni analiz</a>
+    </div>
+</div>
+
+@if (Model.Any())
+{
+    <div class="card">
+        <div class="table-scroll">
+            <table class="data">
+                <thead><tr><th>Kod</th><th>Analiz</th><th>Nümunə</th><th>Vahid</th><th>Norma</th><th>Müayinələr</th><th></th></tr></thead>
+                <tbody>
+                    @foreach (var cat in Model.GroupBy(t => t.Category ?? "Digər"))
+                    {
+                        <tr><td colspan="7" style="background:var(--surface-2); font-size:12px; font-weight:700; text-transform:uppercase; letter-spacing:.04em; color:var(--subtle);">@cat.Key</td></tr>
+                        @foreach (var t in cat)
+                        {
+                            <tr class="@(t.IsActive ? "" : "row-muted")">
+                                <td><span class="barcode-num">@t.Code</span></td>
+                                <td style="font-weight:600;">@t.Name@(t.IsActive ? "" : " (deaktiv)")</td>
+                                <td><span class="sample-pill">@t.SampleType</span></td>
+                                <td class="text-muted">@t.Unit</td>
+                                <td class="text-muted wrap">
+                                    @LabRef.Text(t, null)
+                                    @if (t.CriticalMin != null || t.CriticalMax != null)
+                                    {
+                                        <div class="hint-text" style="color:var(--bad);">kritik: @(t.CriticalMin == null ? "" : "< " + LabRef.Num(t.CriticalMin))@(t.CriticalMin != null && t.CriticalMax != null ? ", " : "")@(t.CriticalMax == null ? "" : "> " + LabRef.Num(t.CriticalMax))</div>
+                                    }
+                                </td>
+                                <td class="text-muted wrap">@(t.ExaminationTypes.Any() ? string.Join(", ", t.ExaminationTypes.Select(x => x.ExaminationType.Name)) : "—")</td>
+                                <td class="actions"><a class="btn btn-ghost btn-sm" asp-action="Edit" asp-route-id="@t.Id">Düzəliş</a></td>
+                            </tr>
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="empty-state">
+            <i class="bi bi-list-check"></i>
+            <p>Kataloq boşdur</p>
+            <p class="hint-text" style="margin-top:6px;">«Standart analizləri əlavə et» ilə ümumi qan, biokimya, hormon, sidik və seroloji analizləri bir kliklə yükləyin.</p>
+        </div>
+    </div>
+}
+
+<p class="hint-text" style="margin-top:16px;"><i class="bi bi-info-circle"></i> Norma aralıqları analizatora və reagentə görə fərqlənir — standart dəyərləri öz laboratoriyanızın göstəricilərinə uyğunlaşdırın.</p>

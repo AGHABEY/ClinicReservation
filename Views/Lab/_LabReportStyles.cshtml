@@ -1,0 +1,20 @@
+<style>
+    .lr-grid { display: grid; grid-template-columns: repeat(3, minmax(0, 1fr)); gap: 10px 20px; margin: 16px 0; padding: 12px 14px; background: #F9FAFB; border-radius: 8px; }
+    .lr-grid span { display: block; font-size: 11px; color: #475467; }
+    .lr-grid strong { font-size: 13px; }
+    .lr-table { width: 100%; border-collapse: collapse; font-size: 13px; }
+    .lr-table th { text-align: left; font-size: 11px; text-transform: uppercase; letter-spacing: .04em; color: #475467; padding: 8px 6px; border-bottom: 2px solid #E4E7EC; }
+    .lr-table td { padding: 7px 6px; border-bottom: 1px solid #F2F4F7; }
+    .lr-cat td { padding-top: 14px; font-weight: 700; color: #0A5C56; border-bottom: 1px solid #CCEAE6; }
+    .lr-val { font-weight: 700; white-space: nowrap; }
+    .lr-off .lr-val { color: #B42318; }
+    .lr-flag { font-weight: 800; }
+    .lr-legend { font-size: 11px; color: #475467; margin: 12px 0 0; }
+    .lr-note { font-size: 12px; margin: 8px 0 0; }
+    .lr-sign { display: flex; justify-content: space-between; margin-top: 36px; padding-top: 8px; border-top: 1px solid #101828; font-size: 12px; color: #344054; }
+    @@media (max-width: 600px) {
+        .lr-grid { grid-template-columns: 1fr 1fr; }
+        .lr-table { font-size: 12px; }
+        .lr-table td:nth-child(3), .lr-table th:nth-child(3) { display: none; }
+    }
+</style>

@@ -8,6 +8,6 @@ namespace ClinicReservation.Models
         public string? FullName { get; set; }
 
         [NotMapped]
-        public string RoleId { get; set; }
+        public string? RoleId { get; set; }
     }
 }

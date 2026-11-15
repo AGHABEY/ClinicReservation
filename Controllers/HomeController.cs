@@ -1,3 +1,5 @@
+using System.Security.Claims;
+using ClinicReservation.Authorization;
 using ClinicReservation.Data;
 using ClinicReservation.Models;
 using ClinicReservation.ViewModels;
@@ -24,48 +26,67 @@ namespace ClinicReservation.Controllers
         {
             var today = DateTime.Today;
             var tomorrow = today.AddDays(1);
+            var dayAfter = today.AddDays(2);
 
-            // Per-reservation total vs paid (so overpayments don't offset other debts)
-            var balances = _context.Reserves
-                .Select(r => new
-                {
-                    Total = r.ReserveExaminationTypes!.Sum(x => (decimal?)x.ExaminationType.Price) ?? 0,
-                    Paid = r.Payments!.Sum(p => (decimal?)p.Amount) ?? 0
-                })
-                .ToList();
+            var userId = User.FindFirstValue(ClaimTypes.NameIdentifier);
+            var myDoctor = userId == null ? null : _context.Doctors.FirstOrDefault(d => d.UserId == userId);
 
-            var totalCollected = balances.Sum(b => b.Paid);
-            var totalOutstanding = balances.Sum(b => b.Total - b.Paid > 0 ? b.Total - b.Paid : 0);
+            var active = _context.Reserves.Where(r => r.Status == null
+                || (r.Status.Name != StatusNames.Cancelled && r.Status.Name != StatusNames.NoShow));
+            if (myDoctor != null)
+                active = active.Where(r => r.DoctorId == myDoctor.Id);
+
+            var todayQuery = active.Where(r => r.AppointmentAt >= today && r.AppointmentAt < tomorrow);
 
             var model = new DashboardViewModel
             {
-                TotalReservations = _context.Reserves.Count(),
-                WaitingReservations = _context.Reserves.Count(r => r.Status != null && r.Status.Name == "Waiting"),
-                ConfirmedReservations = _context.Reserves.Count(r => r.Status != null && r.Status.Name == "Confirmed"),
-                ExaminationTypeCount = _context.ExaminationTypes.Count(),
-                UserCount = _context.AppUsers.Count(),
-                TotalIncome = totalCollected,
-                TodayIncome = _context.Payments.Where(p => p.PaidAt >= today && p.PaidAt < tomorrow).Sum(p => (decimal?)p.Amount) ?? 0,
-                Outstanding = totalOutstanding,
-                RecentReservations = _context.Reserves
+                MyDoctor = myDoctor,
+                TodayCount = todayQuery.Count(),
+                WaitingRoomCount = todayQuery.Count(r => r.Status!.Name == StatusNames.Arrived),
+                InProgressCount = todayQuery.Count(r => r.Status!.Name == StatusNames.InProgress),
+                CompletedToday = todayQuery.Count(r => r.Status!.Name == StatusNames.Completed),
+                TomorrowCount = active.Count(r => r.AppointmentAt >= tomorrow && r.AppointmentAt < dayAfter),
+                WaitingReservations = active.Count(r => r.Status!.Name == StatusNames.Waiting && r.AppointmentAt >= today),
+                TodayAppointments = todayQuery
                     .Include(r => r.Status)
-                    .OrderByDescending(r => r.Id)
-                    .Take(5)
+                    .Include(r => r.Patient)
+                    .Include(r => r.Doctor)
+                    .Include(r => r.Room)
+                    .Include(r => r.ReserveExaminationTypes!).ThenInclude(x => x.ExaminationType)
+                    .OrderBy(r => r.AppointmentAt)
                     .ToList()
             };
-            return View(model);
-        }
 
-        public IActionResult Privacy()
-        {
-            return View();
+            if (User.Can(Permissions.KassaTotals))
+            {
+                // Per-reservation due vs paid (so one patient's overpayment doesn't hide another's debt)
+                var balances = _context.Reserves
+                    .Select(r => new
+                    {
+                        Due = r.Status != null && (r.Status.Name == StatusNames.Cancelled || r.Status.Name == StatusNames.NoShow)
+                            ? 0
+                            : r.ReserveExaminationTypes!.Sum(x => (decimal?)x.Price) ?? 0,
+                        Paid = r.Payments!.Sum(p => (decimal?)p.Amount) ?? 0
+                    })
+                    .ToList();
+                model.TotalIncome = balances.Sum(b => b.Paid);
+                model.Outstanding = balances.Sum(b => b.Due - b.Paid > 0 ? b.Due - b.Paid : 0);
+                model.TodayIncome = _context.Payments.Where(p => p.PaidAt >= today && p.PaidAt < tomorrow).Sum(p => (decimal?)p.Amount) ?? 0;
+            }
+
+            return View(model);
         }
 
         [AllowAnonymous]
         [ResponseCache(Duration = 0, Location = ResponseCacheLocation.None, NoStore = true)]
-        public IActionResult Error()
+        public IActionResult Error(int? code)
         {
-            return View(new ErrorViewModel { RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier });
+            Response.StatusCode = code ?? 500;
+            return View(new ErrorViewModel
+            {
+                StatusCode = code ?? 500,
+                RequestId = Activity.Current?.Id ?? HttpContext.TraceIdentifier
+            });
         }
     }
 }

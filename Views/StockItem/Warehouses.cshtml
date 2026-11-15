@@ -1,0 +1,59 @@
+@model List<Warehouse>
+@{
+    ViewData["Title"] = "Anbarlar";
+    var departments = ViewBag.Departments as List<Department> ?? new();
+    var stocked = ViewBag.Stocked as Dictionary<int, int> ?? new();
+}
+
+<div class="page-head">
+    <div>
+        <h2>Aptek və anbar</h2>
+        <p>Mərkəzi anbar və şöbə anbarları. Şöbəyə bağlı anbar həmin şöbənin müayinələrinin materiallarını verir.</p>
+    </div>
+</div>
+
+<partial name="_StockNav" />
+
+<div class="card" style="max-width:980px;">
+    <div class="table-scroll">
+        <table class="data">
+            <thead><tr><th>Ad</th><th>Şöbə</th><th>Mərkəzi</th><th>Aktiv</th><th class="num">Məhsul</th><th></th></tr></thead>
+            <tbody>
+                @foreach (var w in Model)
+                {
+                    var formId = $"wh{w.Id}";
+                    <tr class="@(w.IsActive ? "" : "row-muted")">
+                        <td><input form="@formId" name="name" value="@w.Name" class="form-control" maxlength="100" aria-label="Ad" /></td>
+                        <td>
+                            <select form="@formId" name="departmentId" class="form-select" aria-label="Şöbə">
+                                <option value="">— yoxdur —</option>
+                                @foreach (var d in departments) { <option value="@d.Id" selected="@(w.DepartmentId == d.Id)">@d.Name</option> }
+                                @if (w.Department != null && !departments.Any(d => d.Id == w.DepartmentId)) { <option value="@w.DepartmentId" selected>@w.Department.Name</option> }
+                            </select>
+                        </td>
+                        <td><input form="@formId" type="checkbox" name="isMain" value="true" checked="@w.IsMain" aria-label="Mərkəzi" /><input form="@formId" type="hidden" name="isMain" value="false" /></td>
+                        <td><input form="@formId" type="checkbox" name="isActive" value="true" checked="@w.IsActive" aria-label="Aktiv" /><input form="@formId" type="hidden" name="isActive" value="false" /></td>
+                        <td class="num"><a asp-controller="Stock" asp-action="Index" asp-route-warehouseId="@w.Id">@(stocked.TryGetValue(w.Id, out var c) ? c : 0)</a></td>
+                        <td class="actions">
+                            <form id="@formId" asp-action="SaveWarehouse" method="post"><input type="hidden" name="id" value="@w.Id" /><button type="submit" class="btn btn-ghost btn-sm">Yadda saxla</button></form>
+                        </td>
+                    </tr>
+                }
+                <tr>
+                    <td><input form="whNew" name="name" class="form-control" maxlength="100" placeholder="Yeni anbar, məs. Manipulyasiya otağı" aria-label="Yeni anbarın adı" /></td>
+                    <td>
+                        <select form="whNew" name="departmentId" class="form-select" aria-label="Şöbə">
+                            <option value="">— yoxdur —</option>
+                            @foreach (var d in departments) { <option value="@d.Id">@d.Name</option> }
+                        </select>
+                    </td>
+                    <td><input form="whNew" type="checkbox" name="isMain" value="true" aria-label="Mərkəzi" /><input form="whNew" type="hidden" name="isMain" value="false" /></td>
+                    <td><input form="whNew" type="hidden" name="isActive" value="true" /><span class="hint-text">—</span></td>
+                    <td></td>
+                    <td class="actions"><form id="whNew" asp-action="SaveWarehouse" method="post"><input type="hidden" name="id" value="0" /><button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-plus-lg"></i> Əlavə et</button></form></td>
+                </tr>
+            </tbody>
+        </table>
+    </div>
+</div>
+<p class="hint-text" style="margin-top:12px; max-width:980px;"><i class="bi bi-info-circle"></i> Müayinənin şöbəsinin anbarı yoxdursa, materiallar mərkəzi anbardan silinir. Qalığı olan anbarı deaktiv etmək olmaz.</p>

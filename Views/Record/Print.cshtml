@@ -1,0 +1,101 @@
+@model MedicalRecord
+@{
+    Layout = null;
+    var p = Model.Patient;
+    (string Label, string? Text)[] sections =
+    {
+        ("Şikayətlər", Model.Complaint),
+        ("Anamnez", Model.Anamnesis),
+        ("Obyektiv müayinə", Model.Examination),
+        ("Müalicə planı", Model.Treatment),
+        ("Resept", Model.Prescription),
+        ("Tövsiyələr", Model.Recommendations),
+    };
+}
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="utf-8">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230E7C74'/%3E%3Cpath d='M6 17h5l2-5 4 10 3-7h6' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Tibbi qeyd — @p.FullName — @Fmt.Date(Model.CreatedAt)</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; }
+        body { margin: 0; background: #F4F5F7; color: #101828; font-size: 13px; line-height: 1.55; }
+        .sheet { width: 210mm; min-height: 297mm; margin: 24px auto; padding: 18mm 18mm 22mm; background: #fff; box-shadow: 0 12px 32px rgba(16,24,40,.12); }
+        header { display: flex; justify-content: space-between; align-items: flex-start; padding-bottom: 14px; border-bottom: 2px solid #0E7C74; }
+        .brand { font-size: 20px; font-weight: 700; color: #0E7C74; }
+        .brand small { display: block; font-size: 12px; font-weight: 500; color: #475467; }
+        .doc-title { text-align: right; }
+        .doc-title h1 { margin: 0; font-size: 16px; }
+        .doc-title span { color: #475467; font-size: 12px; }
+        .grid { display: grid; grid-template-columns: repeat(3, 1fr); gap: 10px 20px; margin: 18px 0; padding: 12px 14px; background: #F9FAFB; border-radius: 8px; }
+        .grid span { display: block; font-size: 11px; color: #475467; }
+        .grid strong { font-size: 13px; }
+        .alert { padding: 8px 12px; border-radius: 6px; background: #FEE4E2; color: #B42318; margin-bottom: 8px; }
+        .alert.chronic { background: #FEF0C7; color: #93370D; }
+        .dx { margin: 16px 0; padding: 12px 14px; border: 1px solid #CCEAE6; border-radius: 8px; }
+        .dx span { font-size: 11px; color: #0A5C56; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; }
+        .dx div { font-size: 15px; font-weight: 700; margin-top: 2px; }
+        h2 { font-size: 12px; text-transform: uppercase; letter-spacing: .05em; color: #475467; margin: 16px 0 4px; }
+        p.text { margin: 0; white-space: pre-line; }
+        footer { display: flex; justify-content: space-between; margin-top: 48px; padding-top: 8px; }
+        .sign { width: 220px; border-top: 1px solid #101828; padding-top: 6px; font-size: 12px; color: #475467; text-align: center; }
+        .tools { text-align: center; margin: 0 0 24px; }
+        .tools button { font: 600 14px Inter, sans-serif; height: 40px; padding: 0 18px; border-radius: 10px; border: 0; background: #0E7C74; color: #fff; cursor: pointer; }
+        @@media print {
+            @@page { size: A4; margin: 0; }
+            body { background: #fff; }
+            .sheet { margin: 0; box-shadow: none; }
+            .tools { display: none; }
+        }
+    </style>
+</head>
+<body>
+    <div class="sheet">
+        <header>
+            <div class="brand">MedClinic<small>@(Model.Doctor?.Department?.Name ?? "Tibb mərkəzi")</small></div>
+            <div class="doc-title">
+                <h1>Ambulator qəbul vərəqəsi</h1>
+                <span>№ @Model.Id · @Fmt.DateTime(Model.Reserve.AppointmentAt)</span>
+            </div>
+        </header>
+
+        <div class="grid">
+            <div><span>Xəstə</span><strong>@p.FullName</strong></div>
+            <div><span>Doğum tarixi</span><strong>@Fmt.Date(p.Birthday) (@Fmt.Age(p.Birthday) yaş)</strong></div>
+            <div><span>FİN</span><strong>@p.PinCode</strong></div>
+            <div><span>Həkim</span><strong>@(Model.Doctor?.FullName ?? "—")</strong></div>
+            <div><span>İxtisas</span><strong>@(Model.Doctor?.Specialty ?? "—")</strong></div>
+            <div><span>Telefon</span><strong>@p.Phone</strong></div>
+        </div>
+
+        @if (!string.IsNullOrWhiteSpace(p.Allergies)) { <div class="alert"><strong>Allergiya:</strong> @p.Allergies</div> }
+        @if (!string.IsNullOrWhiteSpace(p.ChronicConditions)) { <div class="alert chronic"><strong>Xroniki xəstəliklər:</strong> @p.ChronicConditions</div> }
+
+        <div class="dx">
+            <span>Diaqnoz@(Model.IcdCode == null ? "" : " (BXT-10)")</span>
+            <div>@(Model.IcdCode == null ? "" : Model.IcdCode + " — ")@(Model.Diagnosis ?? "—")</div>
+        </div>
+
+        @foreach (var (label, text) in sections.Where(s => !string.IsNullOrWhiteSpace(s.Text)))
+        {
+            <h2>@label</h2>
+            <p class="text">@text</p>
+        }
+
+        @if (Model.FollowUpDays != null)
+        {
+            <h2>Kontrol qəbulu</h2>
+            <p class="text">@Model.FollowUpDays gün sonra — @Fmt.Date(Model.CreatedAt.Date.AddDays(Model.FollowUpDays.Value))</p>
+        }
+
+        <footer>
+            <div class="sign">Tarix: @Fmt.Date(Model.CreatedAt)</div>
+            <div class="sign">Həkim: @(Model.Doctor?.FullName ?? "") — imza</div>
+        </footer>
+    </div>
+    <div class="tools"><button type="button" onclick="window.print()">Çap et / PDF kimi saxla</button></div>
+</body>
+</html>

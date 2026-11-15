@@ -1,0 +1,130 @@
+@model StockIndexViewModel
+@{
+    ViewData["Title"] = "Aptek və anbar";
+    string StateBadge(StockState s) => s switch
+    {
+        StockState.Expired => "<span class=\"badge-soft badge-unpaid\">Vaxtı keçib</span>",
+        StockState.Expiring => "<span class=\"badge-soft badge-partial\">Vaxtı bitir</span>",
+        StockState.Out => "<span class=\"badge-soft badge-unpaid\">Bitib</span>",
+        StockState.Low => "<span class=\"badge-soft badge-waiting\">Az qalıb</span>",
+        _ => ""
+    };
+    var filters = new[] { ("all", "Hamısı", (int?)null), ("low", "Az qalan", (int?)Model.LowCount), ("expiry", "Vaxtı bitən", (int?)(Model.ExpiringCount + Model.ExpiredCount)) };
+}
+
+<div class="page-head">
+    <div>
+        <h2>Aptek və anbar</h2>
+        <p>Dərman və materialların qalığı, partiyalar və son istifadə tarixləri</p>
+    </div>
+    <div class="page-actions"><partial name="_StockActions" /></div>
+</div>
+
+<partial name="_StockNav" />
+
+<div class="stat-grid">
+    <div class="stat">
+        <div class="icon teal"><i class="bi bi-box-seam"></i></div>
+        <div><div class="value">@Model.ItemCount</div><div class="label">Qalığı olan məhsul</div></div>
+    </div>
+    <a class="stat stat-link" asp-action="Index" asp-route-filter="low" asp-route-warehouseId="@Model.WarehouseId">
+        <div class="icon amber"><i class="bi bi-graph-down-arrow"></i></div>
+        <div><div class="value">@Model.LowCount</div><div class="label">Az qalan və ya bitən</div></div>
+    </a>
+    <a class="stat stat-link" asp-action="Expiry" asp-route-warehouseId="@Model.WarehouseId">
+        <div class="icon red"><i class="bi bi-calendar-x"></i></div>
+        <div><div class="value">@Model.ExpiredCount <span style="font-size:15px; color:var(--subtle); font-weight:500;">/ @Model.ExpiringCount</span></div><div class="label">Vaxtı keçmiş / @StockService.ExpirySoonDays gündə bitən</div></div>
+    </a>
+    @if (Model.ShowCosts)
+    {
+        <div class="stat">
+            <div class="icon green"><i class="bi bi-cash-stack"></i></div>
+            <div><div class="value">@Fmt.Money(Model.TotalValue)</div><div class="label">Anbar dəyəri (alış qiyməti)</div></div>
+        </div>
+    }
+</div>
+
+<div class="toolbar">
+    <div class="seg seg-scroll">
+        @foreach (var (key, label, count) in filters)
+        {
+            <a class="@(Model.Filter == key ? "on" : "")" asp-action="Index" asp-route-filter="@key" asp-route-warehouseId="@Model.WarehouseId" asp-route-kind="@Model.Kind" asp-route-q="@Model.Query">@label @if (count != null) { <span class="seg-count">@count</span> }</a>
+        }
+    </div>
+    <form method="get" class="toolbar-right stock-filters">
+        <input type="hidden" name="filter" value="@Model.Filter" />
+        <input type="search" name="q" value="@Model.Query" class="form-control" placeholder="Ad, kod və ya forma" aria-label="Axtarış" style="max-width:220px;" />
+        <select name="kind" class="form-select" aria-label="Növ" onchange="this.form.submit()" style="max-width:170px;">
+            <option value="">Bütün növlər</option>
+            @foreach (var k in Enum.GetValues<StockItemKind>())
+            {
+                <option value="@k" selected="@(Model.Kind == k)">@StockLabels.Kind(k)</option>
+            }
+        </select>
+        <select name="warehouseId" class="form-select" aria-label="Anbar" onchange="this.form.submit()" style="max-width:200px;">
+            <option value="">Bütün anbarlar</option>
+            @foreach (var w in Model.Warehouses)
+            {
+                <option value="@w.Id" selected="@(Model.WarehouseId == w.Id)">@w.Name</option>
+            }
+        </select>
+    </form>
+</div>
+
+<div class="card">
+    @if (Model.Rows.Any())
+    {
+        <div class="table-scroll">
+            <table class="data">
+                <thead><tr><th>Məhsul</th><th>Növ</th><th class="num">Qalıq</th><th class="num">Minimum</th><th>Ən yaxın son tarix</th>@if (Model.ShowCosts) { <th class="num">Dəyər</th> }<th></th></tr></thead>
+                <tbody>
+                    @foreach (var r in Model.Rows)
+                    {
+                        <tr class="@(r.Item.IsActive ? "" : "row-muted")">
+                            <td>
+                                <a asp-action="Item" asp-route-id="@r.Item.Id" class="link-strong">@r.Item.Name</a>
+                                <div class="hint-text">@r.Item.Form@(r.Item.Code != null ? (r.Item.Form != null ? " · " : "") + r.Item.Code : "")</div>
+                            </td>
+                            <td class="text-muted">@StockLabels.Kind(r.Item.Kind)</td>
+                            <td class="num" style="white-space:nowrap;">
+                                <span style="font-weight:600;">@StockService.Qty(r.Usable)</span> <span class="hint-text">@r.Item.Unit</span>
+                                @if (r.ExpiredQuantity > 0) { <div class="hint-text" style="color:var(--bad);">+ @StockService.Qty(r.ExpiredQuantity) vaxtı keçmiş</div> }
+                            </td>
+                            <td class="num text-muted">@(r.Item.MinQuantity > 0 ? StockService.Qty(r.Item.MinQuantity) : "—")</td>
+                            <td style="white-space:nowrap;">@Fmt.Date(r.NearestExpiry)</td>
+                            @if (Model.ShowCosts) { <td class="num money">@Fmt.Money(r.Value)</td> }
+                            <td class="actions">@Html.Raw(StateBadge(r.State))</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            <i class="bi bi-box-seam"></i>
+            @if (Model.Filter != "all" || Model.Query != null || Model.Kind != null)
+            {
+                <p>Seçimə uyğun məhsul yoxdur</p>
+            }
+            else if (Model.LowCount > 0)
+            {
+                <p>Anbarda qalıq yoxdur</p>
+                <p class="hint-text" style="margin-top:6px;">Kataloqdakı məhsulları mədaxil sənədi ilə qəbul edin. Qalığı olmayanlar «Az qalan» bölməsində görünür.</p>
+            }
+            else
+            {
+                <p>Kataloqda məhsul yoxdur</p>
+                @if (User.Can(Permissions.StockManage))
+                {
+                    <p class="hint-text" style="margin-top:6px;"><a asp-controller="StockItem" asp-action="Index">Məhsul kataloqunu</a> doldurun, sonra mədaxil sənədi ilə qəbul edin.</p>
+                }
+            }
+        </div>
+    }
+</div>
+@if (Model.WarehouseId != null)
+{
+    <p class="hint-text" style="margin-top:12px;"><i class="bi bi-info-circle"></i> Minimum qalıq bütün anbarlar üzrə yoxlanır — «Az qalıb» nişanı yalnız «Bütün anbarlar» seçiləndə göstərilir.</p>
+}

@@ -1,0 +1,160 @@
+@model LabWorklistViewModel
+@{
+    ViewData["Title"] = "Laboratoriya";
+    var canWork = User.Can(Permissions.LabWork);
+    var dateStr = Model.Date.ToString("yyyy-MM-dd");
+    var printLabels = TempData["PrintLabels"] as string;
+    var tabs = new[]
+    {
+        ("pending", "Nümunə gözləyir", Model.PendingCount),
+        ("work", "İcrada", Model.WorkCount),
+        ("done", "Hazır", Model.DoneCount),
+    };
+}
+
+<div class="page-head">
+    <div>
+        <h2>Laboratoriya</h2>
+        <p>@Fmt.Long(Model.Date) · nümunə götür, nəticəni yaz, təsdiqlə</p>
+    </div>
+    <div class="page-actions">
+        @if (User.Can(Permissions.CatalogManage))
+        {
+            <a class="btn btn-light" asp-controller="LabTest" asp-action="Index"><i class="bi bi-list-check"></i> Analiz kataloqu</a>
+        }
+    </div>
+</div>
+
+@if (!string.IsNullOrEmpty(printLabels))
+{
+    <div class="alert alert-success" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+        <i class="bi bi-upc-scan"></i> <span style="flex:1;">Nümunə qeydə alındı. Barkod etiketini çap edib sınaq şüşəsinə yapışdırın.</span>
+        <a class="btn btn-primary btn-sm" asp-action="Label" asp-route-ids="@printLabels" asp-route-print="1" target="_blank" rel="noopener"><i class="bi bi-printer"></i> Etiketi çap et</a>
+    </div>
+}
+
+<div class="toolbar">
+    <div class="seg seg-scroll">
+        @foreach (var (key, label, count) in tabs)
+        {
+            <a class="@(Model.Tab == key ? "on" : "")" asp-action="Index" asp-route-tab="@key" asp-route-date="@dateStr" asp-route-q="@Model.Query">@label <span class="seg-count">@count</span></a>
+        }
+    </div>
+    <form method="get" class="toolbar-right">
+        <input type="hidden" name="tab" value="@Model.Tab" />
+        <div class="barcode-search">
+            <i class="bi bi-upc-scan"></i>
+            <input type="search" name="q" value="@Model.Query" class="form-control" placeholder="Barkodu skan edin və ya ad, FİN yazın" aria-label="Barkod və ya xəstə" autofocus autocomplete="off" />
+        </div>
+        @if (Model.Tab != "work")
+        {
+            <input type="date" name="date" value="@dateStr" class="form-control" style="max-width:170px;" aria-label="Tarix" onchange="this.form.submit()" />
+        }
+    </form>
+</div>
+
+<div class="card">
+    @if (Model.Tab == "pending")
+    {
+        @if (Model.Pending.Any())
+        {
+            <div class="table-scroll">
+                <table class="data">
+                    <thead><tr><th>Vaxt</th><th>Xəstə</th><th>Analizlər</th><th>Status</th><th></th></tr></thead>
+                    <tbody>
+                        @foreach (var row in Model.Pending)
+                        {
+                            var r = row.Reserve;
+                            <tr>
+                                <td><span class="time-pill">@Fmt.Time(r.AppointmentAt)</span></td>
+                                <td>
+                                    <a asp-controller="Reservation" asp-action="Details" asp-route-id="@r.Id" class="link-strong">@r.Patient.FullName</a>
+                                    <div class="hint-text">@Fmt.Age(r.Patient.Birthday) yaş · @Fmt.Gender(r.Patient.Gender) · @(r.Doctor?.FullName ?? "—")</div>
+                                </td>
+                                <td class="wrap">
+                                    @foreach (var g in row.Tests.GroupBy(t => t.SampleType))
+                                    {
+                                        <div style="display:flex; gap:8px; align-items:center; flex-wrap:wrap; margin:2px 0;">
+                                            <span class="sample-pill"><i class="bi bi-droplet"></i> @g.Key</span>
+                                            <span class="test-chips">@foreach (var t in g) { <span class="test-chip" title="@t.Name">@t.Code</span> }</span>
+                                        </div>
+                                    }
+                                </td>
+                                <td><partial name="_StatusBadge" model="r.Status?.Name" /></td>
+                                <td class="actions">
+                                    @if (canWork)
+                                    {
+                                        <form asp-action="Collect" method="post">
+                                            <input type="hidden" name="reserveId" value="@r.Id" />
+                                            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-eyedropper"></i> Nümunə götür</button>
+                                        </form>
+                                    }
+                                </td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state">
+                <i class="bi bi-eyedropper"></i>
+                <p>Bu gün nümunə gözləyən xəstə yoxdur</p>
+                <p class="hint-text" style="margin-top:4px;">Analizi olan müayinə ilə yazılmış xəstələr burada görünür.</p>
+            </div>
+        }
+    }
+    else if (Model.Orders.Any())
+    {
+        <div class="table-scroll">
+            <table class="data">
+                <thead><tr><th>Barkod</th><th>Xəstə</th><th>Analizlər</th><th>@(Model.Tab == "done" ? "Təsdiqlənib" : "Götürülüb")</th><th></th></tr></thead>
+                <tbody>
+                    @foreach (var o in Model.Orders)
+                    {
+                        var filled = o.Results.Count(x => x.Value != null);
+                        <tr>
+                            <td>
+                                <span class="barcode-num">@o.Barcode</span>
+                                <div><span class="sample-pill">@o.Results.FirstOrDefault()?.LabTest.SampleType</span></div>
+                            </td>
+                            <td>
+                                <a asp-action="Order" asp-route-id="@o.Id" class="link-strong">@o.Patient.FullName</a>
+                                <div class="hint-text">@Fmt.Age(o.Patient.Birthday) yaş · @(o.Reserve.Doctor?.FullName ?? "—")</div>
+                            </td>
+                            <td class="wrap">
+                                <span class="test-chips">@foreach (var x in o.Results.OrderBy(x => x.LabTest.SortOrder)) { <span class="test-chip @LabRef.Css(x.Flag)">@x.LabTest.Code</span> }</span>
+                                @if (o.HasCritical) { <div class="lab-alert" style="margin-top:4px;"><i class="bi bi-exclamation-octagon-fill"></i> Kritik dəyər</div> }
+                            </td>
+                            <td style="white-space:nowrap;">
+                                @if (Model.Tab == "done")
+                                {
+                                    <div>@Fmt.Time(o.ValidatedAt!.Value)</div><div class="hint-text">@o.ValidatedBy</div>
+                                }
+                                else
+                                {
+                                    <div>@Fmt.DateTime(o.CollectedAt)</div><div class="hint-text">@filled / @o.Results.Count nəticə</div>
+                                }
+                            </td>
+                            <td class="actions">
+                                @if (Model.Tab == "done")
+                                {
+                                    <a class="btn btn-light btn-sm" asp-action="Report" asp-route-id="@o.Id" target="_blank" rel="noopener"><i class="bi bi-printer"></i> Blank</a>
+                                }
+                                <a class="btn btn-ghost btn-sm" asp-action="Order" asp-route-id="@o.Id">@(Model.Tab == "work" && User.CanAny(Permissions.LabWork, Permissions.LabValidate) ? "Nəticə yaz" : "Bax")</a>
+                            </td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state">
+            <i class="bi bi-@(Model.Tab == "work" ? "hourglass" : "clipboard2-check")"></i>
+            <p>@(Model.Tab == "work" ? "İcrada nümunə yoxdur" : "Bu tarixdə təsdiqlənmiş nəticə yoxdur")</p>
+        </div>
+    }
+</div>

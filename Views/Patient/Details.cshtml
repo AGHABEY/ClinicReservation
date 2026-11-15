@@ -1,0 +1,189 @@
+@model Patient
+@{
+    ViewData["Title"] = Model.FullName;
+    var visits = Model.Reserves.OrderByDescending(r => r.AppointmentAt).ToList();
+    var completed = visits.Count(r => r.Status?.Name == StatusNames.Completed);
+    var noShows = visits.Count(r => r.Status?.Name == StatusNames.NoShow);
+    var upcoming = visits.Where(r => r.AppointmentAt >= DateTime.Now && ReserveFlow.Active.Contains(r.Status?.Name ?? "")).OrderBy(r => r.AppointmentAt).ToList();
+    var totalPaid = visits.Sum(r => r.Paid);
+    var balance = visits.Sum(r => r.AmountDue - r.Paid);
+    var canMoney = User.CanAny(Permissions.PaymentsTake, Permissions.KassaTotals);
+    var records = ViewBag.Records as List<MedicalRecord>;
+    var labOrders = ViewBag.LabOrders as List<LabOrder>;
+    // Allergies matter for anyone treating the patient; other staff don't see medical details.
+    var seeMedical = User.CanAny(Permissions.RecordsView, Permissions.RecordsEdit);
+}
+
+<div class="page-head">
+    <div style="display:flex; align-items:center; gap:16px;">
+        <span class="avatar-lg">@Fmt.Initials(Model.FullName)</span>
+        <div>
+            <h2>@Model.FullName</h2>
+            <p>FİN @Model.PinCode · @Fmt.Age(Model.Birthday) yaş · kart @Fmt.Date(Model.CreatedAt) tarixindən</p>
+        </div>
+    </div>
+    <div class="page-actions">
+        @if (User.Can(Permissions.PatientsEdit))
+        {
+            <a class="btn btn-light" asp-action="Edit" asp-route-id="@Model.Id"><i class="bi bi-pencil"></i> Düzəliş</a>
+        }
+        @if (User.Can(Permissions.ReservationsManage))
+        {
+            <a class="btn btn-primary" asp-controller="Reservation" asp-action="Add" asp-route-patientId="@Model.Id"><i class="bi bi-calendar-plus"></i> Yeni rezervasiya</a>
+        }
+    </div>
+</div>
+
+@if (seeMedical && !string.IsNullOrWhiteSpace(Model.Allergies))
+{
+    <div class="med-alert" style="margin-bottom:12px;"><i class="bi bi-exclamation-octagon-fill"></i><span><strong>Allergiya:</strong> @Model.Allergies</span></div>
+}
+@if (seeMedical && !string.IsNullOrWhiteSpace(Model.ChronicConditions))
+{
+    <div class="med-alert chronic" style="margin-bottom:20px;"><i class="bi bi-heart-pulse-fill"></i><span><strong>Xroniki xəstəliklər:</strong> @Model.ChronicConditions</span></div>
+}
+@if (!string.IsNullOrEmpty(Model.Notes))
+{
+    <div class="alert alert-warning"><i class="bi bi-sticky-fill"></i> <strong>Qeyd:</strong> @Model.Notes</div>
+}
+
+<div class="stat-grid">
+    <div class="stat"><div class="icon green"><i class="bi bi-check2-all"></i></div><div><div class="value">@completed</div><div class="label">Tamamlanmış vizit</div></div></div>
+    <div class="stat"><div class="icon teal"><i class="bi bi-calendar-event"></i></div><div><div class="value">@upcoming.Count</div><div class="label">Gələcək qəbul</div></div></div>
+    <div class="stat"><div class="icon amber"><i class="bi bi-person-x"></i></div><div><div class="value">@noShows</div><div class="label">Gəlmədiyi qəbul</div></div></div>
+    @if (canMoney)
+    {
+        <div class="stat"><div class="icon @(balance > 0 ? "red" : "blue")"><i class="bi bi-wallet2"></i></div><div><div class="value">@Fmt.Money(Math.Abs(balance))</div><div class="label">@(balance > 0 ? "Borc" : balance < 0 ? "Qaytarılmalı" : $"Borc yoxdur · ödənib {Fmt.Money(totalPaid)}")</div></div></div>
+    }
+</div>
+
+<div class="detail-grid">
+    <div class="card">
+        <div class="card-head">
+            <h3 class="card-title"><i class="bi bi-clock-history"></i> Vizit tarixçəsi</h3>
+            <span class="hint-text">@visits.Count rezervasiya</span>
+        </div>
+        @if (visits.Any())
+        {
+            <div class="table-scroll">
+                <table class="data">
+                    <thead><tr><th>Tarix</th><th>Həkim</th><th>Müayinələr</th><th>Status</th>@if (canMoney) {<th class="num">Məbləğ</th>}<th></th></tr></thead>
+                    <tbody>
+                        @foreach (var r in visits)
+                        {
+                            <tr class="@(StatusNames.IsClosedWithoutVisit(r.Status?.Name) ? "row-muted" : "")">
+                                <td style="font-weight:600;">@Fmt.DateTime(r.AppointmentAt)</td>
+                                <td>@(r.Doctor?.FullName ?? "—")</td>
+                                <td class="text-muted wrap">@string.Join(", ", r.ReserveExaminationTypes!.Select(x => x.ExaminationType.Name))</td>
+                                <td><partial name="_StatusBadge" model="r.Status?.Name" /></td>
+                                @if (canMoney) {<td class="num money">@Fmt.Money(r.Total)</td>}
+                                <td class="actions"><a class="btn btn-ghost btn-sm" asp-controller="Reservation" asp-action="Details" asp-route-id="@r.Id">Bax</a></td>
+                            </tr>
+                        }
+                    </tbody>
+                </table>
+            </div>
+        }
+        else
+        {
+            <div class="empty-state"><i class="bi bi-calendar2-x"></i><p>Hələ rezervasiya yoxdur</p></div>
+        }
+    </div>
+
+    <div class="stack">
+        <div class="card">
+            <div class="card-pad">
+                <h3 class="card-title"><i class="bi bi-person-vcard"></i> Məlumatlar</h3>
+                <dl class="detail-list">
+                    <div class="detail-row"><dt>FİN kod</dt><dd>@Model.PinCode</dd></div>
+                    <div class="detail-row"><dt>Telefon</dt><dd><a href="tel:@Model.Phone.Replace(" ", "")" style="color:inherit;">@Model.Phone</a></dd></div>
+                    <div class="detail-row"><dt>Doğum tarixi</dt><dd>@Fmt.Date(Model.Birthday)</dd></div>
+                    <div class="detail-row"><dt>Cins</dt><dd>@Fmt.Gender(Model.Gender)</dd></div>
+                </dl>
+            </div>
+        </div>
+        @if (ViewBag.Admissions is List<Admission> stays && (stays.Any() || User.CanAny(Permissions.InpatientManage, Permissions.InpatientDoctor)))
+        {
+            var current = stays.FirstOrDefault(x => x.IsActive);
+            <div class="card">
+                <div class="card-pad">
+                    <h3 class="card-title"><i class="bi bi-hospital"></i> Stasionar</h3>
+                    @if (current != null)
+                    {
+                        <a class="history-item" asp-controller="Inpatient" asp-action="Details" asp-route-id="@current.Id" style="border-color:var(--brand-ring); background:var(--brand-tint);">
+                            <div class="d">İndi stasionardadır · @current.Number · @Fmt.Ordinal(current.Day(DateTime.Now)) gün</div>
+                            <div class="t">@current.Bed?.Label · @current.AdmitDiagnosis</div>
+                        </a>
+                    }
+                    @foreach (var s in stays.Where(x => !x.IsActive))
+                    {
+                        <a class="history-item" asp-controller="Inpatient" asp-action="Details" asp-route-id="@s.Id">
+                            <div class="d">@Fmt.Date(s.AdmittedAt) – @Fmt.Date(s.DischargedAt) · @(s.Department?.Name ?? s.Number)</div>
+                            <div class="t">@(s.FinalDiagnosis ?? s.AdmitDiagnosis)</div>
+                        </a>
+                    }
+                    @if (current == null && User.CanAny(Permissions.InpatientManage, Permissions.InpatientDoctor))
+                    {
+                        <a class="btn btn-light btn-sm" style="margin-top:8px;" asp-controller="Inpatient" asp-action="Admit" asp-route-patientId="@Model.Id"><i class="bi bi-hospital"></i> Stasionara yerləşdir</a>
+                    }
+                </div>
+            </div>
+        }
+        @if (labOrders != null && labOrders.Any())
+        {
+            <div class="card">
+                <div class="card-pad">
+                    <h3 class="card-title"><i class="bi bi-droplet-half"></i> Analizlər</h3>
+                    @foreach (var o in labOrders)
+                    {
+                        var done = o.Status == LabOrderStatus.Validated;
+                        var off = o.Results.Count(r => r.Flag is not (LabFlag.None or LabFlag.Normal));
+                        <a class="history-item" asp-controller="Lab" asp-action="Order" asp-route-id="@o.Id">
+                            <div class="d">@Fmt.Date(o.CollectedAt) · <span class="barcode-num">@o.Barcode</span> · @(done ? "hazırdır" : "icrada")</div>
+                            <div class="t">@o.Results.Count analiz@(done && off > 0 ? $" · {off} normadan kənar" : "")</div>
+                        </a>
+                    }
+                </div>
+            </div>
+        }
+        @if (records != null)
+        {
+            <div class="card">
+                <div class="card-pad">
+                    <h3 class="card-title"><i class="bi bi-file-earmark-medical"></i> Tibbi tarixçə</h3>
+                    @if (records.Any())
+                    {
+                        @foreach (var m in records)
+                        {
+                            <a class="history-item" asp-controller="Record" asp-action="Show" asp-route-id="@m.Id">
+                                <div class="d">@Fmt.Date(m.CreatedAt) · @(m.Doctor?.FullName ?? "—")</div>
+                                <div class="t">@if (m.IcdCode != null) {<span class="icd">@m.IcdCode</span>}@(m.Diagnosis ?? "Diaqnoz yazılmayıb")</div>
+                            </a>
+                        }
+                    }
+                    else
+                    {
+                        <p class="hint-text" style="margin:0;">Hələ tibbi qeyd yoxdur.</p>
+                    }
+                </div>
+            </div>
+        }
+        @if (upcoming.Any())
+        {
+            <div class="card">
+                <div class="card-pad">
+                    <h3 class="card-title"><i class="bi bi-calendar-event"></i> Gələcək qəbullar</h3>
+                    <div class="line-list">
+                        @foreach (var r in upcoming)
+                        {
+                            <a class="line-item" asp-controller="Reservation" asp-action="Details" asp-route-id="@r.Id" style="text-decoration:none; color:inherit;">
+                                <span><strong>@Fmt.Appointment(r.AppointmentAt)</strong><br /><span class="hint-text">@(r.Doctor?.FullName)</span></span>
+                                <partial name="_StatusBadge" model="r.Status?.Name" />
+                            </a>
+                        }
+                    </div>
+                </div>
+            </div>
+        }
+    </div>
+</div>

@@ -1,0 +1,238 @@
+@model LabOrderViewModel
+@{
+    var o = Model.Order;
+    var p = o.Patient;
+    ViewData["Title"] = $"Analiz — {p.FullName}";
+    var errors = ViewBag.Errors as List<string>;
+    var sendSms = ViewBag.SendSms as bool? ?? true;
+    var canValidate = User.Can(Permissions.LabValidate);
+    var needsGender = p.Gender == null && o.Results.Any(r => r.LabTest.RefMinFemale != null || r.LabTest.RefMaxFemale != null);
+    var statusLabel = o.Status switch { LabOrderStatus.Validated => "Təsdiqlənib", LabOrderStatus.Cancelled => "Ləğv edilib", _ => "İcrada" };
+    var statusCss = o.Status switch { LabOrderStatus.Validated => "lab-status-validated", LabOrderStatus.Cancelled => "lab-status-cancelled", _ => "lab-status-collected" };
+    var rows = o.Results.OrderBy(r => r.LabTest.Category).ThenBy(r => r.LabTest.SortOrder).ToList();
+    var i = 0;
+}
+
+<div class="page-head">
+    <div style="display:flex; align-items:center; gap:16px;">
+        <span class="avatar-lg">@Fmt.Initials(p.FullName)</span>
+        <div>
+            <h2>@p.FullName</h2>
+            <p>@Fmt.Age(p.Birthday) yaş · @Fmt.Gender(p.Gender) · FİN @p.PinCode · <span class="barcode-num">@o.Barcode</span> · <span class="badge-soft @statusCss">@statusLabel</span></p>
+        </div>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-light" asp-action="Index" asp-route-tab="@(o.Status == LabOrderStatus.Validated ? "done" : "work")"><i class="bi bi-arrow-left"></i> Laboratoriya</a>
+        <a class="btn btn-light" asp-action="Label" asp-route-ids="@o.Id" asp-route-print="1" target="_blank" rel="noopener"><i class="bi bi-upc"></i> Etiket</a>
+        @if (o.Status == LabOrderStatus.Validated)
+        {
+            <a class="btn btn-primary" asp-action="Report" asp-route-id="@o.Id" target="_blank" rel="noopener"><i class="bi bi-printer"></i> Nəticə blankı</a>
+        }
+    </div>
+</div>
+
+@if (errors != null)
+{
+    <div class="alert alert-danger"><i class="bi bi-exclamation-circle-fill"></i> Saxlanılmadı:<ul style="margin:6px 0 0; padding-left:20px;">@foreach (var e in errors) { <li>@e</li> }</ul></div>
+}
+@if (!string.IsNullOrWhiteSpace(p.Allergies) && User.CanAny(Permissions.RecordsView, Permissions.RecordsEdit))
+{
+    <div class="med-alert" style="margin-bottom:16px;"><i class="bi bi-exclamation-octagon-fill"></i><span><strong>Allergiya:</strong> @p.Allergies</span></div>
+}
+@if (needsGender && User.Can(Permissions.LabWork) && o.Status == LabOrderStatus.Collected)
+{
+    <div class="alert alert-warning" style="display:flex; align-items:center; gap:12px; flex-wrap:wrap;">
+        <i class="bi bi-gender-ambiguous"></i>
+        <span style="flex:1;">Xəstənin cinsi qeyd edilməyib — bəzi analizlərin norması kişi və qadın üçün fərqlidir.</span>
+        @foreach (var (g, label) in new[] { (Gender.Male, "Kişi"), (Gender.Female, "Qadın") })
+        {
+            <form asp-action="SetGender" asp-route-id="@o.Id" method="post">
+                <input type="hidden" name="gender" value="@g" />
+                <button type="submit" class="btn btn-light btn-sm">@label</button>
+            </form>
+        }
+    </div>
+}
+
+<div class="record-grid">
+    <form asp-action="Save" method="post" novalidate id="labForm" class="card">
+        <input type="hidden" name="OrderId" value="@o.Id" />
+        <input type="hidden" name="Validate" value="" />
+        <div class="table-scroll">
+            <table class="data results-table">
+                <thead><tr><th>Analiz</th><th>Nəticə</th><th></th><th>Vahid</th><th>Norma</th><th>Əvvəlki</th></tr></thead>
+                <tbody>
+                    @foreach (var cat in rows.GroupBy(r => r.LabTest.Category ?? "Digər"))
+                    {
+                        <tr class="cat-row"><td colspan="6">@cat.Key</td></tr>
+                        @foreach (var r in cat)
+                        {
+                            var t = r.LabTest;
+                            Model.Previous.TryGetValue(t.Id, out var prev);
+                            var (rmin, rmax) = LabRef.EffectiveRange(t, p.Gender);
+                            <tr class="@LabRef.Css(r.Flag)" data-type="@((int)t.ResultType)"
+                                data-min="@LabRef.Num(rmin)" data-max="@LabRef.Num(rmax)"
+                                data-cmin="@LabRef.Num(t.CriticalMin)" data-cmax="@LabRef.Num(t.CriticalMax)" data-normal="@t.RefText">
+                                <td>
+                                    <div style="font-weight:600;">@t.Name</div>
+                                    <div class="hint-text">@t.Code</div>
+                                </td>
+                                <td>
+                                    <input type="hidden" name="Results[@i].Id" value="@r.Id" />
+                                    @if (!Model.CanEdit)
+                                    {
+                                        <span class="res-value">@(r.Value ?? "—")</span>
+                                    }
+                                    else if (t.ResultType == LabResultType.Choice)
+                                    {
+                                        <select name="Results[@i].Value" class="form-select res-input" aria-label="@t.Name">
+                                            <option value=""></option>
+                                            @foreach (var c in t.ChoiceList) { <option value="@c" selected="@(string.Equals(c, r.Value, StringComparison.OrdinalIgnoreCase))">@c</option> }
+                                        </select>
+                                    }
+                                    else
+                                    {
+                                        <input name="Results[@i].Value" value="@r.Value" class="form-control res-input" aria-label="@t.Name"
+                                               inputmode="@(t.ResultType == LabResultType.Numeric ? "decimal" : "text")" autocomplete="off" maxlength="500" />
+                                    }
+                                </td>
+                                <td><span class="flag">@LabRef.Arrow(r.Flag)</span></td>
+                                <td class="text-muted">@t.Unit</td>
+                                <td class="text-muted" style="white-space:nowrap;">@LabRef.Text(t, p.Gender)</td>
+                                <td class="prev">
+                                    @if (prev != null)
+                                    {
+                                        <span class="@LabRef.Css(prev.Flag)">@prev.Value @LabRef.Arrow(prev.Flag)</span><br />@Fmt.Date(prev.LabOrder.CollectedAt)
+                                    }
+                                    else
+                                    {
+                                        @:—
+                                    }
+                                </td>
+                            </tr>
+                            i++;
+                        }
+                    }
+                </tbody>
+            </table>
+        </div>
+        <div class="card-pad">
+            <div class="field">
+                <label for="Note">Laborant qeydi</label>
+                @if (Model.CanEdit)
+                {
+                    <textarea id="Note" name="Note" class="form-control" rows="2" maxlength="500" placeholder="Məs: nümunə hemolizlidir">@o.Note</textarea>
+                }
+                else
+                {
+                    <p style="margin:0;">@(o.Note ?? "—")</p>
+                }
+            </div>
+            @if (Model.CanEdit)
+            {
+                <div class="record-actions">
+                    @if (canValidate)
+                    {
+                        <label class="hint-text" style="display:flex; align-items:center; gap:6px; margin-right:auto;">
+                            <input type="checkbox" name="SendSms" value="true" checked="@sendSms" /> Təsdiqdən sonra xəstəyə SMS göndər
+                        </label>
+                        <label class="hint-text" id="critBox" style="display:none; align-items:center; gap:6px; color:var(--bad); font-weight:600;">
+                            <input type="checkbox" name="ConfirmCritical" value="true" /> Kritik dəyəri yoxladım, həkimə xəbər verilib
+                        </label>
+                    }
+                    <button type="submit" class="btn btn-light"><i class="bi bi-save"></i> Yadda saxla</button>
+                    @if (canValidate)
+                    {
+                        <button type="submit" class="btn btn-primary" onclick="this.form.Validate.value='1'"><i class="bi bi-patch-check"></i> Təsdiqlə</button>
+                    }
+                </div>
+            }
+        </div>
+    </form>
+
+    <div class="stack">
+        <div class="card card-pad">
+            <h3 class="card-title"><i class="bi bi-info-circle"></i> Nümunə</h3>
+            <dl class="detail-list">
+                <div class="detail-row"><dt>Barkod</dt><dd class="barcode-num">@o.Barcode</dd></div>
+                <div class="detail-row"><dt>Nümunə</dt><dd>@o.Results.FirstOrDefault()?.LabTest.SampleType</dd></div>
+                <div class="detail-row"><dt>Götürülüb</dt><dd>@Fmt.DateTime(o.CollectedAt) · @o.CollectedBy</dd></div>
+                <div class="detail-row"><dt>Göndərən həkim</dt><dd>@(o.Reserve.Doctor?.FullName ?? "—")</dd></div>
+                @if (o.ValidatedAt != null)
+                {
+                    <div class="detail-row"><dt>Təsdiqləyib</dt><dd>@o.ValidatedBy · @Fmt.DateTime(o.ValidatedAt)</dd></div>
+                }
+            </dl>
+            <a class="hint-text" style="display:inline-block; margin-top:12px;" asp-controller="Reservation" asp-action="Details" asp-route-id="@o.ReserveId">Rezervasiya #@o.ReserveId <i class="bi bi-arrow-right"></i></a>
+        </div>
+
+        @if (o.Status == LabOrderStatus.Validated && canValidate)
+        {
+            <div class="card card-pad">
+                <h3 class="card-title"><i class="bi bi-arrow-counterclockwise"></i> Düzəliş</h3>
+                <p class="hint-text" style="margin:0 0 12px;">Səhv aşkar olunarsa, təsdiqi geri alıb nəticəni düzəldin. Səbəb audit jurnalına yazılır.</p>
+                <form asp-action="Reopen" asp-route-id="@o.Id" method="post" data-confirm="Təsdiq geri alınsın?">
+                    <input name="reason" class="form-control" maxlength="250" placeholder="Səbəb, məs: HGB səhv yazılıb" required />
+                    <button type="submit" class="btn btn-light btn-sm" style="margin-top:10px;">Təsdiqi geri al</button>
+                </form>
+            </div>
+        }
+        @if (o.Status == LabOrderStatus.Collected && User.Can(Permissions.LabWork))
+        {
+            <div class="card card-pad">
+                <h3 class="card-title"><i class="bi bi-x-circle"></i> Nümunəni ləğv et</h3>
+                <p class="hint-text" style="margin:0 0 12px;">Nümunə yararsızdırsa (hemoliz, az miqdar) ləğv edin — analizlər yenidən «Nümunə gözləyir» siyahısına düşür.</p>
+                <form asp-action="Cancel" asp-route-id="@o.Id" method="post" data-confirm="Nümunə ləğv edilsin?">
+                    <input name="reason" class="form-control" maxlength="200" placeholder="Səbəb" />
+                    <button type="submit" class="btn btn-danger btn-sm" style="margin-top:10px;">Ləğv et</button>
+                </form>
+            </div>
+        }
+    </div>
+</div>
+
+@section Scripts {
+    <script>
+        (function () {
+            // Live flags while typing (the server recalculates them on save).
+            const num = (s) => { const v = parseFloat((s || '').toString().replace(',', '.')); return isNaN(v) ? null : v; };
+            const crit = document.getElementById('critBox');
+            function update(tr) {
+                const input = tr.querySelector('.res-input'); if (!input) return;
+                const flag = tr.querySelector('.flag'), type = tr.dataset.type, v = input.value.trim();
+                let css = '', arrow = '';
+                if (v && type === '1') {
+                    const n = num(v), min = num(tr.dataset.min), max = num(tr.dataset.max), cmin = num(tr.dataset.cmin), cmax = num(tr.dataset.cmax);
+                    if (n === null) { css = 'flag-abn'; arrow = '?'; }
+                    else if (cmin !== null && n < cmin) { css = 'flag-crit'; arrow = '↓↓'; }
+                    else if (cmax !== null && n > cmax) { css = 'flag-crit'; arrow = '↑↑'; }
+                    else if (min !== null && n < min) { css = 'flag-abn'; arrow = '↓'; }
+                    else if (max !== null && n > max) { css = 'flag-abn'; arrow = '↑'; }
+                } else if (v && type === '2' && tr.dataset.normal && v.toLowerCase() !== tr.dataset.normal.toLowerCase()) {
+                    css = 'flag-abn'; arrow = '!';
+                }
+                tr.classList.remove('flag-abn', 'flag-crit', 'flag-ok');
+                if (css) tr.classList.add(css);
+                flag.textContent = arrow;
+            }
+            function refreshCritical() {
+                if (crit) crit.style.display = document.querySelector('.results-table tr.flag-crit') ? 'flex' : 'none';
+            }
+            document.querySelectorAll('.results-table tbody tr[data-type]').forEach(tr => {
+                const input = tr.querySelector('.res-input');
+                if (!input) return;
+                input.addEventListener('input', () => { update(tr); refreshCritical(); });
+                input.addEventListener('change', () => { update(tr); refreshCritical(); });
+                // Enter moves to the next result instead of submitting.
+                input.addEventListener('keydown', (e) => {
+                    if (e.key !== 'Enter') return;
+                    e.preventDefault();
+                    const all = [...document.querySelectorAll('.res-input')];
+                    all[all.indexOf(input) + 1]?.focus();
+                });
+            });
+            refreshCritical();
+            document.querySelector('.res-input')?.focus();
+        })();
+    </script>
+}

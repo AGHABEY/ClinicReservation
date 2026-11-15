@@ -8,19 +8,20 @@
         <h2>Yeni rol</h2>
         <p>Sistem üçün yeni rol yaradın</p>
     </div>
-    <a class="btn btn-light" asp-action="Index"><i class="bi bi-arrow-left"></i> Siyahıya qayıt</a>
+    <a class="btn btn-light" asp-controller="Role" asp-action="Index"><i class="bi bi-arrow-left"></i> Rollar</a>
 </div>
 
 <div class="card" style="max-width:560px;">
     <div class="card-pad">
-        <form asp-controller="Account" asp-action="CreateRole" method="post">
-            <div asp-validation-summary="All" class="alert alert-danger" style="display:@(ViewData.ModelState.IsValid ? "none" : "block")"></div>
+        <form asp-controller="Account" asp-action="CreateRole" method="post" novalidate>
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
             <div class="field">
-                <label asp-for="Role.Name">Rolun adı</label>
-                <input class="form-control" asp-for="Role.Name" placeholder="Məs: Doctor" />
-                <span asp-validation-for="Role.Name" class="text-danger"></span>
+                <label asp-for="Name">Rolun adı</label>
+                <input class="form-control" asp-for="Name" placeholder="Məs: Doctor" autocomplete="off" />
+                <span asp-validation-for="Name" class="text-danger"></span>
             </div>
-            <div class="mt-3" style="display:flex; gap:10px;">
+            <p class="hint-text" style="margin-top:12px;"><i class="bi bi-info-circle"></i> Rol yaradıldıqdan sonra onun icazələrini «Rollar və icazələr» səhifəsində seçin.</p>
+            <div class="form-actions">
                 <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Yarat</button>
                 <a class="btn btn-light" asp-action="Index">İmtina</a>
             </div>

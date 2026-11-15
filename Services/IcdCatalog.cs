@@ -1,0 +1,80 @@
+namespace ClinicReservation.Services
+{
+    /// <summary>
+    /// Frequently used BXT-10 (ICD-10) codes for the diagnosis autocomplete.
+    /// Not the full classification — any other code can be typed by hand.
+    /// </summary>
+    public static class IcdCatalog
+    {
+        public record Code(string Value, string Name);
+
+        public static readonly Code[] Common =
+        {
+            new("A09", "İnfeksion qastroenterit və kolit"),
+            new("B34.9", "Virus infeksiyası, dəqiqləşdirilməmiş"),
+            new("D50.9", "Dəmir çatışmazlığı anemiyası"),
+            new("E03.9", "Hipotireoz"),
+            new("E05.9", "Tireotoksikoz (hipertireoz)"),
+            new("E11.9", "2-ci tip şəkərli diabet, ağırlaşmasız"),
+            new("E66.9", "Piylənmə"),
+            new("E78.5", "Hiperlipidemiya"),
+            new("F32.9", "Depressiv epizod"),
+            new("F41.1", "Generalizə olunmuş təşviş pozuntusu"),
+            new("G43.9", "Miqren"),
+            new("G44.2", "Gərginlik tipli baş ağrısı"),
+            new("H10.9", "Konyunktivit"),
+            new("H52.1", "Miopiya"),
+            new("H66.9", "Orta otit"),
+            new("I10", "Essensial (birincili) hipertenziya"),
+            new("I20.9", "Stenokardiya"),
+            new("I25.1", "Ürəyin aterosklerotik xəstəliyi"),
+            new("I48", "Qulaqcıqların fibrilyasiyası və səyriməsi"),
+            new("I83.9", "Aşağı ətrafların varikoz venaları"),
+            new("J00", "Kəskin nazofaringit (soyuqdəymə)"),
+            new("J01.9", "Kəskin sinusit"),
+            new("J02.9", "Kəskin faringit"),
+            new("J03.9", "Kəskin tonzillit"),
+            new("J06.9", "Yuxarı tənəffüs yollarının kəskin infeksiyası"),
+            new("J11.1", "Qrip, virus təyin edilməmiş"),
+            new("J18.9", "Pnevmoniya, dəqiqləşdirilməmiş"),
+            new("J20.9", "Kəskin bronxit"),
+            new("J30.4", "Allergik rinit"),
+            new("J45.9", "Bronxial astma"),
+            new("K21.9", "Qastroezofageal reflüks xəstəliyi"),
+            new("K29.7", "Qastrit"),
+            new("K30", "Funksional dispepsiya"),
+            new("K58.9", "Qıcıqlanmış bağırsaq sindromu"),
+            new("K59.0", "Qəbizlik"),
+            new("K76.0", "Qaraciyərin piyli distrofiyası"),
+            new("K80.2", "Öd kisəsində daş (xolesistitsiz)"),
+            new("K81.1", "Xroniki xolesistit"),
+            new("L20.9", "Atopik dermatit"),
+            new("L30.9", "Dermatit"),
+            new("L50.9", "Övrə (kəhir)"),
+            new("L70.0", "Sızanaq (akne)"),
+            new("M17.9", "Diz oynağının artrozu (qonartroz)"),
+            new("M25.5", "Oynaq ağrısı"),
+            new("M41.9", "Skolioz"),
+            new("M42.1", "Onurğanın osteoxondrozu (böyüklərdə)"),
+            new("M51.1", "Bel fəqərəarası disk pozğunluğu, radikulopatiya ilə"),
+            new("M54.2", "Servikalgiya (boyun ağrısı)"),
+            new("M54.5", "Bel ağrısı"),
+            new("M81.9", "Osteoporoz"),
+            new("N20.0", "Böyrək daşı"),
+            new("N30.0", "Kəskin sistit"),
+            new("N39.0", "Sidik yollarının infeksiyası"),
+            new("N40", "Prostatın hiperplaziyası"),
+            new("N76.0", "Kəskin vaginit"),
+            new("N92.6", "Nizamsız menstruasiya"),
+            new("N95.1", "Menopauza və klimakterik vəziyyət"),
+            new("R05", "Öskürək"),
+            new("R10.4", "Qarın ağrısı"),
+            new("R42", "Başgicəllənmə"),
+            new("R50.9", "Qızdırma"),
+            new("R51", "Baş ağrısı"),
+            new("Z00.0", "Ümumi tibbi müayinə (check-up)"),
+            new("Z01.4", "Ginekoloji müayinə"),
+            new("Z34.9", "Normal hamiləliyin müşahidəsi"),
+        };
+    }
+}

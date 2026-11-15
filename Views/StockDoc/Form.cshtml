@@ -1,0 +1,241 @@
+@model StockDocFormViewModel
+@{
+    var t = Model.Type;
+    var receipt = t == StockDocType.Receipt;
+    var transfer = t == StockDocType.Transfer;
+    var writeOff = t == StockDocType.WriteOff;
+    var action = t switch { StockDocType.Receipt => "Receipt", StockDocType.Transfer => "Transfer", _ => "WriteOff" };
+    ViewData["Title"] = t switch { StockDocType.Receipt => "Mədaxil", StockDocType.Transfer => "Köçürmə", _ => "Silinmə" };
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    string D(decimal? v) => v?.ToString("0.####", inv) ?? "";
+}
+
+<div class="page-head">
+    <div>
+        <h2><i class="bi @StockLabels.Icon(t)" style="color:var(--subtle); margin-right:6px;"></i>@ViewData["Title"]</h2>
+        <p>@(receipt ? "Təchizatçıdan gələn məhsulları partiya və son istifadə tarixi ilə qəbul edin"
+             : transfer ? "Məhsulları bir anbardan digərinə keçirin (məs. mərkəzi anbardan şöbəyə)"
+             : "Xəstəyə verilən, prosedurda istifadə olunan, vaxtı keçmiş və ya zədələnmiş məhsulları silin")</p>
+    </div>
+    <a class="btn btn-light" asp-action="Index"><i class="bi bi-arrow-left"></i> Sənədlər</a>
+</div>
+
+@if (Model.Errors.Any())
+{
+    <div class="alert alert-danger"><ul>@foreach (var e in Model.Errors) { <li>@e</li> }</ul></div>
+}
+
+<form asp-action="@action" method="post" novalidate id="docForm">
+    <input type="hidden" asp-for="ReserveId" />
+    <div class="card card-pad" style="margin-bottom:20px;">
+        <div class="form-grid">
+            <div class="field">
+                <label for="WarehouseId">@(receipt ? "Anbar" : transfer ? "Haradan" : "Anbar")</label>
+                <select id="WarehouseId" name="WarehouseId" class="form-select" data-onhand>
+                    @foreach (var w in Model.Warehouses) { <option value="@w.Id" selected="@(Model.WarehouseId == w.Id)">@w.Name@(w.IsMain ? " (mərkəzi)" : "")</option> }
+                </select>
+            </div>
+            @if (transfer)
+            {
+                <div class="field">
+                    <label for="ToWarehouseId">Haraya</label>
+                    <select id="ToWarehouseId" name="ToWarehouseId" class="form-select">
+                        <option value="">— seçin —</option>
+                        @foreach (var w in Model.Warehouses) { <option value="@w.Id" selected="@(Model.ToWarehouseId == w.Id)">@w.Name</option> }
+                    </select>
+                </div>
+            }
+            @if (receipt)
+            {
+                <div class="field">
+                    <label for="SupplierId">Təchizatçı</label>
+                    <select id="SupplierId" name="SupplierId" class="form-select">
+                        <option value="">— göstərilməyib —</option>
+                        @foreach (var s in Model.Suppliers) { <option value="@s.Id" selected="@(Model.SupplierId == s.Id)">@s.Name</option> }
+                    </select>
+                    @if (User.Can(Permissions.StockManage)) { <span class="hint-text"><a asp-controller="StockItem" asp-action="Suppliers">Təchizatçı əlavə et</a></span> }
+                </div>
+                <div class="field">
+                    <label for="InvoiceNo">Qaimə-faktura №</label>
+                    <input id="InvoiceNo" name="InvoiceNo" value="@Model.InvoiceNo" class="form-control" maxlength="50" />
+                </div>
+                <div class="field">
+                    <label for="Date">Qaimə tarixi</label>
+                    <input id="Date" name="Date" type="date" value="@Model.Date.ToString("yyyy-MM-dd")" max="@DateTime.Today.ToString("yyyy-MM-dd")" class="form-control" />
+                </div>
+            }
+            @if (writeOff)
+            {
+                <div class="field">
+                    <label for="Reason">Səbəb</label>
+                    <select id="Reason" name="Reason" class="form-select">
+                        <option value="">— seçin —</option>
+                        @foreach (var r in StockLabels.WriteOffReasons) { <option value="@r" selected="@(Model.Reason == r)">@r</option> }
+                    </select>
+                    <span class="hint-text" id="reasonHint"></span>
+                </div>
+                @if (Model.Reserve != null)
+                {
+                    <div class="field">
+                        <label>Xəstə</label>
+                        <div class="form-control" style="display:flex; align-items:center; background:var(--surface-2);">@Model.Reserve.Patient.FullName · rezervasiya #@Model.Reserve.Id</div>
+                    </div>
+                }
+                else
+                {
+                    <div class="field">
+                        <label for="PatientPin">Xəstənin FİN-i <span class="hint-text">(xəstəyə veriləndə)</span></label>
+                        <input id="PatientPin" name="PatientPin" value="@Model.PatientPin" class="form-control" maxlength="7" style="text-transform:uppercase;" autocomplete="off" />
+                    </div>
+                }
+            }
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head">
+            <h3 class="card-title"><i class="bi bi-list-ul"></i> Məhsullar</h3>
+            @if (!receipt) { <span class="hint-text">Partiyalar avtomatik seçilir: son istifadə tarixi ən yaxın olan birinci çıxır</span> }
+        </div>
+        <div class="table-scroll">
+            <table class="data doc-lines">
+                <thead>
+                    <tr>
+                        <th style="min-width:260px;">Məhsul</th>
+                        <th style="width:120px;">Miqdar</th>
+                        @if (receipt)
+                        {
+                            <th style="width:130px;">Alış qiyməti, ₼</th>
+                            <th style="width:140px;">Seriya</th>
+                            <th style="width:160px;">Son istifadə</th>
+                            <th class="num" style="width:110px;">Məbləğ</th>
+                        }
+                        else
+                        {
+                            <th>Qalıq</th>
+                        }
+                        <th style="width:48px;"></th>
+                    </tr>
+                </thead>
+                <tbody id="lines">
+                    @foreach (var l in Model.Lines)
+                    {
+                        <tr class="doc-line">
+                            <td>
+                                <select data-name="ItemId" class="form-select" aria-label="Məhsul">
+                                    <option value="">— seçin —</option>
+                                    @foreach (var it in Model.Items) { <option value="@it.Id" data-unit="@it.Unit" data-kind="@((int)it.Kind)" selected="@(l.ItemId == it.Id)">@it.DisplayName@(it.Code != null ? " · " + it.Code : "")</option> }
+                                </select>
+                            </td>
+                            <td><input data-name="Quantity" value="@D(l.Quantity)" type="number" step="any" min="0" class="form-control" aria-label="Miqdar" /></td>
+                            @if (receipt)
+                            {
+                                <td><input data-name="UnitCost" value="@D(l.UnitCost)" type="number" step="0.0001" min="0" class="form-control" aria-label="Alış qiyməti" /></td>
+                                <td><input data-name="BatchNo" value="@l.BatchNo" class="form-control" maxlength="50" aria-label="Seriya" /></td>
+                                <td><input data-name="ExpiryDate" value="@l.ExpiryDate?.ToString("yyyy-MM-dd")" type="date" class="form-control" aria-label="Son istifadə tarixi" /></td>
+                                <td class="num money line-sum">—</td>
+                            }
+                            else
+                            {
+                                <td class="onhand hint-text">—</td>
+                            }
+                            <td><button type="button" class="btn btn-ghost btn-sm line-del" aria-label="Sətri sil"><i class="bi bi-x-lg"></i></button></td>
+                        </tr>
+                    }
+                </tbody>
+                @if (receipt)
+                {
+                    <tfoot><tr><td colspan="5" style="font-weight:600;">Cəmi</td><td class="num money" id="docSum" style="font-weight:700;">—</td><td></td></tr></tfoot>
+                }
+            </table>
+        </div>
+        <div class="card-pad" style="padding-top:12px;">
+            <button type="button" class="btn btn-light btn-sm" id="lineAdd"><i class="bi bi-plus-lg"></i> Sətir əlavə et</button>
+            <div class="field mt-3">
+                <label for="Note">Qeyd</label>
+                <textarea id="Note" name="Note" class="form-control" rows="2" maxlength="1000">@Model.Note</textarea>
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Təsdiqlə və qeydə al</button>
+                <a class="btn btn-light" asp-action="Index">İmtina</a>
+            </div>
+        </div>
+    </div>
+</form>
+
+@section Scripts {
+    <script>
+        (function () {
+            const onHand = @Json.Serialize(Model.OnHand);
+            const receipt = @(receipt ? "true" : "false");
+            const body = document.getElementById('lines');
+            const tpl = body.querySelector('.doc-line').cloneNode(true);
+            tpl.querySelectorAll('input').forEach(i => i.value = '');
+            tpl.querySelector('select').selectedIndex = 0;
+            const wh = document.getElementById('WarehouseId');
+            // Same look as the server's Fmt (1 250,50) whatever locale the browser has.
+            const group = s => s.replace(/\B(?=(\d{3})+(?!\d))/g, ' ');
+            const az = { format: v => { const [i, f] = String(+(+v).toFixed(3)).split('.'); return group(i) + (f ? ',' + f : ''); } };
+            const money = { format: v => { const [i, f] = (+v).toFixed(2).split('.'); return group(i) + ',' + f; } };
+
+            function refresh() {
+                let sum = 0;
+                body.querySelectorAll('.doc-line').forEach(row => {
+                    const sel = row.querySelector('select');
+                    const opt = sel.selectedOptions[0];
+                    const unit = opt && opt.dataset.unit ? opt.dataset.unit : '';
+                    const qty = parseFloat(row.querySelector('[data-name=Quantity]').value);
+                    if (receipt) {
+                        const cost = parseFloat(row.querySelector('[data-name=UnitCost]').value);
+                        const cell = row.querySelector('.line-sum');
+                        const v = qty > 0 && cost >= 0 ? qty * cost : null;
+                        cell.textContent = v == null ? '—' : money.format(v) + ' ₼';
+                        if (v) sum += v;
+                        // Medicines (1) and reagents (3) need an expiry date.
+                        const exp = row.querySelector('[data-name=ExpiryDate]');
+                        exp.required = !!opt && (opt.dataset.kind === '1' || opt.dataset.kind === '3');
+                    } else {
+                        const cell = row.querySelector('.onhand');
+                        if (!sel.value) { cell.textContent = '—'; cell.style.color = ''; return; }
+                        const have = ((onHand[wh.value] || {})[sel.value]) || 0;
+                        cell.textContent = az.format(have) + ' ' + unit;
+                        cell.style.color = qty > have ? 'var(--bad)' : '';
+                        cell.style.fontWeight = qty > have ? '600' : '';
+                    }
+                });
+                const total = document.getElementById('docSum');
+                if (total) total.textContent = sum ? money.format(sum) + ' ₼' : '—';
+            }
+            function renumber() {
+                body.querySelectorAll('.doc-line').forEach((row, i) =>
+                    row.querySelectorAll('[data-name]').forEach(el => el.name = `Lines[${i}].${el.dataset.name}`));
+            }
+            document.getElementById('lineAdd').addEventListener('click', () => {
+                const row = tpl.cloneNode(true);
+                body.appendChild(row);
+                renumber(); refresh();
+                row.querySelector('select').focus();
+            });
+            body.addEventListener('click', e => {
+                const b = e.target.closest('.line-del');
+                if (!b) return;
+                if (body.querySelectorAll('.doc-line').length === 1) {
+                    b.closest('.doc-line').querySelectorAll('input').forEach(i => i.value = '');
+                    b.closest('.doc-line').querySelector('select').selectedIndex = 0;
+                } else b.closest('.doc-line').remove();
+                renumber(); refresh();
+            });
+            body.addEventListener('input', refresh);
+            body.addEventListener('change', refresh);
+            wh.addEventListener('change', refresh);
+            const reason = document.getElementById('Reason'), hint = document.getElementById('reasonHint');
+            if (reason && hint) {
+                const show = () => hint.textContent = reason.value === 'Vaxtı keçib'
+                    ? 'Yalnız vaxtı keçmiş partiyalar silinəcək' : reason.value ? 'Yalnız yararlı partiyalar silinəcək' : '';
+                reason.addEventListener('change', show); show();
+            }
+            document.getElementById('docForm').addEventListener('submit', renumber);
+            renumber(); refresh();
+        })();
+    </script>
+}

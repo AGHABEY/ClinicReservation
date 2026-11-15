@@ -1,0 +1,45 @@
+@model List<LabOrder>
+@* Result sheet body: used by the printed report and the patient's online page. *@
+@{
+    var p = Model.First().Patient;
+    var doctor = Model.First().Reserve?.Doctor?.FullName;
+    var results = Model.SelectMany(o => o.Results).OrderBy(r => r.LabTest.Category).ThenBy(r => r.LabTest.SortOrder).ToList();
+    var last = Model.Max(o => o.ValidatedAt);
+}
+<div class="lr-grid">
+    <div><span>Xəstə</span><strong>@p.FullName</strong></div>
+    <div><span>Doğum tarixi</span><strong>@Fmt.Date(p.Birthday) (@Fmt.Age(p.Birthday) yaş)</strong></div>
+    <div><span>Cins</span><strong>@Fmt.Gender(p.Gender)</strong></div>
+    <div><span>Göndərən həkim</span><strong>@(doctor ?? "—")</strong></div>
+    <div><span>Nümunə götürülüb</span><strong>@Fmt.DateTime(Model.Min(o => o.CollectedAt))</strong></div>
+    <div><span>Barkod</span><strong>@string.Join(", ", Model.Select(o => o.Barcode))</strong></div>
+</div>
+
+<table class="lr-table">
+    <thead><tr><th>Analiz</th><th>Nəticə</th><th>Vahid</th><th>Norma</th></tr></thead>
+    <tbody>
+        @foreach (var cat in results.GroupBy(r => r.LabTest.Category ?? "Digər"))
+        {
+            <tr class="lr-cat"><td colspan="4">@cat.Key</td></tr>
+            @foreach (var r in cat)
+            {
+                var off = r.Flag is not (LabFlag.None or LabFlag.Normal);
+                <tr class="@(off ? "lr-off" : "")">
+                    <td>@r.LabTest.Name</td>
+                    <td class="lr-val">@r.Value <span class="lr-flag">@LabRef.Arrow(r.Flag)</span></td>
+                    <td>@r.Unit</td>
+                    <td>@r.Reference</td>
+                </tr>
+            }
+        }
+    </tbody>
+</table>
+<p class="lr-legend">↑ / ↓ — normadan yuxarı / aşağı, ↑↑ / ↓↓ — kritik dəyər, ! — normadan kənar. Nəticələri həkiminizlə birlikdə qiymətləndirin.</p>
+@foreach (var o in Model.Where(o => !string.IsNullOrWhiteSpace(o.Note)))
+{
+    <p class="lr-note"><strong>Qeyd:</strong> @o.Note</p>
+}
+<div class="lr-sign">
+    <div>Təsdiqləyib: <strong>@string.Join(", ", Model.Select(o => o.ValidatedBy).Distinct())</strong></div>
+    <div>@Fmt.DateTime(last)</div>
+</div>

@@ -1,0 +1,58 @@
+@model StockDocument
+@{
+    var costs = ViewBag.ShowCosts as bool? ?? false;
+    var t = Model.Type;
+    // A transfer is shown by its incoming side; reversals are listed separately on the page.
+    var lines = Model.Lines.Where(m => t != StockDocType.Transfer || m.Quantity > 0)
+        .OrderBy(m => m.StockItem.Name).ThenBy(m => m.StockBatch.ExpiryDate).ToList();
+    var n = 0;
+}
+@if (lines.Any())
+{
+    <table class="data doc-print-table">
+        <thead>
+            <tr>
+                <th style="width:36px;">№</th><th>Məhsul</th><th>Seriya</th><th>Son tarix</th>
+                @if (t == StockDocType.Count) { <th class="num">Sistemdə idi</th><th class="num">Sayıldı</th><th class="num">Fərq</th> }
+                else { <th class="num">Miqdar</th> }
+                @if (costs) { <th class="num">Qiymət</th><th class="num">Məbləğ</th> }
+            </tr>
+        </thead>
+        <tbody>
+            @foreach (var m in lines)
+            {
+                n++;
+                var qty = Math.Abs(m.Quantity);
+                <tr>
+                    <td class="text-muted">@n</td>
+                    <td><span style="font-weight:600;">@m.StockItem.Name</span>@if (m.StockItem.Form != null) { <span class="hint-text"> · @m.StockItem.Form</span> }</td>
+                    <td class="text-muted">@(m.StockBatch.BatchNo ?? "—")</td>
+                    <td style="white-space:nowrap;">@Fmt.Date(m.StockBatch.ExpiryDate)</td>
+                    @if (t == StockDocType.Count)
+                    {
+                        <td class="num">@StockService.Qty((m.Counted ?? 0) - m.Quantity)</td>
+                        <td class="num">@StockService.Qty(m.Counted ?? 0)</td>
+                        <td class="num" style="font-weight:600; color:@(m.Quantity < 0 ? "var(--bad)" : "var(--ok)");">@(m.Quantity > 0 ? "+" : "−")@StockService.Qty(qty)</td>
+                    }
+                    else
+                    {
+                        <td class="num" style="white-space:nowrap;"><strong>@StockService.Qty(qty)</strong> <span class="hint-text">@m.StockItem.Unit</span></td>
+                    }
+                    @if (costs)
+                    {
+                        <td class="num money">@Fmt.Money(m.UnitCost)</td>
+                        <td class="num money">@Fmt.Money(qty * m.UnitCost)</td>
+                    }
+                </tr>
+            }
+        </tbody>
+        @if (costs)
+        {
+            <tfoot><tr><td colspan="@(t == StockDocType.Count ? 8 : 6)" style="font-weight:600;">Cəmi</td><td class="num money" style="font-weight:700;">@Fmt.Money(lines.Sum(m => Math.Abs(m.Quantity) * m.UnitCost))</td></tr></tfoot>
+        }
+    </table>
+}
+else
+{
+    <div class="empty-state" style="padding:28px;"><i class="bi bi-check2-circle"></i><p>@(t == StockDocType.Count ? "Fərq tapılmadı — sayılan miqdarlar sistemlə eynidir" : "Sətir yoxdur")</p></div>
+}
