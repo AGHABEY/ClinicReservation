@@ -10,6 +10,9 @@
     var status = Model.Status?.Name;
     var visited = status is StatusNames.Arrived or StatusNames.InProgress or StatusNames.Completed;
     var canSms = User.Can(Permissions.SmsManage) && status is StatusNames.Waiting or StatusNames.Confirmed && Model.AppointmentAt > DateTime.Now;
+    var labOrders = ViewBag.LabOrders as List<LabOrder>;
+    var labPending = ViewBag.LabPending as List<LabTest>;
+    var showLab = labOrders != null && (labOrders.Any() || labPending!.Any());
     var showRecord = User.CanAny(Permissions.RecordsView, Permissions.RecordsEdit) && (Model.MedicalRecord != null || visited);
     ViewData["ReturnTo"] = "details";
     ViewData["Small"] = false;
@@ -170,6 +173,46 @@ else if (Model.Status?.Name == StatusNames.NoShow)
                     <a class="btn btn-primary btn-sm" style="margin-top:12px;" asp-controller="Record" asp-action="Edit" asp-route-reserveId="@Model.Id">
                         <i class="bi bi-pencil-square"></i> @(Model.MedicalRecord == null ? "Tibbi qeyd yaz" : "Qeydi dəyiş")
                     </a>
+                }
+            </div>
+        }
+
+        @if (showLab)
+        {
+            <div class="card card-pad">
+                <div class="flex-between" style="margin-bottom:10px;">
+                    <h3 class="card-title" style="margin:0;"><i class="bi bi-droplet-half"></i> Laboratoriya</h3>
+                </div>
+                @foreach (var o in labOrders!.Where(o => o.Status != LabOrderStatus.Cancelled))
+                {
+                    var done = o.Status == LabOrderStatus.Validated;
+                    <a class="line-item quick-link" style="margin-bottom:8px;" asp-controller="Lab" asp-action="Order" asp-route-id="@o.Id">
+                        <span style="min-width:0;">
+                            <span class="barcode-num">@o.Barcode</span>
+                            <span class="hint-text" style="display:block;">@string.Join(", ", o.Results.Select(r => r.LabTest.Code))</span>
+                        </span>
+                        <span class="badge-soft @(done ? "lab-status-validated" : "lab-status-collected")">@(done ? "Hazırdır" : "İcrada")</span>
+                    </a>
+                    @if (done && o.HasCritical)
+                    {
+                        <div class="lab-alert" style="margin:-2px 0 8px;"><i class="bi bi-exclamation-octagon-fill"></i> Kritik dəyər var</div>
+                    }
+                }
+                @if (labPending!.Any())
+                {
+                    <p class="hint-text" style="margin:4px 0 10px;">Nümunə gözləyir: @string.Join(", ", labPending.Select(t => t.Code))</p>
+                    @if (User.Can(Permissions.LabWork) && !closed)
+                    {
+                        <form asp-controller="Lab" asp-action="Collect" method="post">
+                            <input type="hidden" name="reserveId" value="@Model.Id" />
+                            <input type="hidden" name="returnTo" value="reservation" />
+                            <button type="submit" class="btn btn-primary btn-sm"><i class="bi bi-eyedropper"></i> Nümunə götür</button>
+                        </form>
+                    }
+                }
+                @if (TempData["PrintLabels"] is string labels)
+                {
+                    <a class="btn btn-light btn-sm" style="margin-top:8px;" asp-controller="Lab" asp-action="Label" asp-route-ids="@labels" asp-route-print="1" target="_blank" rel="noopener"><i class="bi bi-printer"></i> Etiketi çap et</a>
                 }
             </div>
         }

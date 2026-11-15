@@ -144,6 +144,55 @@
             </div>
 
             <div class="card card-pad">
+                <h3 class="card-title"><i class="bi bi-droplet-half"></i> Analizlər</h3>
+                @if (Model.LabOrders.Any())
+                {
+                    @foreach (var o in Model.LabOrders)
+                    {
+                        var done = o.Status == LabOrderStatus.Validated;
+                        <div class="flex-between" style="margin-bottom:6px;">
+                            <span class="barcode-num">@o.Barcode</span>
+                            <span class="badge-soft @(done ? "lab-status-validated" : "lab-status-collected")">@(done ? "Hazırdır" : "İcrada")</span>
+                        </div>
+                        @if (done)
+                        {
+                            <table class="lab-mini" style="margin-bottom:12px;">
+                                @foreach (var lr in o.Results.OrderBy(x => x.LabTest.SortOrder))
+                                {
+                                    <tr class="@LabRef.Css(lr.Flag)"><td>@lr.LabTest.Name</td><td><span class="res-value">@lr.Value</span> @lr.Unit <span class="flag">@LabRef.Arrow(lr.Flag)</span></td></tr>
+                                }
+                            </table>
+                        }
+                        else
+                        {
+                            <p class="hint-text" style="margin:0 0 12px;">@string.Join(", ", o.Results.Select(x => x.LabTest.Code)) — nəticə gözlənilir</p>
+                        }
+                    }
+                }
+                else
+                {
+                    <p class="hint-text" style="margin:0 0 12px;">Bu vizit üçün nümunə götürülməyib.</p>
+                }
+                @if (Model.LabExams.Any() && r.Status?.Name is StatusNames.Arrived or StatusNames.InProgress)
+                {
+                    <details>
+                        <summary class="btn btn-light btn-sm" style="list-style:none;"><i class="bi bi-plus-lg"></i> Analiz təyin et</summary>
+                        <div style="margin-top:12px;">
+                            @* Separate form (forms can't be nested): checkboxes post to OrderLab. *@
+                            <div class="chip-group" id="labExamPicker">
+                                @foreach (var e in Model.LabExams)
+                                {
+                                    <label class="chip"><input type="checkbox" form="orderLabForm" name="examinationTypeIds" value="@e.Id" /> @e.Name <span class="price">@Fmt.Money(e.Price)</span></label>
+                                }
+                            </div>
+                            <button type="submit" form="orderLabForm" class="btn btn-primary btn-sm" style="margin-top:10px;">Təyin et</button>
+                            <p class="hint-text" style="margin:8px 0 0;">Rezervasiyaya əlavə olunur; xəstə kassada ödəyir, laboratoriya siyahısına düşür.</p>
+                        </div>
+                    </details>
+                }
+            </div>
+
+            <div class="card card-pad">
                 <h3 class="card-title"><i class="bi bi-clock-history"></i> Əvvəlki qeydlər</h3>
                 @if (Model.History.Any())
                 {
@@ -162,6 +211,10 @@
             </div>
         </div>
     </div>
+</form>
+
+<form id="orderLabForm" asp-action="OrderLab" method="post">
+    <input type="hidden" name="reserveId" value="@r.Id" />
 </form>
 
 @section Scripts {
@@ -183,7 +236,11 @@
             // Warn before leaving with unsaved changes.
             const form = document.getElementById('recordForm');
             let dirty = false;
-            form.addEventListener('input', () => { dirty = true; });
+            form.addEventListener('input', (e) => { if (e.target.form === form) dirty = true; });
+            // Ordering lab tests reloads the page: don't lose an unsaved note.
+            document.getElementById('orderLabForm')?.addEventListener('submit', (e) => {
+                if (dirty) { e.preventDefault(); alert('Əvvəlcə tibbi qeydi «Yadda saxla» ilə saxlayın, sonra analiz təyin edin.'); }
+            });
             form.addEventListener('submit', () => { dirty = false; });
             window.addEventListener('beforeunload', (e) => { if (dirty) { e.preventDefault(); e.returnValue = ''; } });
         })();

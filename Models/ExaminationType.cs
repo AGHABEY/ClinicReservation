@@ -16,5 +16,8 @@ namespace ClinicReservation.Models
         [Required(ErrorMessage = "Qiymət daxil edilməlidir")]
         [Range(0.01, 1000000, ErrorMessage = "Qiymət 0-dan böyük olmalıdır")]
         public decimal Price { get; set; }
+
+        /// <summary>Lab tests run for this examination (empty for non-lab services).</summary>
+        public List<ExaminationTypeLabTest> LabTests { get; set; } = new();
     }
 }

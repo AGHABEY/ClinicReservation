@@ -30,6 +30,10 @@ namespace ClinicReservation.Models
         public string ReminderTemplate { get; set; } =
             "Hormetli {ad}, {tarix} saat {saat} {hekim} qebulunuz var ({klinika}). Tesdiq ve ya legv: {link}";
 
+        /// <summary>Sent when lab results are validated. Placeholders: {ad} {klinika} {link}.</summary>
+        public string LabResultTemplate { get; set; } =
+            "Hormetli {ad}, analiz neticeleriniz hazirdir ({klinika}). Baxmaq ucun: {link}";
+
         /// <summary>Replace Azerbaijani letters (ə, ş, ç …) with Latin ones: 160 chars per SMS instead of 70.</summary>
         public bool AsciiOnly { get; set; } = true;
 

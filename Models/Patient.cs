@@ -6,6 +6,12 @@ namespace ClinicReservation.Models
     /// A patient's card. One record per person (identified by FİN); every
     /// reservation points to it, so visit history lives in one place.
     /// </summary>
+    public enum Gender
+    {
+        Male = 1,
+        Female = 2
+    }
+
     public class Patient : BaseModel
     {
         public string Name { get; set; } = "";
@@ -16,6 +22,9 @@ namespace ClinicReservation.Models
 
         public string Phone { get; set; } = "";
         public DateTime Birthday { get; set; }
+
+        /// <summary>Needed for sex-specific lab reference ranges.</summary>
+        public Gender? Gender { get; set; }
 
         /// <summary>Free-form note for staff (e.g. "prefers morning appointments").</summary>
         public string? Notes { get; set; }

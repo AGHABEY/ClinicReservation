@@ -73,6 +73,7 @@ namespace ClinicReservation.Services
     {
         public const string KindReminder = "Xatırlatma";
         public const string KindManual = "Əl ilə";
+        public const string KindLabResult = "Analiz nəticəsi";
 
         private readonly AppDbContext _context;
         private readonly ISmsSender _sender;
@@ -90,6 +91,18 @@ namespace ClinicReservation.Services
         public string ConfirmLink(Reserve reserve) =>
             $"{_options.PublicBaseUrl.TrimEnd('/')}/r/{EnsureToken(reserve)}";
 
+        public string ResultsLink(Reserve reserve) => ConfirmLink(reserve) + "/lab";
+
+        /// <summary>The reservation must be loaded with Patient.</summary>
+        public string LabResultText(Reserve reserve)
+        {
+            var text = _options.LabResultTemplate
+                .Replace("{ad}", reserve.Patient.Name)
+                .Replace("{klinika}", _options.ClinicName)
+                .Replace("{link}", ResultsLink(reserve));
+            return _options.AsciiOnly ? SmsText.ToAscii(text) : text;
+        }
+
         /// <summary>The reservation must be loaded with Patient and Doctor.</summary>
         public string ReminderText(Reserve reserve)
         {
@@ -104,7 +117,11 @@ namespace ClinicReservation.Services
             return _options.AsciiOnly ? SmsText.ToAscii(text) : text;
         }
 
-        public async Task<SmsMessage> SendReminderAsync(Reserve reserve, string kind, string? sentBy, CancellationToken ct = default)
+        public Task<SmsMessage> SendReminderAsync(Reserve reserve, string kind, string? sentBy, CancellationToken ct = default) =>
+            SendAsync(reserve, ReminderText(reserve), kind, sentBy, ct);
+
+        /// <summary>Sends one SMS to the reservation's patient and writes it to the SMS log.</summary>
+        public async Task<SmsMessage> SendAsync(Reserve reserve, string text, string kind, string? sentBy, CancellationToken ct = default)
         {
             var message = new SmsMessage
             {
@@ -113,7 +130,7 @@ namespace ClinicReservation.Services
                 PatientId = reserve.PatientId,
                 Kind = kind,
                 SentBy = sentBy,
-                Text = ReminderText(reserve)
+                Text = text
             };
 
             var phone = SmsText.NormalizePhone(reserve.Patient.Phone);
@@ -131,14 +148,14 @@ namespace ClinicReservation.Services
                 message.Error = result.Error;
             }
 
-            if (message.Status != SmsStatus.Failed)
+            if (message.Status != SmsStatus.Failed && kind is KindReminder or KindManual)
                 reserve.ReminderSentAt = message.CreatedAt;
             _context.SmsMessages.Add(message);
             await _context.SaveChangesAsync(ct);
             return message;
         }
 
-        private static string EnsureToken(Reserve reserve)
+        public static string EnsureToken(Reserve reserve)
         {
             reserve.PatientToken ??= Convert.ToBase64String(RandomNumberGenerator.GetBytes(18))
                 .Replace('+', '-').Replace('/', '_');

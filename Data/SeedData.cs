@@ -40,6 +40,7 @@ namespace ClinicReservation.Data
             var roleManager = provider.GetRequiredService<RoleManager<IdentityRole>>();
             var userManager = provider.GetRequiredService<UserManager<IdentityUser>>();
 
+            var createdNow = new HashSet<string>();
             foreach (var roleName in AppRoles.BuiltIn)
             {
                 var role = await roleManager.FindByNameAsync(roleName);
@@ -47,6 +48,7 @@ namespace ClinicReservation.Data
                 {
                     role = new IdentityRole(roleName);
                     await roleManager.CreateAsync(role);
+                    createdNow.Add(roleName);
                 }
 
                 // Give a role its default permissions only once (when it has none),
@@ -60,7 +62,8 @@ namespace ClinicReservation.Data
             }
 
             // Permissions introduced in a later version: if no role carries one yet,
-            // give it to the built-in roles that have it by default. After that the
+            // give it to the built-in roles that have it by default. Roles created in
+            // this run already got their defaults and don't count as "someone has it". After that the
             // Roles page is the only place that changes it.
             var allRoleClaims = new List<(IdentityRole Role, IList<System.Security.Claims.Claim> Claims)>();
             foreach (var roleName in AppRoles.BuiltIn)
@@ -74,9 +77,12 @@ namespace ClinicReservation.Data
 
             foreach (var permission in Permissions.All.Select(p => p.Code))
             {
-                var anyoneHasIt = allRoleClaims.Any(x => x.Claims.Any(c => c.Type == Permissions.ClaimType && c.Value == permission));
+                var anyoneHasIt = allRoleClaims.Where(x => !createdNow.Contains(x.Role.Name!))
+                    .Any(x => x.Claims.Any(c => c.Type == Permissions.ClaimType && c.Value == permission));
                 if (anyoneHasIt) continue;
-                foreach (var (role, claims) in allRoleClaims.Where(x => AppRoles.DefaultPermissions(x.Role.Name!).Contains(permission)))
+                var targets = allRoleClaims.Where(x => AppRoles.DefaultPermissions(x.Role.Name!).Contains(permission)
+                    && !x.Claims.Any(c => c.Type == Permissions.ClaimType && c.Value == permission)).ToList();
+                foreach (var (role, _) in targets)
                     await roleManager.AddClaimAsync(role, new System.Security.Claims.Claim(Permissions.ClaimType, permission));
             }
 

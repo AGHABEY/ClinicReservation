@@ -24,6 +24,10 @@ namespace ClinicReservation.Data
         public DbSet<AuditLog> AuditLogs { get; set; }
         public DbSet<MedicalRecord> MedicalRecords { get; set; }
         public DbSet<SmsMessage> SmsMessages { get; set; }
+        public DbSet<LabTest> LabTests { get; set; }
+        public DbSet<ExaminationTypeLabTest> ExaminationTypeLabTests { get; set; }
+        public DbSet<LabOrder> LabOrders { get; set; }
+        public DbSet<LabResult> LabResults { get; set; }
         public DbSet<AppUser> AppUsers { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -74,6 +78,52 @@ namespace ClinicReservation.Data
                 foreach (var name in new[] { nameof(MedicalRecord.Complaint), nameof(MedicalRecord.Anamnesis), nameof(MedicalRecord.Examination),
                              nameof(MedicalRecord.Treatment), nameof(MedicalRecord.Prescription), nameof(MedicalRecord.Recommendations) })
                     e.Property(name).HasMaxLength(4000);
+            });
+
+            builder.Entity<LabTest>(e =>
+            {
+                e.HasIndex(t => t.Code).IsUnique();
+                e.Property(t => t.Code).HasMaxLength(20);
+                e.Property(t => t.Name).HasMaxLength(150);
+                e.Property(t => t.Category).HasMaxLength(100);
+                e.Property(t => t.SampleType).HasMaxLength(50);
+                e.Property(t => t.Unit).HasMaxLength(30);
+                e.Property(t => t.Choices).HasMaxLength(300);
+                e.Property(t => t.RefText).HasMaxLength(150);
+            });
+
+            builder.Entity<ExaminationTypeLabTest>(e =>
+            {
+                e.HasKey(x => new { x.ExaminationTypeId, x.LabTestId });
+                e.HasOne(x => x.ExaminationType).WithMany(x => x.LabTests)
+                    .HasForeignKey(x => x.ExaminationTypeId).OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(x => x.LabTest).WithMany(x => x.ExaminationTypes)
+                    .HasForeignKey(x => x.LabTestId).OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<LabOrder>(e =>
+            {
+                e.HasIndex(o => o.Barcode).IsUnique();
+                e.HasIndex(o => o.CollectedAt);
+                e.HasIndex(o => o.ReserveId);
+                e.Property(o => o.Barcode).HasMaxLength(20);
+                e.Property(o => o.Note).HasMaxLength(500);
+                e.HasOne(o => o.Reserve).WithMany()
+                    .HasForeignKey(o => o.ReserveId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(o => o.Patient).WithMany()
+                    .HasForeignKey(o => o.PatientId).OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<LabResult>(e =>
+            {
+                e.HasIndex(r => new { r.LabOrderId, r.LabTestId }).IsUnique();
+                e.Property(r => r.Value).HasMaxLength(500);
+                e.Property(r => r.Unit).HasMaxLength(30);
+                e.Property(r => r.Reference).HasMaxLength(150);
+                e.HasOne(r => r.LabOrder).WithMany(o => o.Results)
+                    .HasForeignKey(r => r.LabOrderId).OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(r => r.LabTest).WithMany()
+                    .HasForeignKey(r => r.LabTestId).OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<SmsMessage>(e =>

@@ -72,6 +72,52 @@ namespace ClinicReservation.Controllers
             return Redirect($"/r/{token}");
         }
 
+        private const string LabFailAction = "Onlayn nəticə: səhv doğum tarixi";
+
+        /// <summary>Online lab results: the link from the SMS plus the patient's birth date.</summary>
+        [HttpGet("lab")]
+        public IActionResult Lab(string token)
+        {
+            var res = Load(token);
+            if (res == null) return View("NotFound");
+            ViewBag.Token = token;
+            return View("LabLogin", res);
+        }
+
+        [HttpPost("lab")]
+        [ValidateAntiForgeryToken]
+        public IActionResult Lab(string token, DateTime? birthday)
+        {
+            var res = Load(token);
+            if (res == null) return View("NotFound");
+            ViewBag.Token = token;
+
+            var since = DateTime.Now.AddHours(-1);
+            var failures = _context.AuditLogs.Count(a => a.Action == LabFailAction && a.EntityId == res.Id.ToString() && a.At >= since);
+            if (failures >= 5)
+            {
+                ViewBag.Error = "Çox sayda səhv cəhd. Bir saat sonra yenidən yoxlayın və ya klinikaya zəng edin.";
+                return View("LabLogin", res);
+            }
+            if (birthday?.Date != res.Patient.Birthday.Date)
+            {
+                _audit.Log(LabFailAction, AuditEntities.Lab, res.Id, res.Patient.FullName, userName: "Xəstə (SMS linki)");
+                ViewBag.Error = "Doğum tarixi uyğun gəlmir";
+                return View("LabLogin", res);
+            }
+
+            var orders = _context.LabOrders
+                .Include(o => o.Patient)
+                .Include(o => o.Reserve).ThenInclude(r => r.Doctor)
+                .Include(o => o.Results).ThenInclude(r => r.LabTest)
+                .Where(o => o.ReserveId == res.Id && o.Status == LabOrderStatus.Validated)
+                .OrderBy(o => o.CollectedAt)
+                .AsSplitQuery()
+                .ToList();
+            _audit.Log("Xəstə nəticəyə onlayn baxdı", AuditEntities.Lab, res.Id, res.Patient.FullName, userName: "Xəstə (SMS linki)");
+            return View("LabResults", orders);
+        }
+
         /// <summary>Only before the visit and while the booking is still open.</summary>
         public static bool CanAnswer(Reserve r) =>
             r.AppointmentAt > DateTime.Now && r.Status?.Name is StatusNames.Waiting or StatusNames.Confirmed;

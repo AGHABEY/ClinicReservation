@@ -31,7 +31,9 @@
                 @foreach (var item in Model)
                 {
                     <tr>
-                        <td style="font-weight:600;"><i class="bi bi-clipboard2-pulse text-muted"></i> @item.Name</td>
+                        <td style="font-weight:600;"><i class="bi bi-clipboard2-pulse text-muted"></i> @item.Name
+                            @if (item.LabTests.Any()) { <div class="test-chips" style="margin-top:4px;">@foreach (var l in item.LabTests.OrderBy(l => l.LabTest.SortOrder)) { <span class="test-chip">@l.LabTest.Code</span> }</div> }
+                        </td>
                         <td class="text-muted">@(item.Department?.Name ?? "Ümumi")</td>
                         <td class="text-muted wrap">@(string.IsNullOrEmpty(item.Description) ? "—" : item.Description)</td>
                         <td class="num money">@Fmt.Money(item.Price)</td>

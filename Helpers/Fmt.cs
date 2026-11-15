@@ -74,6 +74,13 @@ namespace ClinicReservation.Helpers
             return name.StartsWith("Dr", StringComparison.OrdinalIgnoreCase) ? name : "Dr. " + name;
         }
 
+        public static string Gender(Models.Gender? g) => g switch
+        {
+            Models.Gender.Male => "Kişi",
+            Models.Gender.Female => "Qadın",
+            _ => "—"
+        };
+
         public static string Initials(string? name)
         {
             var parts = (name ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);

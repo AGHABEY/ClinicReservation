@@ -60,6 +60,14 @@
                                 </a>
                             </li>
                         }
+                        @if (User.CanAny(Permissions.LabView, Permissions.LabWork, Permissions.LabValidate))
+                        {
+                            <li>
+                                <a class="@Active("Lab")" aria-current="@Current("Lab")" asp-controller="Lab" asp-action="Index">
+                                    <i class="bi bi-droplet-half"></i> Laboratoriya
+                                </a>
+                            </li>
+                        }
                         @if (User.Can(Permissions.PatientsView))
                         {
                             <li>
@@ -92,6 +100,14 @@
                                 <li>
                                     <a class="@Active("ExaminationType")" aria-current="@Current("ExaminationType")" asp-controller="ExaminationType" asp-action="Index">
                                         <i class="bi bi-clipboard2-pulse-fill"></i> Müayinələr
+                                    </a>
+                                </li>
+                            }
+                            @if (User.Can(Permissions.CatalogManage))
+                            {
+                                <li>
+                                    <a class="@Active("LabTest")" aria-current="@Current("LabTest")" asp-controller="LabTest" asp-action="Index">
+                                        <i class="bi bi-list-check"></i> Analiz kataloqu
                                     </a>
                                 </li>
                             }

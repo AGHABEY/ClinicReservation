@@ -57,6 +57,7 @@ builder.Services.Configure<ClinicReservation.Models.ClinicOptions>(builder.Confi
 builder.Services.AddScoped<ClinicReservation.Services.SlotService>();
 builder.Services.AddScoped<ClinicReservation.Services.AuditService>();
 builder.Services.AddScoped<ClinicReservation.Services.QueueService>();
+builder.Services.AddScoped<ClinicReservation.Services.LabService>();
 
 // SMS: "Log" = test mode (messages only appear in the SMS log), "Http" = real gateway.
 builder.Services.Configure<ClinicReservation.Models.SmsOptions>(builder.Configuration.GetSection("Sms"));

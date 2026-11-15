@@ -363,11 +363,17 @@ namespace ClinicReservation.Controllers
             return RedirectToAction(nameof(Details), new { id = res.Id });
         }
 
-        public IActionResult Details(int id)
+        public IActionResult Details(int id, [FromServices] LabService lab)
         {
             var res = LoadReserve(id);
             if (res == null)
                 return NotFound();
+            if (User.CanAny(Permissions.LabView, Permissions.LabWork))
+            {
+                ViewBag.LabOrders = _context.LabOrders.Include(o => o.Results).ThenInclude(r => r.LabTest)
+                    .Where(o => o.ReserveId == id).OrderBy(o => o.CollectedAt).ToList();
+                ViewBag.LabPending = lab.PendingTests(id);
+            }
             return View(res);
         }
 

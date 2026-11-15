@@ -93,6 +93,8 @@ namespace ClinicReservation.ViewModels
         [StringLength(500, ErrorMessage = "Qeyd ən çox 500 simvol ola bilər")]
         public string? Notes { get; set; }
 
+        public Gender? Gender { get; set; }
+
         public bool IsEdit => Id > 0;
     }
 

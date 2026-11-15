@@ -176,9 +176,58 @@ namespace ClinicReservation.Controllers
             return null;
         }
 
+        /// <summary>
+        /// The doctor orders lab examinations during the visit: they are added to the
+        /// reservation (price locked now, paid at the cashier) and appear in the lab's list.
+        /// </summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [HasPermission(Permissions.RecordsEdit)]
+        public IActionResult OrderLab(int reserveId, List<int>? examinationTypeIds)
+        {
+            var reserve = LoadReserve(reserveId);
+            if (reserve == null) return NotFound();
+            var denied = CheckCanWrite(reserve);
+            if (denied != null) return denied;
+            if (reserve.Status?.Name is not (StatusNames.Arrived or StatusNames.InProgress))
+            {
+                TempData["Error"] = "Analiz yalnız qəbul zamanı təyin edilir";
+                return RedirectToAction(nameof(Edit), new { reserveId });
+            }
+
+            var ids = examinationTypeIds ?? new();
+            var existing = reserve.ReserveExaminationTypes!.Select(x => x.ExaminationTypeId).ToHashSet();
+            var toAdd = _context.ExaminationTypes
+                .Where(e => ids.Contains(e.Id) && e.LabTests.Any() && !existing.Contains(e.Id))
+                .ToList();
+            if (toAdd.Count == 0)
+            {
+                TempData["Error"] = "Yeni analiz seçilməyib";
+                return RedirectToAction(nameof(Edit), new { reserveId });
+            }
+
+            foreach (var e in toAdd)
+                reserve.ReserveExaminationTypes!.Add(new ReserveExaminationType { ExaminationTypeId = e.Id, Price = e.Price });
+            _context.SaveChanges();
+            _audit.Log("Həkim analiz təyin etdi", AuditEntities.Reservation, reserve.Id,
+                $"{reserve.Patient.FullName}: {string.Join(", ", toAdd.Select(e => e.Name))} (+{Fmt.Money(toAdd.Sum(e => e.Price))})");
+            TempData["Success"] = $"Analiz təyin edildi: {string.Join(", ", toAdd.Select(e => e.Name))}. Xəstə kassada ödəyib laboratoriyaya keçə bilər.";
+            return RedirectToAction(nameof(Edit), new { reserveId });
+        }
+
         private void Prepare(RecordFormViewModel model, Reserve reserve)
         {
             model.Reserve = reserve;
+            model.LabOrders = _context.LabOrders
+                .Include(o => o.Results).ThenInclude(r => r.LabTest)
+                .Where(o => o.ReserveId == reserve.Id && o.Status != LabOrderStatus.Cancelled)
+                .OrderBy(o => o.CollectedAt)
+                .ToList();
+            var current = reserve.ReserveExaminationTypes!.Select(x => x.ExaminationTypeId).ToList();
+            model.LabExams = _context.ExaminationTypes
+                .Where(e => e.LabTests.Any() && !current.Contains(e.Id))
+                .OrderBy(e => e.Name)
+                .ToList();
             model.History = _context.MedicalRecords
                 .Include(m => m.Doctor)
                 .Where(m => m.PatientId == reserve.PatientId && m.ReserveId != reserve.Id)

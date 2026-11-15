@@ -78,6 +78,16 @@ namespace ClinicReservation.Controllers
                     .ToList();
             }
 
+            if (User.Can(Permissions.LabView))
+            {
+                ViewBag.LabOrders = _context.LabOrders
+                    .Include(o => o.Results)
+                    .Where(o => o.PatientId == id && o.Status != LabOrderStatus.Cancelled)
+                    .OrderByDescending(o => o.CollectedAt)
+                    .Take(20)
+                    .ToList();
+            }
+
             _audit.Log("Xəstə kartına baxıldı", AuditEntities.Patient, patient.Id, patient.FullName);
             return View(patient);
         }
@@ -121,7 +131,8 @@ namespace ClinicReservation.Controllers
                 PinCode = p.PinCode,
                 Phone = p.Phone,
                 Birthday = p.Birthday,
-                Notes = p.Notes
+                Notes = p.Notes,
+                Gender = p.Gender
             });
         }
 
@@ -152,6 +163,7 @@ namespace ClinicReservation.Controllers
             patient.Phone = model.Phone!.Trim();
             patient.Birthday = model.Birthday!.Value.Date;
             patient.Notes = string.IsNullOrWhiteSpace(model.Notes) ? null : model.Notes.Trim();
+            patient.Gender = model.Gender;
             if (isNew) _context.Patients.Add(patient);
             _context.SaveChanges();
 

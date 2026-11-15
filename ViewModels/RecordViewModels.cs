@@ -47,6 +47,9 @@ namespace ClinicReservation.ViewModels
         // Display only
         public Reserve? Reserve { get; set; }
         public List<MedicalRecord> History { get; set; } = new();
+        public List<LabOrder> LabOrders { get; set; } = new();
+        /// <summary>Lab examinations the doctor can still order for this visit.</summary>
+        public List<ExaminationType> LabExams { get; set; } = new();
         public bool Exists { get; set; }
     }
 }

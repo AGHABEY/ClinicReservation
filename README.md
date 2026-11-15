@@ -69,7 +69,7 @@ Tələblər: .NET 8 SDK + işləyən PostgreSQL.
 - **Kassa** — ödəniş, qismən ödəniş, geri qaytarma; ləğv və «gəlmədi» rezervasiyalar borc yaratmır
 - **Hesabatlar** — xalis gəlir, nağd/kart, günlük qrafik, müayinə və həkim üzrə statistika
   («gəlmədi» faizi daxil)
-- **Rollar və icazələr** — Admin, İşçi, Resepsiya, Kassir, Həkim, Rəhbərlik; hər rolun icazələri
+- **Rollar və icazələr** — Admin, İşçi, Resepsiya, Kassir, Həkim, Rəhbərlik, Laborant; hər rolun icazələri
   «Rollar və icazələr» səhifəsində seçilir (Admin həmişə hər şeyə icazəlidir)
 - **Audit jurnalı** — kim nə vaxt nə etdi: girişlər, xəstə kartına baxış, rezervasiya və
   status dəyişiklikləri, ödənişlər, istifadəçi və icazə dəyişiklikləri
@@ -83,6 +83,13 @@ Tələblər: .NET 8 SDK + işləyən PostgreSQL.
   müalicə, resept, tövsiyələr, kontrol qəbulu; A4 formatda çap / PDF. Allergiya və xroniki
   xəstəliklər xəstə kartında qırmızı xəbərdarlıq kimi görünür. Həkim yalnız öz xəstəsinə
   qeyd yaza bilər; hər baxış və dəyişiklik audit jurnalına düşür
+- **Laboratoriya** — analiz kataloqu (kod, vahid, nümunə, kişi/qadın norması, kritik dəyərlər,
+  31 standart analiz bir kliklə), analizlər müayinəyə bağlanır və kassadan ödənilir. Laborant
+  «Nümunə götür» deyəndə hər nümunə növü üçün barkod (58×40 mm etiket) yaranır; nəticə yazılarkən
+  normadan kənar dəyərlər ↑/↓, kritik dəyərlər qırmızı göstərilir və ayrıca təsdiq tələb edir;
+  əvvəlki nəticə yanında görünür. Təsdiqdən sonra A4 blank, xəstəyə SMS və doğum tarixi ilə
+  qorunan onlayn nəticə səhifəsi. Həkim qəbul zamanı analiz təyin edir və nəticəni tibbi
+  qeyd ekranında görür. Təsdiqi geri almaq yalnız səbəb yazmaqla mümkündür (audit)
 - **SMS xatırlatma** — qəbuldan 24 saat əvvəl avtomatik SMS; içindəki linklə xəstə girişsiz
   «Gələcəyəm» və ya «Gələ bilməyəcəyəm» seçir. SMS jurnalı, əl ilə göndəriş, sakit saatlar
 
@@ -92,7 +99,9 @@ Tələblər: .NET 8 SDK + işləyən PostgreSQL.
 2. «Həkimlər» səhifəsində həkimləri və onların həftəlik qrafikini qurun.
 3. «Müayinələr»də müayinələri şöbələrə bağlayın (istəyə bağlı).
 4. «İstifadəçilər»də işçilərə rol verin, həkimlərə öz loginini bağlayın.
-5. Şöbələrə talon hərfi verin (məs. Kardiologiya → `K`) və gözləmə zalındakı TV-də
+5. «Analiz kataloqu»nda standart analizləri yükləyin, normaları öz laboratoriyanıza görə
+   yoxlayın və «Müayinələr»də analiz müayinələrini (məs. «Ümumi qan analizi») analizlərə bağlayın.
+6. Şöbələrə talon hərfi verin (məs. Kardiologiya → `K`) və gözləmə zalındakı TV-də
    «Növbə ekranı»nı açın (növbə ekranı icazəsi olan ayrıca istifadəçi ilə).
 
 ## 📱 SMS sazlamaları

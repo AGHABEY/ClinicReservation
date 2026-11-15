@@ -1,0 +1,28 @@
+@{
+    var tests = ViewBag.LabTests as List<LabTest> ?? new();
+    var selected = ViewBag.SelectedLabTests as List<int> ?? new();
+}
+<div class="field mt-3">
+    <label>Laboratoriya analizləri <span class="hint-text">(bu müayinə yazılanda laboratoriyada nümunə gözləyir)</span></label>
+    @if (tests.Any())
+    {
+        <div style="border:1px solid var(--line); border-radius:var(--radius-sm); padding:14px; max-height:340px; overflow:auto;">
+            @foreach (var g in tests.GroupBy(t => t.Category ?? "Digər"))
+            {
+                <div class="picker-group">
+                    <div class="picker-group-title">@g.Key</div>
+                    <div class="chip-group">
+                        @foreach (var t in g)
+                        {
+                            <label class="chip"><input type="checkbox" name="labTestIds" value="@t.Id" checked="@selected.Contains(t.Id)" /> @t.Code <span class="price">@t.Name</span></label>
+                        }
+                    </div>
+                </div>
+            }
+        </div>
+    }
+    else
+    {
+        <p class="hint-text" style="margin:0;">Analiz kataloqu boşdur. @if (User.Can(Permissions.CatalogManage)) { <a asp-controller="LabTest" asp-action="Index">Kataloqu doldurun</a> }</p>
+    }
+</div>

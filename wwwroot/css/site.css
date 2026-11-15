@@ -1082,3 +1082,36 @@ textarea.form-control { min-height: 84px; resize: vertical; line-height: 1.5; pa
     .record-actions { margin: 20px -18px -18px; padding: 14px 18px; }
     .record-actions .btn { flex: 1; }
 }
+
+/* =====================================================================
+   Laboratory
+   ===================================================================== */
+.barcode-search { position: relative; max-width: 360px; flex: 1; }
+.barcode-search i { position: absolute; left: 12px; top: 50%; transform: translateY(-50%); color: var(--subtle); }
+.barcode-search .form-control { padding-left: 38px; }
+.test-chips { display: flex; flex-wrap: wrap; gap: 4px; }
+.test-chip { display: inline-block; padding: 2px 8px; border-radius: 6px; background: var(--line-2); color: var(--ink-2); font-size: 12px; font-weight: 600; }
+.sample-pill { display: inline-flex; align-items: center; gap: 6px; padding: 2px 8px; border-radius: 999px; background: var(--violet-bg); color: var(--violet); font-size: 12px; font-weight: 600; }
+.barcode-num { font-family: ui-monospace, SFMono-Regular, Menlo, monospace; font-weight: 600; letter-spacing: .04em; }
+
+.results-table td { vertical-align: middle; }
+.results-table .res-input { max-width: 150px; }
+.results-table .res-input.form-select { max-width: 170px; }
+.results-table .cat-row td { background: var(--surface-2); font-size: 12px; font-weight: 700; letter-spacing: .04em; text-transform: uppercase; color: var(--subtle); padding-top: 10px; padding-bottom: 10px; }
+.res-value { font-weight: 700; font-variant-numeric: tabular-nums; }
+.flag { display: inline-block; min-width: 22px; font-weight: 800; text-align: center; }
+.flag-abn, .flag-abn .res-value { color: #B54708; }
+.flag-crit, .flag-crit .res-value { color: var(--bad); }
+tr.flag-crit td { background: #FEF3F2; }
+.prev { font-size: 12.5px; color: var(--subtle); white-space: nowrap; }
+.lab-status-collected { background: var(--info-bg); color: var(--info); }
+.lab-status-validated { background: var(--ok-bg); color: var(--ok); }
+.lab-status-cancelled { background: var(--grey-bg); color: var(--grey); }
+.lab-alert { display: flex; gap: 8px; align-items: center; font-weight: 600; color: var(--bad); font-size: 13px; }
+.lab-mini { width: 100%; border-collapse: collapse; font-size: 13px; }
+.lab-mini td { padding: 6px 0; border-top: 1px solid var(--line-2); }
+.lab-mini td:last-child { text-align: right; white-space: nowrap; }
+.picker-group { margin-bottom: 14px; }
+.picker-group-title { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .04em; color: var(--subtle); margin-bottom: 8px; }
+.seg-count { display: inline-block; min-width: 20px; margin-left: 6px; padding: 0 6px; border-radius: 999px; background: var(--line); color: var(--muted); font-size: 12px; font-weight: 700; line-height: 18px; text-align: center; }
+.seg .on .seg-count { background: var(--brand-soft); color: var(--brand-dark); }

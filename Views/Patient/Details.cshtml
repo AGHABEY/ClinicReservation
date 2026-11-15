@@ -9,6 +9,7 @@
     var balance = visits.Sum(r => r.AmountDue - r.Paid);
     var canMoney = User.CanAny(Permissions.PaymentsTake, Permissions.KassaTotals);
     var records = ViewBag.Records as List<MedicalRecord>;
+    var labOrders = ViewBag.LabOrders as List<LabOrder>;
     // Allergies matter for anyone treating the patient; other staff don't see medical details.
     var seeMedical = User.CanAny(Permissions.RecordsView, Permissions.RecordsEdit);
 }
@@ -97,9 +98,27 @@
                     <div class="detail-row"><dt>FİN kod</dt><dd>@Model.PinCode</dd></div>
                     <div class="detail-row"><dt>Telefon</dt><dd><a href="tel:@Model.Phone.Replace(" ", "")" style="color:inherit;">@Model.Phone</a></dd></div>
                     <div class="detail-row"><dt>Doğum tarixi</dt><dd>@Fmt.Date(Model.Birthday)</dd></div>
+                    <div class="detail-row"><dt>Cins</dt><dd>@Fmt.Gender(Model.Gender)</dd></div>
                 </dl>
             </div>
         </div>
+        @if (labOrders != null && labOrders.Any())
+        {
+            <div class="card">
+                <div class="card-pad">
+                    <h3 class="card-title"><i class="bi bi-droplet-half"></i> Analizlər</h3>
+                    @foreach (var o in labOrders)
+                    {
+                        var done = o.Status == LabOrderStatus.Validated;
+                        var off = o.Results.Count(r => r.Flag is not (LabFlag.None or LabFlag.Normal));
+                        <a class="history-item" asp-controller="Lab" asp-action="Order" asp-route-id="@o.Id">
+                            <div class="d">@Fmt.Date(o.CollectedAt) · <span class="barcode-num">@o.Barcode</span> · @(done ? "hazırdır" : "icrada")</div>
+                            <div class="t">@o.Results.Count analiz@(done && off > 0 ? $" · {off} normadan kənar" : "")</div>
+                        </a>
+                    }
+                </div>
+            </div>
+        }
         @if (records != null)
         {
             <div class="card">

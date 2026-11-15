@@ -43,6 +43,7 @@ namespace ClinicReservation.Services
         public const string Payment = "Ödəniş";
         public const string MedicalRecord = "Tibbi qeyd";
         public const string Sms = "SMS";
+        public const string Lab = "Laboratoriya";
         public const string Doctor = "Həkim";
         public const string Catalog = "Sazlama";
         public const string User = "İstifadəçi";
