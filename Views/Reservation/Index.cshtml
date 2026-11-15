@@ -14,6 +14,7 @@
     DateTime? lastDay = null;
     var grouped = period is not ("past" or "all");
     var now = DateTime.Now;
+    ViewData["PrimaryOnly"] = true;
 }
 
 <div class="page-head">
@@ -21,10 +22,6 @@
         <h2>Rezervasiyalar</h2>
         <p>@Model.Count rezervasiya@(string.IsNullOrWhiteSpace(q) ? "" : $" · «{q}» üzrə")@(Model.Count >= 500 ? " (ilk 500)" : "")</p>
     </div>
-    @if (User.Can(Permissions.ReservationsManage))
-    {
-        <a class="btn btn-primary" asp-action="Add" asp-route-doctorId="@doctorId"><i class="bi bi-plus-lg"></i> Yeni rezervasiya</a>
-    }
 </div>
 
 <form method="get" class="toolbar" role="search">

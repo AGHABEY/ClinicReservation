@@ -3,8 +3,12 @@
 @{
     var returnTo = ViewData["ReturnTo"] as string;
     var small = ViewData["Small"] as bool? ?? true;
+    // In lists only the main next step is shown; the details page shows all of them.
+    var primaryOnly = ViewData["PrimaryOnly"] as bool? ?? false;
+    var steps = ReserveFlow.Actions(Model, User, DateTime.Now);
+    if (primaryOnly) { steps = steps.Take(1); }
 }
-@foreach (var step in ReserveFlow.Actions(Model, User, DateTime.Now))
+@foreach (var step in steps)
 {
     <form asp-controller="Reservation" asp-action="Transition" asp-route-id="@Model.Id" method="post"
           data-confirm="@(step.To == StatusNames.NoShow ? $"{Model.Patient.FullName} gəlmədi kimi qeyd edilsin?" : null)">
