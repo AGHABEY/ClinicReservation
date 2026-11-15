@@ -93,6 +93,8 @@ builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.ReservationQueri
 builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.Reservations>();
 builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.QueueDesk>();
 builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.PatientLinks>();
+builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.Waitlist>();
+builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.WaitlistQueries>();
 builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.DashboardQueries>();
 builder.Services.AddScoped<ClinicReservation.Modules.Emr.MedicalRecords>();
 builder.Services.AddScoped<ClinicReservation.Modules.Billing.Kassa>();
@@ -113,6 +115,7 @@ builder.Services.AddScoped<ClinicReservation.Modules.Lab.LabCatalogSettings>();
 builder.Services.AddScoped<ClinicReservation.Events.Outbox>();
 builder.Services.AddHostedService<ClinicReservation.Events.OutboxWorker>();
 builder.Services.AddScoped<ClinicReservation.Events.IEventHandler, ClinicReservation.Modules.Pharmacy.TakeMaterialsOnVisitCompleted>();
+builder.Services.AddScoped<ClinicReservation.Events.IEventHandler, ClinicReservation.Modules.Notifications.SmsOnWaitlistOffered>();
 builder.Services.AddScoped<ClinicReservation.Events.IEventHandler, ClinicReservation.Modules.Pharmacy.TakeMaterialsOnLabSample>();
 builder.Services.AddScoped<ClinicReservation.Events.IEventHandler, ClinicReservation.Modules.Pharmacy.IssueMedicineOnDoseGiven>();
 

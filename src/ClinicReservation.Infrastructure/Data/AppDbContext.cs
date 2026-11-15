@@ -47,6 +47,7 @@ namespace ClinicReservation.Data
         public DbSet<Equipment> Equipment { get; set; }
         public DbSet<CancellationReason> CancellationReasons { get; set; }
         public DbSet<ReserveSeries> ReserveSeries { get; set; }
+        public DbSet<WaitlistEntry> WaitlistEntries { get; set; }
         public DbSet<AppUser> AppUsers { get; set; }
 
         /// <summary>Keys that sign login cookies and form tokens — shared by every app instance.</summary>
@@ -343,6 +344,19 @@ namespace ClinicReservation.Data
                 e.HasIndex(r => new { r.EquipmentId, r.AppointmentAt });
                 e.HasOne(r => r.Series).WithMany(s => s.Reserves).HasForeignKey(r => r.SeriesId).OnDelete(DeleteBehavior.SetNull);
             });
+            builder.Entity<WaitlistEntry>(e =>
+            {
+                e.HasIndex(w => new { w.Status, w.FromDate });
+                e.Property(w => w.Note).HasMaxLength(300);
+                e.Property(w => w.CloseNote).HasMaxLength(300);
+                e.HasOne(w => w.Patient).WithMany().HasForeignKey(w => w.PatientId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(w => w.Doctor).WithMany().HasForeignKey(w => w.DoctorId).OnDelete(DeleteBehavior.SetNull);
+                e.HasOne(w => w.OfferedDoctor).WithMany().HasForeignKey(w => w.OfferedDoctorId).OnDelete(DeleteBehavior.SetNull);
+                e.HasOne(w => w.Department).WithMany().HasForeignKey(w => w.DepartmentId).OnDelete(DeleteBehavior.SetNull);
+                e.HasOne(w => w.ExaminationType).WithMany().HasForeignKey(w => w.ExaminationTypeId).OnDelete(DeleteBehavior.SetNull);
+                e.HasOne(w => w.Reserve).WithMany().HasForeignKey(w => w.ReserveId).OnDelete(DeleteBehavior.SetNull);
+            });
+
             builder.Entity<ReserveSeries>(e =>
             {
                 e.Property(s => s.Pattern).HasMaxLength(200);
@@ -397,7 +411,7 @@ namespace ClinicReservation.Data
                     builder.Entity(t).ToTable(builder.Model.FindEntityType(t)!.GetTableName(), schema);
             }
             Schema("core", typeof(Patient), typeof(Department), typeof(Room), typeof(Equipment), typeof(Doctor), typeof(DoctorWorkHours), typeof(DoctorLeave), typeof(ExaminationType));
-            Schema("scheduling", typeof(Reserve), typeof(ReserveStatus), typeof(ReserveExaminationType), typeof(CancellationReason), typeof(ReserveSeries));
+            Schema("scheduling", typeof(Reserve), typeof(ReserveStatus), typeof(ReserveExaminationType), typeof(CancellationReason), typeof(ReserveSeries), typeof(WaitlistEntry));
             Schema("billing", typeof(Payment));
             Schema("emr", typeof(MedicalRecord));
             Schema("lab", typeof(LabTest), typeof(ExaminationTypeLabTest), typeof(LabOrder), typeof(LabResult));

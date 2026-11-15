@@ -679,6 +679,7 @@ a.link-strong:hover { color: var(--brand-dark); text-decoration: underline; }
 .alert-danger { background: #FEF3F2; border-color: #FECDCA; color: var(--bad); }
 .alert-success { background: #ECFDF3; border-color: #ABEFC6; color: #067647; }
 .alert-warning { background: #FFFAEB; border-color: #FEDF89; color: var(--warn); }
+.alert-info { background: #EFF8FF; border-color: #B2DDFF; color: #175CD3; }
 
 .flash { display: flex; align-items: center; gap: 10px; }
 .flash span { flex: 1; }

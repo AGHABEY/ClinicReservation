@@ -51,6 +51,11 @@
                                     <i class="bi bi-calendar2-check-fill"></i> Rezervasiyalar
                                 </a>
                             </li>
+                            <li>
+                                <a class="@Active("Waitlist")" aria-current="@Current("Waitlist")" asp-controller="Waitlist" asp-action="Index">
+                                    <i class="bi bi-hourglass-split"></i> Gözləmə siyahısı
+                                </a>
+                            </li>
                         }
                         @if (User.Can(Permissions.QueueCall))
                         {

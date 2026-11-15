@@ -41,9 +41,20 @@ namespace ClinicReservation.Controllers
         // ---------- Create ----------
 
         [HasPermission(Permissions.ReservationsManage)]
-        public async Task<IActionResult> Add(DateTime? date, int? doctorId, int? patientId, CancellationToken ct)
+        public async Task<IActionResult> Add(DateTime? date, int? doctorId, int? patientId, int? waitlistId,
+            [FromServices] WaitlistQueries waitlist, CancellationToken ct)
         {
             var model = new ReserveFormViewModel { AppointmentDate = (date ?? ClinicTime.Today).Date, DoctorId = doctorId };
+            // Booking a waiting patient: their wish (or the offered time) fills the form.
+            if (waitlistId != null && await waitlist.EntryAsync(waitlistId.Value, ct) is { Status: WaitlistStatus.Waiting or WaitlistStatus.Offered } w)
+            {
+                model.WaitlistId = w.Id;
+                patientId = w.PatientId;
+                model.DoctorId = w.OfferedDoctorId ?? w.DoctorId ?? doctorId;
+                model.AppointmentDate = (w.OfferedSlot ?? (w.FromDate < ClinicTime.Today ? ClinicTime.Today : w.FromDate)).Date;
+                model.AppointmentTime = w.OfferedSlot?.ToString("HH:mm");
+                if (w.ExaminationTypeId != null) model.ExaminationTypeIds = new() { w.ExaminationTypeId.Value };
+            }
             if (patientId != null && await _queries.PatientAsync(patientId.Value, ct) is { } p)
             {
                 model.PinCode = p.PinCode;

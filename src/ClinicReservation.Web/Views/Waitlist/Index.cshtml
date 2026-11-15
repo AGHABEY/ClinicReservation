@@ -1,0 +1,140 @@
+@model List<WaitlistEntry>
+@{
+    ViewData["Title"] = "Gözləmə siyahısı";
+    var status = ViewBag.Status as WaitlistStatus?;
+    var doctorId = ViewBag.DoctorId as int?;
+    var departmentId = ViewBag.DepartmentId as int?;
+    var doctors = (List<Doctor>)ViewBag.Doctors;
+    var departments = (List<Department>)ViewBag.Departments;
+    var canManage = User.Can(Permissions.ReservationsManage);
+    var today = ClinicTime.Today;
+    var tabs = new (WaitlistStatus? Key, string Label)[]
+    {
+        (null, "Açıq"), (WaitlistStatus.Offered, "Təklif edilib"), (WaitlistStatus.Waiting, "Gözləyir"),
+        (WaitlistStatus.Booked, "Rezerv edildi"), (WaitlistStatus.Closed, "Bağlı")
+    };
+    string Label(WaitlistStatus s) => s switch
+    {
+        WaitlistStatus.Waiting => "Gözləyir", WaitlistStatus.Offered => "Vaxt təklif edilib",
+        WaitlistStatus.Booked => "Rezerv edildi", _ => "Bağlı"
+    };
+    string Css(WaitlistStatus s) => s switch
+    {
+        WaitlistStatus.Waiting => "badge-waiting", WaitlistStatus.Offered => "badge-arrived",
+        WaitlistStatus.Booked => "badge-completed", _ => "badge-default"
+    };
+}
+
+<div class="page-head">
+    <div>
+        <h2>Gözləmə siyahısı</h2>
+        <p>«Daha tez vaxt olsa, xəbər verin» deyən xəstələr. Kimsə ləğv edəndə boşalan vaxt ən əvvəl yazılan uyğun xəstəyə təklif olunur.</p>
+    </div>
+    @if (canManage)
+    {
+        <a class="btn btn-primary" asp-action="Add"><i class="bi bi-plus-lg"></i> Siyahıya yaz</a>
+    }
+</div>
+
+<form method="get" class="toolbar">
+    <div class="seg seg-scroll">
+        @foreach (var t in tabs)
+        {
+            <a class="@(status == t.Key ? "on" : "")" asp-action="Index" asp-route-status="@t.Key" asp-route-doctorId="@doctorId" asp-route-departmentId="@departmentId">@t.Label</a>
+        }
+    </div>
+    <input type="hidden" name="status" value="@status" />
+    <div class="toolbar-right">
+        <select name="departmentId" class="form-select" aria-label="Şöbə" onchange="this.form.submit()" style="width:auto; max-width:220px;">
+            <option value="">Bütün şöbələr</option>
+            @foreach (var d in departments) { <option value="@d.Id" selected="@(departmentId == d.Id)">@d.Name</option> }
+        </select>
+        <select name="doctorId" class="form-select" aria-label="Həkim" onchange="this.form.submit()" style="width:auto; max-width:240px;">
+            <option value="">Bütün həkimlər</option>
+            @foreach (var d in doctors) { <option value="@d.Id" selected="@(doctorId == d.Id)">@d.FullName</option> }
+        </select>
+    </div>
+</form>
+
+@if (Model.Any())
+{
+    <div class="table-wrap">
+        <table class="data" id="waitlistTable">
+            <thead>
+                <tr>
+                    <th>Xəstə</th>
+                    <th>Kimə</th>
+                    <th>İstədiyi vaxt</th>
+                    <th>Status</th>
+                    <th class="actions">Əməliyyatlar</th>
+                </tr>
+            </thead>
+            <tbody>
+                @foreach (var w in Model)
+                {
+                    var expired = w.Status == WaitlistStatus.Waiting && w.ToDate < today;
+                    <tr class="@(expired || w.Status == WaitlistStatus.Closed ? "row-muted" : "")" data-entry="@w.Id">
+                        <td>
+                            <a asp-controller="Patient" asp-action="Details" asp-route-id="@w.PatientId" class="link-strong">@w.Patient.FullName</a>
+                            <div class="hint-text">@w.Patient.Phone · yazılıb @Fmt.Date(w.CreatedAt)</div>
+                        </td>
+                        <td>
+                            <div style="white-space:nowrap;">@(w.Doctor?.FullName ?? "İstənilən həkim")</div>
+                            <div class="hint-text">@w.Department?.Name@(w.ExaminationType != null ? $" · {w.ExaminationType.Name}" : "")</div>
+                        </td>
+                        <td>
+                            <div>@Fmt.Date(w.FromDate) – @Fmt.Date(w.ToDate)</div>
+                            <div class="hint-text">
+                                @(w.TimeFrom == null && w.TimeTo == null ? "istənilən saat" : $"{w.TimeFrom?.ToString(@"hh\:mm") ?? "…"}–{w.TimeTo?.ToString(@"hh\:mm") ?? "…"}")
+                                @if (w.NotifyBySms) { <span> · <i class="bi bi-chat-dots"></i> SMS</span> }
+                            </div>
+                            @if (!string.IsNullOrEmpty(w.Note)) { <div class="hint-text"><i class="bi bi-sticky"></i> @w.Note</div> }
+                        </td>
+                        <td>
+                            <span class="badge-soft @(expired ? "badge-noshow" : Css(w.Status))">@(expired ? "Vaxtı keçib" : Label(w.Status))</span>
+                            @if (w.Status == WaitlistStatus.Offered && w.OfferedSlot != null)
+                            {
+                                <div class="hint-text" style="margin-top:4px;"><b>@Fmt.Appointment(w.OfferedSlot.Value)</b> · @w.OfferedDoctor?.FullName</div>
+                            }
+                            @if (w.Status == WaitlistStatus.Booked && w.ReserveId != null)
+                            {
+                                <div class="hint-text" style="margin-top:4px;"><a asp-controller="Reservation" asp-action="Details" asp-route-id="@w.ReserveId">@Fmt.Appointment(w.Reserve!.AppointmentAt)</a></div>
+                            }
+                            @if (w.Status == WaitlistStatus.Closed && w.CloseNote != null) { <div class="hint-text">@w.CloseNote</div> }
+                        </td>
+                        <td class="actions">
+                            @if (canManage && w.Status is WaitlistStatus.Waiting or WaitlistStatus.Offered)
+                            {
+                                <div class="actions-inner" style="flex-wrap:wrap; justify-content:flex-end;">
+                                    <a class="btn btn-@(w.Status == WaitlistStatus.Offered ? "success" : "ghost") btn-sm" asp-controller="Reservation" asp-action="Add" asp-route-waitlistId="@w.Id">
+                                        <i class="bi bi-calendar-plus"></i> Rezerv et
+                                    </a>
+                                    @if (w.Status == WaitlistStatus.Offered)
+                                    {
+                                        <form asp-action="Decline" asp-route-id="@w.Id" method="post" style="display:inline;">
+                                            <button type="submit" class="btn btn-light btn-sm" title="Xəstə bu vaxtı istəmədi — vaxt növbəti xəstəyə təklif olunur"><i class="bi bi-arrow-counterclockwise"></i> İmtina</button>
+                                        </form>
+                                    }
+                                    <form asp-action="Close" asp-route-id="@w.Id" method="post" style="display:inline;"
+                                          onsubmit="const n = prompt('Niyə bağlanır? (istəyə görə)'); if (n === null) return false; this.note.value = n;">
+                                        <input type="hidden" name="note" />
+                                        <button type="submit" class="btn btn-light btn-sm" title="Qeydi bağla" aria-label="Qeydi bağla"><i class="bi bi-x-lg"></i></button>
+                                    </form>
+                                </div>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <div class="card">
+        <div class="empty-state">
+            <i class="bi bi-hourglass-split"></i>
+            <p>Siyahıda qeyd yoxdur</p>
+        </div>
+    </div>
+}

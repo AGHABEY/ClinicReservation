@@ -14,6 +14,9 @@ namespace ClinicReservation.Events
     public record DoseGiven(int OrderId, DateTime ScheduledAt, int AdmissionId, int PatientId, int? DepartmentId, int StockItemId,
         decimal Quantity, string Note, string? User) : IIntegrationEvent;
 
+    /// <summary>A freed time was offered to a waiting patient (Scheduling) — text them if they asked.</summary>
+    public record WaitlistOffered(int EntryId, int PatientId, DateTime Slot, string DoctorName, string? User) : IIntegrationEvent;
+
     /// <summary>Reacts to one event type. Returns a warning for the user (e.g. a stock shortage) or null.</summary>
     public interface IEventHandler
     {

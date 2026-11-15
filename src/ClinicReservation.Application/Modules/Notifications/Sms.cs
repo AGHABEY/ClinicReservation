@@ -75,6 +75,7 @@ namespace ClinicReservation.Modules.Notifications
         public const string KindReminder = "Xatırlatma";
         public const string KindManual = "Əl ilə";
         public const string KindLabResult = "Analiz nəticəsi";
+        public const string KindWaitlist = "Gözləmə siyahısı";
 
         private readonly IAppDbContext _context;
         private readonly ISmsSender _sender;
@@ -104,6 +105,18 @@ namespace ClinicReservation.Modules.Notifications
             return _options.AsciiOnly ? SmsText.ToAscii(text) : text;
         }
 
+        public string WaitlistText(string patientName, DateTime slot, string doctorName)
+        {
+            var text = _options.WaitlistTemplate
+                .Replace("{ad}", patientName)
+                .Replace("{tarix}", slot.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture))
+                .Replace("{saat}", slot.ToString("HH:mm", CultureInfo.InvariantCulture))
+                .Replace("{hekim}", Fmt.Doctor(doctorName))
+                .Replace("{klinika}", _options.ClinicName);
+            text = string.Join(' ', text.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+            return _options.AsciiOnly ? SmsText.ToAscii(text) : text;
+        }
+
         /// <summary>The reservation must be loaded with Patient and Doctor.</summary>
         public string ReminderText(Reserve reserve)
         {
@@ -122,6 +135,31 @@ namespace ClinicReservation.Modules.Notifications
             SendAsync(reserve, ReminderText(reserve), kind, sentBy, ct);
 
         /// <summary>Sends one SMS to the reservation's patient and writes it to the SMS log.</summary>
+        /// <summary>A message to a patient that isn't about one reservation (e.g. a waitlist offer).</summary>
+        public async Task<SmsMessage?> SendToPatientAsync(int patientId, string text, string kind, string? sentBy, CancellationToken ct = default)
+        {
+            var patient = await _context.Patients.FindAsync(new object[] { patientId }, ct);
+            if (patient == null) return null;
+            var message = new SmsMessage { CreatedAt = ClinicTime.Now, PatientId = patient.Id, Kind = kind, SentBy = sentBy, Text = text };
+            var phone = SmsText.NormalizePhone(patient.Phone);
+            if (phone == null)
+            {
+                message.Phone = patient.Phone ?? "";
+                message.Status = SmsStatus.Failed;
+                message.Error = "Telefon nömrəsi düzgün deyil";
+            }
+            else
+            {
+                message.Phone = phone;
+                var result = await _sender.SendAsync(phone, text, ct);
+                message.Status = result.Status;
+                message.Error = result.Error;
+            }
+            _context.SmsMessages.Add(message);
+            await _context.SaveChangesAsync(ct);
+            return message;
+        }
+
         public async Task<SmsMessage> SendAsync(Reserve reserve, string text, string kind, string? sentBy, CancellationToken ct = default)
         {
             var message = new SmsMessage

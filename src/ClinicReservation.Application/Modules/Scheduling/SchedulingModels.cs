@@ -43,6 +43,9 @@ namespace ClinicReservation.Modules.Scheduling
 
         public List<int>? ExaminationTypeIds { get; set; }
 
+        /// <summary>Booked from this waitlist entry (it becomes «Rezerv edildi»).</summary>
+        public int? WaitlistId { get; set; }
+
         /// <summary>How the booking reached the clinic.</summary>
         public ReserveSource Source { get; set; } = ReserveSource.Reception;
 

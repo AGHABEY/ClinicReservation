@@ -17,9 +17,11 @@ namespace ClinicReservation.Modules.Scheduling
         private readonly Outbox _outbox;
         private readonly AuditService _audit;
         private readonly ICurrentUser _user;
+        private readonly Waitlist _waitlist;
 
-        public Reservations(IAppDbContext db, SlotService slots, QueueService queue, Outbox outbox, AuditService audit, ICurrentUser user)
+        public Reservations(IAppDbContext db, SlotService slots, QueueService queue, Outbox outbox, AuditService audit, ICurrentUser user, Waitlist waitlist)
         {
+            _waitlist = waitlist;
             _db = db;
             _slots = slots;
             _queue = queue;
@@ -58,6 +60,7 @@ namespace ClinicReservation.Modules.Scheduling
             };
             _db.Reserves.Add(reserve);
             await _db.SaveChangesAsync(ct);
+            if (await _waitlist.SettleAsync(reserve, form.WaitlistId, ct) > 0) await _db.SaveChangesAsync(ct);
 
             if (createdPatient)
                 _audit.Log("Xəstə kartı yaradıldı", AuditEntities.Patient, patient.Id, $"{patient.FullName} ({patient.PinCode})");
@@ -172,6 +175,7 @@ namespace ClinicReservation.Modules.Scheduling
             if (createdPatient)
                 _audit.Log("Xəstə kartı yaradıldı", AuditEntities.Patient, p.Id, $"{p.FullName} ({p.PinCode})");
             var first = series.Reserves.OrderBy(x => x.AppointmentAt).First();
+            if (await _waitlist.SettleAsync(first, form.WaitlistId, ct) > 0) await _db.SaveChangesAsync(ct);
             _audit.Log("Kurs yaradıldı", AuditEntities.Reservation, first.Id,
                 $"{p.FullName}: {series.Pattern}, {series.Count} seans ({Fmt.Date(first.AppointmentAt)} – {Fmt.Date(series.Reserves.Max(x => x.AppointmentAt))})");
             var skipped = form.SeriesCount - series.Count;
@@ -295,9 +299,14 @@ namespace ClinicReservation.Modules.Scheduling
             _audit.Log("Rezervasiya ləğv edildi", AuditEntities.Reservation, res.Id,
                 $"{res.Patient.FullName} — {reason?.Name ?? "səbəbsiz"} ({BookingLabels.Party(res.CancelledBy)})"
                 + (res.CancelReason == null ? "" : $": {res.CancelReason}"));
-            return Result.Success(res.Paid > 0
+            var offered = await _waitlist.OfferFreedAsync(res, ct: ct);
+            var result = Result.Success(res.Paid > 0
                 ? $"Rezervasiya ləğv edildi. Xəstəyə {Fmt.Money(res.Paid)} qaytarılmalıdır — Kassada qeyd edin."
                 : "Rezervasiya ləğv edildi", res.Id);
+            if (offered != null)
+                result.Message = result.Message!.TrimEnd('.') + $". Boşalan vaxt gözləmə siyahısından {offered.Patient.FullName} üçün təklif edildi"
+                    + (offered.NotifyBySms ? " (SMS göndərildi)." : " — xəstəyə zəng edin.");
+            return result;
         }
 
         /// <summary>Examinations, birthday and the requested time; errors carry ReserveFormViewModel field names.</summary>

@@ -48,6 +48,7 @@ namespace ClinicReservation.Data
         DbSet<Equipment> Equipment { get; }
         DbSet<CancellationReason> CancellationReasons { get; }
         DbSet<ReserveSeries> ReserveSeries { get; }
+        DbSet<WaitlistEntry> WaitlistEntries { get; }
 
         ChangeTracker ChangeTracker { get; }
         int SaveChanges();

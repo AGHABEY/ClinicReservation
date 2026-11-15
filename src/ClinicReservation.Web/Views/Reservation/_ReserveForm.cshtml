@@ -15,6 +15,11 @@
 <form asp-action="@(Model.IsEdit ? "Edit" : "Add")" method="post" novalidate>
     <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
     <input type="hidden" asp-for="Id" />
+    <input type="hidden" asp-for="WaitlistId" />
+    @if (Model.WaitlistId != null)
+    {
+        <div class="alert alert-info"><i class="bi bi-hourglass-split"></i> Gözləmə siyahısından rezerv — yaradılanda qeyd «Rezerv edildi» olacaq.</div>
+    }
 
     <div class="detail-grid">
         <div class="stack">
@@ -142,6 +147,12 @@
                                 <i class="bi bi-info-circle"></i> <span>@(slotResult.Message ?? (Model.DoctorId == null ? "Saatları görmək üçün həkim seçin" : ""))</span>
                             </p>
                             <span asp-validation-for="AppointmentTime" class="text-danger"></span>
+                            @if (!Model.IsEdit && User.Can(Permissions.ReservationsManage))
+                            {
+                                <p class="hint-text" style="margin:6px 0 0;">
+                                    Uyğun saat yoxdur? <a href="#" id="toWaitlist" data-url="@Url.Action("Add", "Waitlist")"><i class="bi bi-hourglass-split"></i> Gözləmə siyahısına yaz</a>
+                                </p>
+                            }
                             <p class="hint-text" id="shapeInfo" style="margin:6px 0 0;">@ShapeText(slotResult.SlotMinutes, shape.EquipmentName)</p>
                         </div>
                     }
@@ -387,6 +398,18 @@
             seriesCount.addEventListener('input', () => sync(false));
             sync(true);
         }
+        // Carry what's typed so far to the waitlist form.
+        const toWaitlist = document.getElementById('toWaitlist');
+        if (toWaitlist) toWaitlist.addEventListener('click', ev => {
+            ev.preventDefault();
+            const p = new URLSearchParams();
+            if (doctor.value) p.set('doctorId', doctor.value);
+            if (dateInput.value) p.set('date', dateInput.value);
+            if (pin && pin.value.trim()) p.set('pin', pin.value.trim());
+            const exam = document.querySelector('input[name="ExaminationTypeIds"]:checked');
+            if (exam) p.set('examTypeId', exam.value);
+            location.href = toWaitlist.dataset.url + '?' + p;
+        });
         doctor.addEventListener('change', loadSlots);
         dateInput.addEventListener('change', loadSlots);
         document.querySelectorAll('input[name="ExaminationTypeIds"]').forEach(c => c.addEventListener('change', loadSlots));

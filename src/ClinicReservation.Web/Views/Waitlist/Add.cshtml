@@ -1,0 +1,150 @@
+@model WaitlistFormViewModel
+@{
+    ViewData["Title"] = "Gözləmə siyahısına yaz";
+    var doctors = (List<Doctor>)ViewBag.Doctors;
+    var departments = (List<Department>)ViewBag.Departments;
+    var exams = (List<ExaminationType>)ViewBag.Exams;
+    var existing = Model.ExistingPatient;
+}
+
+<div class="page-head">
+    <div>
+        <h2>Gözləmə siyahısına yaz</h2>
+        <p>Seçilən günlərdə uyğun vaxt boşalan kimi siyahıda «Vaxt təklif edilib» görünəcək; istəsə xəstəyə SMS gedəcək.</p>
+    </div>
+    <a class="btn btn-light" asp-action="Index"><i class="bi bi-arrow-left"></i> Siyahıya qayıt</a>
+</div>
+
+<form asp-action="Add" method="post" novalidate>
+    <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+    <div class="detail-grid">
+        <div class="card">
+            <div class="card-pad">
+                <h3 class="card-title"><i class="bi bi-person-vcard"></i> Xəstə</h3>
+                <p class="hint-text" style="margin-top:0;">Kartı olan xəstə üçün FİN kifayətdir; yeni xəstə üçün qalan sahələri də doldurun.</p>
+                <div class="form-grid">
+                    <div class="field">
+                        <label asp-for="PinCode">FİN kod</label>
+                        <input asp-for="PinCode" id="pinInput" class="form-control" maxlength="7" style="text-transform:uppercase;" autocomplete="off" autofocus />
+                        <span asp-validation-for="PinCode" class="text-danger"></span>
+                    </div>
+                </div>
+                <div id="patientFound" class="patient-found mt-3" hidden="@(existing == null)">
+                    <i class="bi bi-person-check-fill"></i>
+                    <span>Mövcud xəstə: <strong id="pfName">@existing?.FullName</strong> <span class="hint-text" id="pfPhone">@existing?.Phone</span></span>
+                    <a id="pfLink" href="@(existing == null ? "#" : Url.Action("Details", "Patient", new { id = existing.Id }))" target="_blank" rel="noopener">Karta bax <i class="bi bi-box-arrow-up-right"></i></a>
+                </div>
+                <div class="form-grid mt-3" id="newPatient" hidden="@(existing != null)">
+                    <div class="field">
+                        <label asp-for="Phone">Telefon</label>
+                        <input asp-for="Phone" class="form-control" placeholder="050 123 45 67" />
+                        <span asp-validation-for="Phone" class="text-danger"></span>
+                    </div>
+                    <div class="field">
+                        <label asp-for="Name">Ad</label>
+                        <input asp-for="Name" class="form-control" />
+                        <span asp-validation-for="Name" class="text-danger"></span>
+                    </div>
+                    <div class="field">
+                        <label asp-for="Surname">Soyad</label>
+                        <input asp-for="Surname" class="form-control" />
+                        <span asp-validation-for="Surname" class="text-danger"></span>
+                    </div>
+                    <div class="field">
+                        <label asp-for="Birthday">Doğum tarixi</label>
+                        <input asp-for="Birthday" type="date" class="form-control" value="@Model.Birthday?.ToString("yyyy-MM-dd")" />
+                        <span asp-validation-for="Birthday" class="text-danger"></span>
+                    </div>
+                </div>
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-pad">
+                <h3 class="card-title"><i class="bi bi-hourglass-split"></i> Nə gözləyir</h3>
+                <div class="form-grid">
+                    <div class="field">
+                        <label asp-for="DoctorId">Həkim</label>
+                        <select asp-for="DoctorId" class="form-select">
+                            <option value="">İstənilən həkim (şöbə üzrə)</option>
+                            @foreach (var d in doctors) { <option value="@d.Id">@d.FullName@(d.Specialty != null ? $" — {d.Specialty}" : "")</option> }
+                        </select>
+                        <span asp-validation-for="DoctorId" class="text-danger"></span>
+                    </div>
+                    <div class="field">
+                        <label asp-for="DepartmentId">Şöbə</label>
+                        <select asp-for="DepartmentId" class="form-select">
+                            <option value="">—</option>
+                            @foreach (var d in departments) { <option value="@d.Id">@d.Name</option> }
+                        </select>
+                        <span asp-validation-for="DepartmentId" class="text-danger"></span>
+                    </div>
+                    <div class="field">
+                        <label asp-for="ExaminationTypeId">Müayinə</label>
+                        <select asp-for="ExaminationTypeId" class="form-select">
+                            <option value="">—</option>
+                            @foreach (var e in exams) { <option value="@e.Id">@e.Name@(e.DurationMinutes != null ? $" ({e.DurationMinutes} dəq)" : "")</option> }
+                        </select>
+                    </div>
+                    <div class="field">
+                        <label asp-for="FromDate">Bu tarixdən</label>
+                        <input asp-for="FromDate" type="date" class="form-control" value="@Model.FromDate?.ToString("yyyy-MM-dd")" min="@ClinicTime.Today.ToString("yyyy-MM-dd")" />
+                        <span asp-validation-for="FromDate" class="text-danger"></span>
+                    </div>
+                    <div class="field">
+                        <label asp-for="ToDate">Bu tarixədək</label>
+                        <input asp-for="ToDate" type="date" class="form-control" value="@Model.ToDate?.ToString("yyyy-MM-dd")" min="@ClinicTime.Today.ToString("yyyy-MM-dd")" />
+                        <span asp-validation-for="ToDate" class="text-danger"></span>
+                    </div>
+                    <div class="field">
+                        <label asp-for="TimeFrom">Saatdan (istəyə görə)</label>
+                        <input asp-for="TimeFrom" type="time" class="form-control" />
+                        <span asp-validation-for="TimeFrom" class="text-danger"></span>
+                    </div>
+                    <div class="field">
+                        <label asp-for="TimeTo">Saatadək</label>
+                        <input asp-for="TimeTo" type="time" class="form-control" />
+                        <span asp-validation-for="TimeTo" class="text-danger"></span>
+                    </div>
+                </div>
+                <label class="mt-3" style="display:flex; gap:8px; align-items:center;">
+                    <input asp-for="NotifyBySms" type="checkbox" /> Vaxt boşalanda xəstəyə SMS göndər
+                </label>
+                <div class="field mt-3">
+                    <label asp-for="Note">Qeyd</label>
+                    <input asp-for="Note" class="form-control" maxlength="300" placeholder="məs: yalnız səhər saatları, zəng etməzdən əvvəl SMS" />
+                </div>
+                <button type="submit" class="btn btn-primary mt-3"><i class="bi bi-check2"></i> Siyahıya yaz</button>
+            </div>
+        </div>
+    </div>
+</form>
+
+<script>
+    // A known FİN needs nothing else; an unknown one opens the new-card fields.
+    (function () {
+        const pin = document.getElementById('pinInput'), found = document.getElementById('patientFound'), fresh = document.getElementById('newPatient');
+        let last = pin.value.trim().toUpperCase();
+        async function lookup() {
+            const v = pin.value.trim().toUpperCase();
+            if (v === last) return;
+            last = v;
+            let p = null;
+            if (v.length === 7) {
+                try {
+                    const res = await fetch('@Url.Action("Lookup", "Patient")?pin=' + encodeURIComponent(v), { headers: { 'Accept': 'application/json' } });
+                    if (res.ok) p = await res.json();
+                } catch (e) { /* convenience only; the server re-checks */ }
+            }
+            const ok = !!(p && p.found);
+            found.hidden = !ok;
+            fresh.hidden = ok || v.length !== 7;
+            if (ok) {
+                document.getElementById('pfName').textContent = p.name + ' ' + p.surname;
+                document.getElementById('pfPhone').textContent = p.phone;
+                document.getElementById('pfLink').href = p.url;
+            }
+        }
+        pin.addEventListener('input', lookup);
+    })();
+</script>

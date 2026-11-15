@@ -34,6 +34,10 @@ namespace ClinicReservation.Models
         public string LabResultTemplate { get; set; } =
             "Hormetli {ad}, analiz neticeleriniz hazirdir ({klinika}). Baxmaq ucun: {link}";
 
+        /// <summary>A freed time offered to a waiting patient. Placeholders: {ad} {tarix} {saat} {hekim} {klinika}.</summary>
+        public string WaitlistTemplate { get; set; } =
+            "Hormetli {ad}, {tarix} saat {saat} {hekim} qebulunda bos vaxt yarandi ({klinika}). Rezerv ucun klinikaya zeng edin.";
+
         /// <summary>Replace Azerbaijani letters (ə, ş, ç …) with Latin ones: 160 chars per SMS instead of 70.</summary>
         public bool AsciiOnly { get; set; } = true;
 

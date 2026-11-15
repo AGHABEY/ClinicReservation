@@ -17,9 +17,11 @@ namespace ClinicReservation.Modules.Scheduling
 
         private readonly IAppDbContext _db;
         private readonly AuditService _audit;
+        private readonly Waitlist _waitlist;
 
-        public PatientLinks(IAppDbContext db, AuditService audit)
+        public PatientLinks(IAppDbContext db, AuditService audit, Waitlist waitlist)
         {
+            _waitlist = waitlist;
             _db = db;
             _audit = audit;
         }
@@ -57,6 +59,7 @@ namespace ClinicReservation.Modules.Scheduling
             res.CancelledBy = CancelledBy.Patient;
             await _db.SaveChangesAsync(ct);
             _audit.Log("Xəstə SMS linki ilə ləğv etdi", AuditEntities.Reservation, res.Id, res.Patient.FullName, userName: Actor);
+            await _waitlist.OfferFreedAsync(res, ct: ct);
         }
 
         /// <summary>Validated results after the birth-date check; at most 5 wrong tries an hour per link.</summary>
