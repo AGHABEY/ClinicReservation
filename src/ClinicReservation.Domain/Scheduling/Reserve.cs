@@ -32,6 +32,11 @@ namespace ClinicReservation.Models
         public CancellationReason? CancellationReason { get; set; }
         public CancelledBy? CancelledBy { get; set; }
 
+        /// <summary>The course this visit belongs to, and its number in it (1..Count).</summary>
+        public int? SeriesId { get; set; }
+        public ReserveSeries? Series { get; set; }
+        public int? SeriesNo { get; set; }
+
         /// <summary>How the booking was made.</summary>
         public ReserveSource Source { get; set; } = ReserveSource.Reception;
 

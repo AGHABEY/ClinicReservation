@@ -1224,3 +1224,4 @@ a.bed.busy:hover { border-color: var(--brand); }
 /* The hidden attribute must win over component display rules (.field is flex). */
 [hidden] { display: none !important; }
 .seg a > i.bi:first-child { margin-right: 6px; }
+a.line-item.quick-link.current { background: var(--brand-tint); box-shadow: inset 3px 0 0 var(--brand); }

@@ -71,7 +71,18 @@ namespace ClinicReservation.Controllers
                 if (string.IsNullOrWhiteSpace(model.Phone)) ModelState.Remove(nameof(model.Phone));
             }
 
-            var r = await _reservations.CreateAsync(model, patient, FormErrors(), ct);
+            // A course: first show the planned dates, book them after the user confirms.
+            if (model.SeriesCount > 1 && model.Step != "confirm")
+            {
+                var (planResult, plan) = await _reservations.PlanSeriesAsync(model, patient, FormErrors(), ct);
+                if (planResult.Ok) model.SeriesPlan = plan;
+                else ShowErrors(planResult);
+                model.ExistingPatient = patient;
+                return await FormView(model, null, ct);
+            }
+            var r = model.SeriesCount > 1
+                ? await _reservations.CreateSeriesAsync(model, patient, FormErrors(), ct)
+                : await _reservations.CreateAsync(model, patient, FormErrors(), ct);
             if (r.Ok)
             {
                 TempData["Success"] = r.Message;
@@ -174,7 +185,9 @@ namespace ClinicReservation.Controllers
         [HasPermission(Permissions.ReservationsManage)]
         public async Task<IActionResult> Cancel(CancelReserveViewModel model, CancellationToken ct)
         {
-            var r = await _reservations.CancelAsync(model.Id, model.ReasonId, model.By, model.Reason, ct);
+            var r = model.Series
+                ? await _reservations.CancelSeriesFromAsync(model.Id, model.ReasonId, model.By, model.Reason, ct)
+                : await _reservations.CancelAsync(model.Id, model.ReasonId, model.By, model.Reason, ct);
             if (r == null) return NotFound();
             TempData[r.Ok ? "Success" : "Error"] = r.Ok ? r.Message : r.ErrorText;
             return RedirectToAction(nameof(Details), new { id = model.Id });
@@ -185,6 +198,7 @@ namespace ClinicReservation.Controllers
             var res = await _queries.ReserveAsync(id, ct);
             if (res == null) return NotFound();
             ViewBag.CancelReasons = await _queries.CancellationReasonsAsync(ct);
+            if (res.SeriesId != null) ViewBag.SeriesSessions = await _queries.SeriesSessionsAsync(res.SeriesId.Value, ct);
             if (User.CanAny(Permissions.StockView, Permissions.StockIssue, Permissions.StockManage))
             {
                 ViewBag.StockDocs = await stock.ForReserveAsync(id, ct);

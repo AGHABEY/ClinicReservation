@@ -46,6 +46,7 @@ namespace ClinicReservation.Data
         public DbSet<OutboxMessage> OutboxMessages { get; set; }
         public DbSet<Equipment> Equipment { get; set; }
         public DbSet<CancellationReason> CancellationReasons { get; set; }
+        public DbSet<ReserveSeries> ReserveSeries { get; set; }
         public DbSet<AppUser> AppUsers { get; set; }
 
         /// <summary>Keys that sign login cookies and form tokens — shared by every app instance.</summary>
@@ -340,6 +341,12 @@ namespace ClinicReservation.Data
                 e.HasOne(r => r.CancellationReason).WithMany().HasForeignKey(r => r.CancellationReasonId).OnDelete(DeleteBehavior.SetNull);
                 e.HasOne(r => r.Equipment).WithMany().HasForeignKey(r => r.EquipmentId).OnDelete(DeleteBehavior.SetNull);
                 e.HasIndex(r => new { r.EquipmentId, r.AppointmentAt });
+                e.HasOne(r => r.Series).WithMany(s => s.Reserves).HasForeignKey(r => r.SeriesId).OnDelete(DeleteBehavior.SetNull);
+            });
+            builder.Entity<ReserveSeries>(e =>
+            {
+                e.Property(s => s.Pattern).HasMaxLength(200);
+                e.HasOne(s => s.Patient).WithMany().HasForeignKey(s => s.PatientId).OnDelete(DeleteBehavior.Restrict);
             });
 
             builder.Entity<OutboxMessage>(e =>
@@ -390,7 +397,7 @@ namespace ClinicReservation.Data
                     builder.Entity(t).ToTable(builder.Model.FindEntityType(t)!.GetTableName(), schema);
             }
             Schema("core", typeof(Patient), typeof(Department), typeof(Room), typeof(Equipment), typeof(Doctor), typeof(DoctorWorkHours), typeof(DoctorLeave), typeof(ExaminationType));
-            Schema("scheduling", typeof(Reserve), typeof(ReserveStatus), typeof(ReserveExaminationType), typeof(CancellationReason));
+            Schema("scheduling", typeof(Reserve), typeof(ReserveStatus), typeof(ReserveExaminationType), typeof(CancellationReason), typeof(ReserveSeries));
             Schema("billing", typeof(Payment));
             Schema("emr", typeof(MedicalRecord));
             Schema("lab", typeof(LabTest), typeof(ExaminationTypeLabTest), typeof(LabOrder), typeof(LabResult));

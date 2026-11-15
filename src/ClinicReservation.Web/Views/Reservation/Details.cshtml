@@ -271,6 +271,23 @@ else if (Model.Status?.Name == StatusNames.NoShow)
             </div>
         }
 
+        @if (ViewBag.SeriesSessions is List<Reserve> sessions && Model.Series != null)
+        {
+            <div class="card card-pad">
+                <h3 class="card-title"><i class="bi bi-calendar2-range"></i> Kurs · @Model.SeriesNo / @Model.Series.Count</h3>
+                <p class="hint-text" style="margin:-8px 0 10px;">@Model.Series.Pattern</p>
+                <div class="line-list">
+                    @foreach (var x in sessions)
+                    {
+                        <a class="line-item quick-link @(x.Id == Model.Id ? "current" : "")" asp-action="Details" asp-route-id="@x.Id">
+                            <span>@x.SeriesNo. @Fmt.DayShort(x.AppointmentAt) · @Fmt.Time(x.AppointmentAt)</span>
+                            <partial name="_StatusBadge" model="x.Status?.Name" />
+                        </a>
+                    }
+                </div>
+            </div>
+        }
+
         <div class="card">
             <div class="card-pad">
                 <h3 class="card-title"><i class="bi bi-clipboard2-pulse"></i> Müayinələr</h3>
@@ -359,6 +376,10 @@ else if (Model.Status?.Name == StatusNames.NoShow)
                     }
                 </div>
             </div>
+            @if (Model.SeriesId != null)
+            {
+                <label class="hint-text mt-3" style="display:flex; gap:8px; align-items:center;"><input type="checkbox" name="Series" value="true" /> Kursun bu və sonrakı bütün seanslarını ləğv et</label>
+            }
             <div class="field mt-3">
                 <label for="cancelReason">Qeyd <span class="hint-text">(istəyə bağlı)</span></label>
                 <input id="cancelReason" name="Reason" class="form-control" maxlength="250" placeholder="Məs: xəstə zəng edib imtina etdi" />

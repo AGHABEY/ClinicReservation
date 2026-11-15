@@ -47,6 +47,7 @@ namespace ClinicReservation.Data
         DbSet<OutboxMessage> OutboxMessages { get; }
         DbSet<Equipment> Equipment { get; }
         DbSet<CancellationReason> CancellationReasons { get; }
+        DbSet<ReserveSeries> ReserveSeries { get; }
 
         ChangeTracker ChangeTracker { get; }
         int SaveChanges();

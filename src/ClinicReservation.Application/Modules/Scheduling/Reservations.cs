@@ -40,25 +40,8 @@ namespace ClinicReservation.Modules.Scheduling
             var (examTypes, start, slot) = await ValidateAsync(form, null, validateBirthday: patient == null, r, ct);
             if (!r.Ok) return r;
 
-            var createdPatient = false;
-            if (patient == null)
-            {
-                patient = new Patient
-                {
-                    PinCode = Patient.NormalizePin(form.PinCode),
-                    Name = form.Name!.Trim(),
-                    Surname = form.Surname!.Trim(),
-                    Phone = form.Phone!.Trim(),
-                    Birthday = form.Birthday!.Value.Date,
-                    CreatedAt = ClinicTime.Now
-                };
-                _db.Patients.Add(patient);
-                createdPatient = true;
-            }
-            else if (!string.IsNullOrWhiteSpace(form.Phone) && form.Phone.Trim() != patient.Phone)
-            {
-                patient.Phone = form.Phone.Trim();
-            }
+            var (createdPatient, p) = PatientFor(form, patient);
+            patient = p;
 
             var reserve = new Reserve
             {
@@ -82,6 +65,132 @@ namespace ClinicReservation.Modules.Scheduling
             _audit.Log("Rezervasiya yaradıldı", AuditEntities.Reservation, reserve.Id,
                 $"{patient.FullName} — {Fmt.DateTime(reserve.AppointmentAt)}, {doctorName}");
             return Result.Success($"{patient.FullName} — {Fmt.DateTime(reserve.AppointmentAt)} üçün rezervasiya yaradıldı", reserve.Id);
+        }
+
+        /// <summary>The existing card (phone refreshed), or a new one from the form.</summary>
+        private (bool Created, Patient Patient) PatientFor(ReserveFormViewModel form, Patient? patient)
+        {
+            if (patient == null)
+            {
+                patient = new Patient
+                {
+                    PinCode = Patient.NormalizePin(form.PinCode),
+                    Name = form.Name!.Trim(),
+                    Surname = form.Surname!.Trim(),
+                    Phone = form.Phone!.Trim(),
+                    Birthday = form.Birthday!.Value.Date,
+                    CreatedAt = ClinicTime.Now
+                };
+                _db.Patients.Add(patient);
+                return (true, patient);
+            }
+            if (!string.IsNullOrWhiteSpace(form.Phone) && form.Phone.Trim() != patient.Phone)
+                patient.Phone = form.Phone.Trim();
+            return (false, patient);
+        }
+
+        // ---------- Course (kurs) ----------
+
+        public const int MaxSeriesSpanDays = 365;
+
+        /// <summary>
+        /// Dates of a course: from the start date, on the chosen weekdays, until the count is reached. Each date
+        /// gets the asked time if free, otherwise the nearest free time that day, otherwise nothing.
+        /// </summary>
+        public async Task<(Result Result, List<SeriesPlanItem> Plan)> PlanSeriesAsync(ReserveFormViewModel form, Patient? patient,
+            IEnumerable<(string? Field, string Message)> formErrors, CancellationToken ct = default)
+        {
+            var r = new Result();
+            foreach (var (f, m) in formErrors) r.Fail(m, f);
+            var (examTypes, _, _) = await ValidateAsync(form, null, validateBirthday: patient == null, r, ct, checkSlot: false);
+            if (form.SeriesCount < 2) r.Fail("Kurs üçün ən azı 2 seans", nameof(form.SeriesCount));
+            if (!TimeSpan.TryParse(form.AppointmentTime, out var time)) r.Fail("Seansların saatını seçin", nameof(form.AppointmentTime));
+            if (!r.Ok) return (r, new());
+
+            var shape = SlotService.Shape(examTypes);
+            var days = (form.SeriesDays is { Count: > 0 } ? form.SeriesDays : new List<DayOfWeek> { form.AppointmentDate!.Value.DayOfWeek }).ToHashSet();
+            var asked = time.ToString(@"hh\:mm");
+            var plan = new List<SeriesPlanItem>();
+            var start = form.AppointmentDate!.Value.Date;
+            for (var d = start; plan.Count < form.SeriesCount && d < start.AddDays(MaxSeriesSpanDays); d = d.AddDays(1))
+            {
+                if (!days.Contains(d.DayOfWeek)) continue;
+                var slots = _slots.GetSlots(form.DoctorId!.Value, d, null, shape.DurationMinutes, shape.EquipmentId);
+                var mine = slots.Slots.FirstOrDefault(x => x.Time == asked);
+                if (mine is { Available: true }) { plan.Add(new(d, asked, SeriesPlanStatus.Ok, null)); continue; }
+                var near = slots.Slots.Where(x => x.Available)
+                    .OrderBy(x => Math.Abs((TimeSpan.Parse(x.Time) - time).TotalMinutes)).FirstOrDefault();
+                plan.Add(near != null
+                    ? new(d, near.Time, SeriesPlanStatus.Alternative, $"{asked} doludur")
+                    : new(d, null, SeriesPlanStatus.NoTime, slots.Message ?? "Boş saat yoxdur"));
+            }
+            if (plan.Count < form.SeriesCount) r.Fail($"Bir il ərzində yalnız {plan.Count} uyğun gün tapıldı");
+            return (r, plan);
+        }
+
+        /// <summary>Books the course as planned now (dates without a free time are skipped and reported).</summary>
+        public async Task<Result> CreateSeriesAsync(ReserveFormViewModel form, Patient? patient, IEnumerable<(string? Field, string Message)> formErrors, CancellationToken ct = default)
+        {
+            var (r, plan) = await PlanSeriesAsync(form, patient, formErrors, ct);
+            if (!r.Ok) return r;
+            var bookable = plan.Where(x => x.Time != null).ToList();
+            if (bookable.Count == 0) return Result.Failure("Heç bir seans üçün boş saat tapılmadı");
+
+            var examTypes = await _db.ExaminationTypes.Include(e => e.Equipment).Where(e => form.ExaminationTypeIds!.Contains(e.Id)).ToListAsync(ct);
+            var shape = SlotService.Shape(examTypes);
+            var (createdPatient, p) = PatientFor(form, patient);
+            var days = form.SeriesDays is { Count: > 0 } ? form.SeriesDays : new List<DayOfWeek> { form.AppointmentDate!.Value.DayOfWeek };
+            var series = new ReserveSeries
+            {
+                Patient = p,
+                DoctorId = form.DoctorId,
+                Count = bookable.Count,
+                Pattern = $"{form.SeriesCount} seans · {string.Join(", ", days.OrderBy(d => ((int)d + 6) % 7).Select(Fmt.DayShortName))} · {form.AppointmentTime}",
+                CreatedAt = ClinicTime.Now,
+                CreatedBy = _user.UserName
+            };
+            var waiting = await _db.ReserveStatuses.FirstAsync(rs => rs.Name == StatusNames.Waiting, ct);
+            var no = 0;
+            foreach (var item in bookable)
+            {
+                // Re-checked at booking time: someone may have taken the time since the plan was shown.
+                var err = _slots.Validate(form.DoctorId!.Value, item.Date, item.Time!, null, out var at, out var slot, shape);
+                if (err != null) continue;
+                series.Reserves.Add(new Reserve
+                {
+                    Patient = p, DoctorId = form.DoctorId, RoomId = slot.RoomId, AppointmentAt = at, DurationMinutes = slot.SlotMinutes,
+                    EquipmentId = shape.EquipmentId, Source = Enum.IsDefined(form.Source) ? form.Source : ReserveSource.Reception,
+                    AddedDate = ClinicTime.Now, Status = waiting, SeriesNo = ++no,
+                    ReserveExaminationTypes = examTypes.Select(e => new ReserveExaminationType { ExaminationTypeId = e.Id, Price = e.Price }).ToList()
+                });
+            }
+            if (series.Reserves.Count == 0) return Result.Failure("Seçilən vaxtlar artıq doludur — tarixləri yenidən yoxlayın");
+            series.Count = series.Reserves.Count;
+            _db.ReserveSeries.Add(series);
+            await _db.SaveChangesAsync(ct);
+
+            if (createdPatient)
+                _audit.Log("Xəstə kartı yaradıldı", AuditEntities.Patient, p.Id, $"{p.FullName} ({p.PinCode})");
+            var first = series.Reserves.OrderBy(x => x.AppointmentAt).First();
+            _audit.Log("Kurs yaradıldı", AuditEntities.Reservation, first.Id,
+                $"{p.FullName}: {series.Pattern}, {series.Count} seans ({Fmt.Date(first.AppointmentAt)} – {Fmt.Date(series.Reserves.Max(x => x.AppointmentAt))})");
+            var skipped = form.SeriesCount - series.Count;
+            return Result.Success($"{p.FullName} üçün {series.Count} seanslıq kurs yaradıldı" + (skipped > 0 ? $" ({skipped} gün boş saat olmadığı üçün buraxıldı)" : ""), first.Id);
+        }
+
+        /// <summary>Cancels this session and the later ones of its course that can still be cancelled.</summary>
+        public async Task<Result?> CancelSeriesFromAsync(int reserveId, int? reasonId, CancelledBy? by, string? note, CancellationToken ct = default)
+        {
+            var res = await _db.Reserves.FirstOrDefaultAsync(r => r.Id == reserveId, ct);
+            if (res == null) return null;
+            if (res.SeriesId == null) return await CancelAsync(reserveId, reasonId, by, note, ct);
+            var ids = await _db.Reserves.Include(r => r.Status)
+                .Where(r => r.SeriesId == res.SeriesId && r.AppointmentAt >= res.AppointmentAt)
+                .OrderBy(r => r.AppointmentAt).ToListAsync(ct);
+            var done = 0;
+            foreach (var x in ids.Where(ReserveFlow.CanCancel))
+                if ((await CancelAsync(x.Id, reasonId, by, note, ct))?.Ok == true) done++;
+            return done == 0 ? Result.Failure("Ləğv ediləcək seans yoxdur") : Result.Success($"Kursun {done} seansı ləğv edildi", reserveId);
         }
 
         /// <summary>Changes time/doctor (before check-in) and the examinations; locked prices of kept examinations stay.</summary>
@@ -193,7 +302,7 @@ namespace ClinicReservation.Modules.Scheduling
 
         /// <summary>Examinations, birthday and the requested time; errors carry ReserveFormViewModel field names.</summary>
         private async Task<(List<ExaminationType> Exams, DateTime Start, SlotResult? Slot)> ValidateAsync(
-            ReserveFormViewModel form, Reserve? existing, bool validateBirthday, Result r, CancellationToken ct)
+            ReserveFormViewModel form, Reserve? existing, bool validateBirthday, Result r, CancellationToken ct, bool checkSlot = true)
         {
             var start = existing?.AppointmentAt ?? default;
             SlotResult? slot = null;
@@ -209,7 +318,7 @@ namespace ClinicReservation.Modules.Scheduling
                 else if (form.Birthday.Value.Year < 1900) r.Fail("Doğum tarixi düzgün deyil", nameof(form.Birthday));
             }
 
-            if (form.DoctorId != null && form.AppointmentDate.HasValue && !string.IsNullOrEmpty(form.AppointmentTime))
+            if (checkSlot && form.DoctorId != null && form.AppointmentDate.HasValue && !string.IsNullOrEmpty(form.AppointmentTime))
             {
                 var requested = form.AppointmentDate.Value.Date + (TimeSpan.TryParse(form.AppointmentTime, out var t) ? t : TimeSpan.Zero);
                 // An unchanged appointment stays valid even if it is in the past or off the grid —

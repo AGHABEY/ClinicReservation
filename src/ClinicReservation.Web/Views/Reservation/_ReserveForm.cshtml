@@ -158,6 +158,59 @@
             </div>
         </div>
 
+        @if (!Model.IsEdit)
+        {
+            var week = new[] { DayOfWeek.Monday, DayOfWeek.Tuesday, DayOfWeek.Wednesday, DayOfWeek.Thursday, DayOfWeek.Friday, DayOfWeek.Saturday, DayOfWeek.Sunday };
+            var chosenDays = Model.SeriesDays ?? new List<DayOfWeek>();
+            <div class="card">
+                <div class="card-pad">
+                    <h3 class="card-title"><i class="bi bi-calendar2-range"></i> Kurs (seriya) <span class="hint-text" style="font-weight:400;">— bir neçə seans eyni saatda</span></h3>
+                    <input type="hidden" name="Step" id="seriesStep" value="" />
+                    <div style="display:flex; gap:16px; flex-wrap:wrap; align-items:flex-end;">
+                        <div class="field" style="max-width:140px;">
+                            <label asp-for="SeriesCount">Seans sayı</label>
+                            <input asp-for="SeriesCount" type="number" min="1" max="60" class="form-control" id="seriesCount" />
+                            <span asp-validation-for="SeriesCount" class="text-danger"></span>
+                        </div>
+                        <div class="field">
+                            <label>Günlər <span class="hint-text">(boş — başlanğıc tarixin günü)</span></label>
+                            <div class="chip-group">
+                                @foreach (var d in week)
+                                {
+                                    <label class="chip"><input type="checkbox" name="SeriesDays" value="@d" checked="@chosenDays.Contains(d)" /> @Fmt.DayShortName(d)</label>
+                                }
+                            </div>
+                        </div>
+                    </div>
+                    @if (Model.SeriesPlan.Any())
+                    {
+                        <div class="table-scroll mt-3" id="seriesPlan">
+                            <table class="data">
+                                <thead><tr><th>№</th><th>Tarix</th><th>Saat</th><th></th></tr></thead>
+                                <tbody>
+                                    @{ var n = 0; }
+                                    @foreach (var item in Model.SeriesPlan)
+                                    {
+                                        <tr class="@(item.Status == SeriesPlanStatus.NoTime ? "row-muted" : "")">
+                                            <td>@(item.Time != null ? (++n).ToString() : "—")</td>
+                                            <td>@Fmt.DayShort(item.Date)</td>
+                                            <td style="font-weight:600;">@(item.Time ?? "—")</td>
+                                            <td>
+                                                @if (item.Status == SeriesPlanStatus.Ok) { <span class="badge-soft badge-confirmed">Boş</span> }
+                                                else if (item.Status == SeriesPlanStatus.Alternative) { <span class="badge-soft badge-waiting">Başqa saat</span> <span class="hint-text">@item.Note</span> }
+                                                else { <span class="badge-soft badge-cancelled">Buraxılacaq</span> <span class="hint-text">@item.Note</span> }
+                                            </td>
+                                        </tr>
+                                    }
+                                </tbody>
+                            </table>
+                        </div>
+                        <p class="hint-text" style="margin:8px 0 0;">«Kursu yarat» bu cədvəl üzrə bütün seansları yaradır. Dəyişiklik etsəniz, tarixlər yenidən yoxlanılır.</p>
+                    }
+                </div>
+            </div>
+        }
+
         <div class="card">
             <div class="card-pad">
                 <h3 class="card-title"><i class="bi bi-clipboard2-pulse"></i> Müayinələr</h3>
@@ -201,7 +254,7 @@
     </div>
 
     <div class="form-actions">
-        <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> @(Model.IsEdit ? "Yadda saxla" : "Rezervasiyanı yarat")</button>
+        <button type="submit" class="btn btn-primary" id="submitBtn"><i class="bi bi-check-lg"></i> <span>@(Model.IsEdit ? "Yadda saxla" : Model.SeriesPlan.Any() ? "Kursu yarat" : "Rezervasiyanı yarat")</span></button>
         @if (Model.IsEdit)
         {
             <a class="btn btn-light" asp-action="Details" asp-route-id="@Model.Id">İmtina</a>
@@ -317,6 +370,22 @@
             } finally {
                 grid.removeAttribute('aria-busy');
             }
+        }
+        // Course: the first submit shows the dates, the second (unchanged) books them.
+        const seriesCount = document.getElementById('seriesCount'), step = document.getElementById('seriesStep');
+        if (seriesCount && step) {
+            const planShown = !!document.getElementById('seriesPlan');
+            const label = document.querySelector('#submitBtn span');
+            // initial: the page as the server sent it (a plan on screen can be confirmed); any later change re-checks.
+            const sync = initial => {
+                const isCourse = parseInt(seriesCount.value || '1', 10) > 1;
+                const confirm = isCourse && planShown && initial;
+                step.value = confirm ? 'confirm' : '';
+                label.textContent = !isCourse ? 'Rezervasiyanı yarat' : confirm ? 'Kursu yarat' : 'Tarixləri yoxla';
+            };
+            document.querySelector('form').addEventListener('change', () => sync(false));
+            seriesCount.addEventListener('input', () => sync(false));
+            sync(true);
         }
         doctor.addEventListener('change', loadSlots);
         dateInput.addEventListener('change', loadSlots);

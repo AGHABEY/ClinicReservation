@@ -94,7 +94,7 @@ namespace ClinicReservation.Tests.Architecture
             var services = Application.GetTypes()
                 .Where(t => t.IsClass && !t.IsAbstract && t.IsPublic && t.Namespace?.StartsWith("ClinicReservation.Modules.") == true)
                 .Where(t => t.GetConstructors().Any(c => c.GetParameters().Any(p => p.ParameterType == typeof(IAppDbContext)
-                    || p.ParameterType.Namespace?.StartsWith("ClinicReservation.Modules.") == true)))
+                    || (p.ParameterType.IsClass && p.ParameterType.Namespace?.StartsWith("ClinicReservation.Modules.") == true))))
                 .Select(t => t.FullName!).ToList();
             var missing = services.Where(s => !program.Contains(s)).ToList();
             Assert.True(missing.Count == 0, "Not registered in Program.cs:\n" + string.Join("\n", missing));

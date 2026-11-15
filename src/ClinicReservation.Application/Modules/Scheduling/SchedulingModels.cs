@@ -46,6 +46,17 @@ namespace ClinicReservation.Modules.Scheduling
         /// <summary>How the booking reached the clinic.</summary>
         public ReserveSource Source { get; set; } = ReserveSource.Reception;
 
+        // ----- Course (kurs): several sessions at the same time on chosen weekdays -----
+        /// <summary>1 = a single visit.</summary>
+        [Range(1, 60, ErrorMessage = "Seans sayı 1–60 olmalıdır")]
+        public int SeriesCount { get; set; } = 1;
+        /// <summary>Weekdays of the sessions (empty = the start date's weekday).</summary>
+        public List<DayOfWeek>? SeriesDays { get; set; }
+        /// <summary>"confirm" after the user has seen the planned dates.</summary>
+        public string? Step { get; set; }
+        /// <summary>Planned dates shown before confirming (display only).</summary>
+        public List<SeriesPlanItem> SeriesPlan { get; set; } = new();
+
         // ----- Display only -----
         public bool IsEdit => Id > 0;
         public bool HasPayments { get; set; }
@@ -60,10 +71,17 @@ namespace ClinicReservation.Modules.Scheduling
         /// <summary>Catalog reason (required when the catalog has any).</summary>
         public int? ReasonId { get; set; }
         public CancelledBy? By { get; set; }
+        /// <summary>Also cancel the later sessions of the course.</summary>
+        public bool Series { get; set; }
 
         [StringLength(250)]
         public string? Reason { get; set; }
     }
+
+    /// <summary>One planned session: the asked time, a nearby free time that day, or nothing.</summary>
+    public record SeriesPlanItem(DateTime Date, string? Time, SeriesPlanStatus Status, string? Note);
+
+    public enum SeriesPlanStatus { Ok, Alternative, NoTime }
 
     /// <summary>Lists and slots the reservation form needs.</summary>
     public class ReserveFormData

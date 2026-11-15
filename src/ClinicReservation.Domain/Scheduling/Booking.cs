@@ -29,6 +29,20 @@ namespace ClinicReservation.Models
         public bool IsActive { get; set; } = true;
     }
 
+    /// <summary>Kurs: a set of visits booked together (e.g. 10 physiotherapy sessions, Mon/Wed/Fri 10:00).</summary>
+    public class ReserveSeries : BaseModel
+    {
+        public int PatientId { get; set; }
+        public Patient Patient { get; set; } = null!;
+        public int? DoctorId { get; set; }
+        /// <summary>As the user asked for it, e.g. "10 seans · B.e, Ç, C · 10:00".</summary>
+        public string Pattern { get; set; } = "";
+        public int Count { get; set; }
+        public DateTime CreatedAt { get; set; }
+        public string? CreatedBy { get; set; }
+        public List<Reserve> Reserves { get; set; } = new();
+    }
+
     public static class BookingLabels
     {
         public static string Source(ReserveSource s) => s switch

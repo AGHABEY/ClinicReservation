@@ -72,6 +72,7 @@ namespace ClinicReservation.Modules.Scheduling
                 .Include(rs => rs.Room)
                 .Include(rs => rs.Equipment)
                 .Include(rs => rs.CancellationReason)
+                .Include(rs => rs.Series)
                 .Include(rs => rs.Payments)
                 .Include(rs => rs.MedicalRecord)
                 .Include(rs => rs.ReserveExaminationTypes!).ThenInclude(rs => rs.ExaminationType)
@@ -129,6 +130,10 @@ namespace ClinicReservation.Modules.Scheduling
             var shape = _slots.ShapeOf(examTypeIds);
             return (_slots.GetSlots(doctorId, date, exclude, shape.DurationMinutes, shape.EquipmentId), shape);
         }
+
+        /// <summary>All sessions of a course, in order (course card on the reservation page).</summary>
+        public Task<List<Reserve>> SeriesSessionsAsync(int seriesId, CancellationToken ct = default) =>
+            _db.Reserves.Include(r => r.Status).Where(r => r.SeriesId == seriesId).OrderBy(r => r.AppointmentAt).ToListAsync(ct);
 
         public Task<List<CancellationReason>> CancellationReasonsAsync(CancellationToken ct = default) =>
             _db.CancellationReasons.Where(r => r.IsActive).OrderBy(r => r.SortOrder).ThenBy(r => r.Name).ToListAsync(ct);
