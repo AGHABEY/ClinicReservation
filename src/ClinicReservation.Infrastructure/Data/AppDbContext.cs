@@ -362,6 +362,24 @@ namespace ClinicReservation.Data
                 e.HasIndex(a => a.At);
                 e.HasIndex(a => new { a.EntityType, a.EntityId });
             });
+
+            // Each module owns its tables in its own PostgreSQL schema (Identity and data-protection
+            // keys stay in "public"). A module that is later moved out takes its schema with it.
+            void Schema(string schema, params Type[] types)
+            {
+                foreach (var t in types)
+                    builder.Entity(t).ToTable(builder.Model.FindEntityType(t)!.GetTableName(), schema);
+            }
+            Schema("core", typeof(Patient), typeof(Department), typeof(Room), typeof(Doctor), typeof(DoctorWorkHours), typeof(DoctorLeave), typeof(ExaminationType));
+            Schema("scheduling", typeof(Reserve), typeof(ReserveStatus), typeof(ReserveExaminationType));
+            Schema("billing", typeof(Payment));
+            Schema("emr", typeof(MedicalRecord));
+            Schema("lab", typeof(LabTest), typeof(ExaminationTypeLabTest), typeof(LabOrder), typeof(LabResult));
+            Schema("stock", typeof(StockItem), typeof(Warehouse), typeof(Supplier), typeof(StockBatch), typeof(StockDocument), typeof(StockMovement), typeof(ExaminationTypeStockItem));
+            Schema("inpatient", typeof(Ward), typeof(Bed), typeof(Admission), typeof(BedStay), typeof(Observation), typeof(MedicationOrder), typeof(MedicationDose));
+            Schema("notify", typeof(SmsMessage));
+            Schema("audit", typeof(AuditLog));
+            Schema("platform", typeof(OutboxMessage));
         }
     }
 }

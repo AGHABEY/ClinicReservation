@@ -129,7 +129,7 @@ namespace ClinicReservation.Migrations
                         .IsUnique()
                         .HasFilter("\"Status\" = 1");
 
-                    b.ToTable("Admissions");
+                    b.ToTable("Admissions", "inpatient");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.AuditLog", b =>
@@ -171,7 +171,7 @@ namespace ClinicReservation.Migrations
 
                     b.HasIndex("EntityType", "EntityId");
 
-                    b.ToTable("AuditLogs");
+                    b.ToTable("AuditLogs", "audit");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.Bed", b =>
@@ -198,7 +198,7 @@ namespace ClinicReservation.Migrations
                     b.HasIndex("WardId", "Name")
                         .IsUnique();
 
-                    b.ToTable("Beds");
+                    b.ToTable("Beds", "inpatient");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.BedStay", b =>
@@ -231,7 +231,7 @@ namespace ClinicReservation.Migrations
 
                     b.HasIndex("BedId");
 
-                    b.ToTable("BedStays");
+                    b.ToTable("BedStays", "inpatient");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.Department", b =>
@@ -255,7 +255,7 @@ namespace ClinicReservation.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Departments");
+                    b.ToTable("Departments", "core");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.Doctor", b =>
@@ -297,7 +297,7 @@ namespace ClinicReservation.Migrations
 
                     b.HasIndex("RoomId");
 
-                    b.ToTable("Doctors");
+                    b.ToTable("Doctors", "core");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.DoctorLeave", b =>
@@ -324,7 +324,7 @@ namespace ClinicReservation.Migrations
 
                     b.HasIndex("DoctorId");
 
-                    b.ToTable("DoctorLeaves");
+                    b.ToTable("DoctorLeaves", "core");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.DoctorWorkHours", b =>
@@ -358,7 +358,7 @@ namespace ClinicReservation.Migrations
                     b.HasIndex("DoctorId", "Day")
                         .IsUnique();
 
-                    b.ToTable("DoctorWorkHours");
+                    b.ToTable("DoctorWorkHours", "core");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.ExaminationType", b =>
@@ -386,7 +386,7 @@ namespace ClinicReservation.Migrations
 
                     b.HasIndex("DepartmentId");
 
-                    b.ToTable("ExaminationTypes");
+                    b.ToTable("ExaminationTypes", "core");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.ExaminationTypeLabTest", b =>
@@ -401,7 +401,7 @@ namespace ClinicReservation.Migrations
 
                     b.HasIndex("LabTestId");
 
-                    b.ToTable("ExaminationTypeLabTests");
+                    b.ToTable("ExaminationTypeLabTests", "lab");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.ExaminationTypeStockItem", b =>
@@ -420,7 +420,7 @@ namespace ClinicReservation.Migrations
 
                     b.HasIndex("StockItemId");
 
-                    b.ToTable("ExaminationTypeStockItems");
+                    b.ToTable("ExaminationTypeStockItems", "stock");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.LabOrder", b =>
@@ -475,7 +475,7 @@ namespace ClinicReservation.Migrations
 
                     b.HasIndex("ReserveId");
 
-                    b.ToTable("LabOrders");
+                    b.ToTable("LabOrders", "lab");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.LabResult", b =>
@@ -523,7 +523,7 @@ namespace ClinicReservation.Migrations
                     b.HasIndex("LabOrderId", "LabTestId")
                         .IsUnique();
 
-                    b.ToTable("LabResults");
+                    b.ToTable("LabResults", "lab");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.LabTest", b =>
@@ -597,7 +597,7 @@ namespace ClinicReservation.Migrations
                     b.HasIndex("Code")
                         .IsUnique();
 
-                    b.ToTable("LabTests");
+                    b.ToTable("LabTests", "lab");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.MedicalRecord", b =>
@@ -673,7 +673,7 @@ namespace ClinicReservation.Migrations
 
                     b.HasIndex("PatientId", "CreatedAt");
 
-                    b.ToTable("MedicalRecords");
+                    b.ToTable("MedicalRecords", "emr");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.MedicationDose", b =>
@@ -711,7 +711,7 @@ namespace ClinicReservation.Migrations
                     b.HasIndex("MedicationOrderId", "ScheduledAt")
                         .IsUnique();
 
-                    b.ToTable("MedicationDoses");
+                    b.ToTable("MedicationDoses", "inpatient");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.MedicationOrder", b =>
@@ -777,7 +777,7 @@ namespace ClinicReservation.Migrations
 
                     b.HasIndex("StockItemId");
 
-                    b.ToTable("MedicationOrders");
+                    b.ToTable("MedicationOrders", "inpatient");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.Observation", b =>
@@ -827,7 +827,7 @@ namespace ClinicReservation.Migrations
 
                     b.HasIndex("AdmissionId", "At");
 
-                    b.ToTable("Observations");
+                    b.ToTable("Observations", "inpatient");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.OutboxMessage", b =>
@@ -865,7 +865,7 @@ namespace ClinicReservation.Migrations
                     b.HasIndex("OccurredAt")
                         .HasFilter("\"ProcessedAt\" IS NULL");
 
-                    b.ToTable("OutboxMessages");
+                    b.ToTable("OutboxMessages", "platform");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.Patient", b =>
@@ -919,7 +919,7 @@ namespace ClinicReservation.Migrations
 
                     b.HasIndex("Surname", "Name");
 
-                    b.ToTable("Patients");
+                    b.ToTable("Patients", "core");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.Payment", b =>
@@ -949,7 +949,7 @@ namespace ClinicReservation.Migrations
 
                     b.HasIndex("ReserveId");
 
-                    b.ToTable("Payments");
+                    b.ToTable("Payments", "billing");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.Reserve", b =>
@@ -1031,7 +1031,7 @@ namespace ClinicReservation.Migrations
 
                     b.HasIndex("DoctorId", "AppointmentAt");
 
-                    b.ToTable("Reserves");
+                    b.ToTable("Reserves", "scheduling");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.ReserveExaminationType", b =>
@@ -1060,7 +1060,7 @@ namespace ClinicReservation.Migrations
 
                     b.HasIndex("ReserveId");
 
-                    b.ToTable("ReserveExaminationTypes");
+                    b.ToTable("ReserveExaminationTypes", "scheduling");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.ReserveStatus", b =>
@@ -1077,7 +1077,7 @@ namespace ClinicReservation.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("ReserveStatuses");
+                    b.ToTable("ReserveStatuses", "scheduling");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.Room", b =>
@@ -1097,7 +1097,7 @@ namespace ClinicReservation.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Rooms");
+                    b.ToTable("Rooms", "core");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.SmsMessage", b =>
@@ -1150,7 +1150,7 @@ namespace ClinicReservation.Migrations
 
                     b.HasIndex("ReserveId");
 
-                    b.ToTable("SmsMessages");
+                    b.ToTable("SmsMessages", "notify");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.StockBatch", b =>
@@ -1199,7 +1199,7 @@ namespace ClinicReservation.Migrations
 
                     b.HasIndex("StockItemId", "WarehouseId");
 
-                    b.ToTable("StockBatches");
+                    b.ToTable("StockBatches", "stock");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.StockDocument", b =>
@@ -1286,7 +1286,7 @@ namespace ClinicReservation.Migrations
 
                     b.HasIndex("ToWarehouseId");
 
-                    b.ToTable("StockDocuments");
+                    b.ToTable("StockDocuments", "stock");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.StockItem", b =>
@@ -1336,7 +1336,7 @@ namespace ClinicReservation.Migrations
 
                     b.HasIndex("Name");
 
-                    b.ToTable("StockItems");
+                    b.ToTable("StockItems", "stock");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.StockMovement", b =>
@@ -1387,7 +1387,7 @@ namespace ClinicReservation.Migrations
 
                     b.HasIndex("WarehouseId", "At");
 
-                    b.ToTable("StockMovements");
+                    b.ToTable("StockMovements", "stock");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.Supplier", b =>
@@ -1420,7 +1420,7 @@ namespace ClinicReservation.Migrations
 
                     b.HasKey("Id");
 
-                    b.ToTable("Suppliers");
+                    b.ToTable("Suppliers", "stock");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.Ward", b =>
@@ -1456,7 +1456,7 @@ namespace ClinicReservation.Migrations
 
                     b.HasIndex("DepartmentId");
 
-                    b.ToTable("Wards");
+                    b.ToTable("Wards", "inpatient");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.Warehouse", b =>
@@ -1485,7 +1485,7 @@ namespace ClinicReservation.Migrations
 
                     b.HasIndex("DepartmentId");
 
-                    b.ToTable("Warehouses");
+                    b.ToTable("Warehouses", "stock");
                 });
 
             modelBuilder.Entity("Microsoft.AspNetCore.DataProtection.EntityFrameworkCore.DataProtectionKey", b =>
