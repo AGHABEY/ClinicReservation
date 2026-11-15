@@ -22,11 +22,28 @@ Tək əmrlə həm verilənlər bazası, həm də veb tətbiq qalxır:
 docker compose up --build
 ```
 
-Sonra brauzerdə açın: **http://localhost:8080**
+Sonra brauzerdə açın: **http://localhost:8090**
 
 - Tətbiq başlayanda migration-lar avtomatik tətbiq olunur və ilkin data (rollar,
   admin istifadəçisi, statuslar) seed edilir.
 - PostgreSQL datası `pgdata` adlı Docker volume-da saxlanılır.
+
+### Portlar (toqquşmanın qarşısını almaq)
+
+Host portları dəyişdirilə bilər — `.env` faylı yaradın (`.env.example`-dən kopyalayın)
+və ya əmrlə verin:
+
+| Dəyişən | Default (host) | Konteyner |
+|---------|:--------------:|:---------:|
+| `WEB_PORT` | `8090` | `8080` |
+| `DB_PORT`  | `5433` | `5432` |
+
+```bash
+WEB_PORT=9000 DB_PORT=5544 docker compose up --build
+```
+
+> DB host portu standart `5432` deyil `5433`-dür ki, maşınınızdakı lokal PostgreSQL
+> ilə toqquşmasın.
 
 Dayandırmaq üçün:
 
