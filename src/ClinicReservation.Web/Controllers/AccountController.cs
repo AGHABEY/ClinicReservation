@@ -9,6 +9,10 @@ using Microsoft.AspNetCore.Mvc;
 
 namespace ClinicReservation.Controllers
 {
+    /// <summary>
+    /// Logins and roles. This is the one controller that reads AppDbContext directly: user and
+    /// role administration is ASP.NET Identity (a host concern), not a clinic module.
+    /// </summary>
     [Authorize]
     public class AccountController : Controller
     {
@@ -247,10 +251,7 @@ namespace ClinicReservation.Controllers
             var result = await _userManager.DeleteAsync(user);
             if (result.Succeeded)
             {
-                // A deleted login can't stay linked to a doctor.
-                foreach (var d in _context.Doctors.Where(d => d.UserId == user.Id))
-                    d.UserId = null;
-                _context.SaveChanges();
+                await HttpContext.RequestServices.GetRequiredService<ClinicReservation.Modules.Catalog.Doctors>().UnlinkUserAsync(user.Id);
                 _audit.Log("İstifadəçi silindi", AuditEntities.User, user.UserName);
             }
             if (result.Succeeded)

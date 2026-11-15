@@ -100,6 +100,8 @@ builder.Services.AddScoped<ClinicReservation.Modules.Billing.ReportQueries>();
 builder.Services.AddScoped<ClinicReservation.Modules.Patients.PatientDirectory>();
 builder.Services.AddScoped<ClinicReservation.Modules.Catalog.Doctors>();
 builder.Services.AddScoped<ClinicReservation.Modules.Catalog.ClinicSettings>();
+builder.Services.AddScoped<ClinicReservation.Modules.Notifications.SmsDesk>();
+builder.Services.AddScoped<ClinicReservation.Modules.Audit.AuditQueries>();
 builder.Services.AddScoped<ClinicReservation.Services.IUserDirectory, UserDirectory>();
 builder.Services.AddScoped<ClinicReservation.Services.AuditService>();
 builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.QueueService>();
@@ -120,12 +122,12 @@ builder.Services.AddScoped<ClinicReservation.Modules.Inpatient.WardSettings>();
 // SMS: "Log" = test mode (messages only appear in the SMS log), "Http" = real gateway.
 builder.Services.Configure<ClinicReservation.Models.SmsOptions>(builder.Configuration.GetSection("Sms"));
 if (string.Equals(builder.Configuration["Sms:Provider"], "Http", StringComparison.OrdinalIgnoreCase))
-    builder.Services.AddHttpClient<ClinicReservation.Services.ISmsSender, ClinicReservation.Services.HttpSmsSender>(c => c.Timeout = TimeSpan.FromSeconds(15));
+    builder.Services.AddHttpClient<ClinicReservation.Modules.Notifications.ISmsSender, ClinicReservation.Modules.Notifications.HttpSmsSender>(c => c.Timeout = TimeSpan.FromSeconds(15));
 else
-    builder.Services.AddSingleton<ClinicReservation.Services.ISmsSender, ClinicReservation.Services.LogSmsSender>();
-builder.Services.AddScoped<ClinicReservation.Services.SmsService>();
-builder.Services.AddSingleton<ClinicReservation.Services.ReminderWorker>();
-builder.Services.AddHostedService(sp => sp.GetRequiredService<ClinicReservation.Services.ReminderWorker>());
+    builder.Services.AddSingleton<ClinicReservation.Modules.Notifications.ISmsSender, ClinicReservation.Modules.Notifications.LogSmsSender>();
+builder.Services.AddScoped<ClinicReservation.Modules.Notifications.SmsService>();
+builder.Services.AddSingleton<ClinicReservation.Modules.Notifications.ReminderWorker>();
+builder.Services.AddHostedService(sp => sp.GetRequiredService<ClinicReservation.Modules.Notifications.ReminderWorker>());
 builder.Services.AddHttpContextAccessor();
 
 // Permission-based authorization: [HasPermission(Permissions.X)] on controllers/actions.

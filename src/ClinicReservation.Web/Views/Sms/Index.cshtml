@@ -74,7 +74,7 @@
                                     <div class="hint-text">@(m.Phone.StartsWith("994") ? "+" : "")@m.Phone</div>
                                 </td>
                                 <td>
-                                    <span class="badge-soft @(m.Status switch { SmsStatus.Sent => "badge-sent", SmsStatus.Simulated => "badge-sim", _ => "badge-failed" })">@SmsController.StatusLabel(m.Status)</span>
+                                    <span class="badge-soft @(m.Status switch { SmsStatus.Sent => "badge-sent", SmsStatus.Simulated => "badge-sim", _ => "badge-failed" })">@SmsDesk.StatusLabel(m.Status)</span>
                                     @if (m.Error != null) { <div class="hint-text" style="color:var(--bad); max-width:200px; white-space:normal;">@m.Error</div> }
                                 </td>
                                 <td class="wrap"><div class="sms-text">@m.Text</div><div class="hint-text">@m.Text.Length simvol · @SmsText.Segments(m.Text) SMS</div></td>

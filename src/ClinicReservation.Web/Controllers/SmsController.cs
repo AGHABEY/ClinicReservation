@@ -1,101 +1,51 @@
 using ClinicReservation.Authorization;
-using ClinicReservation.Data;
-using ClinicReservation.Helpers;
 using ClinicReservation.Models;
-using ClinicReservation.Services;
+using ClinicReservation.Modules.Notifications;
 using Microsoft.AspNetCore.Mvc;
-using Microsoft.EntityFrameworkCore;
 
 namespace ClinicReservation.Controllers
 {
     [HasPermission(Permissions.SmsManage)]
     public class SmsController : Controller
     {
-        private const int PageSize = 50;
-        private readonly AppDbContext _context;
-        private readonly SmsService _sms;
-        private readonly ReminderWorker _worker;
-        private readonly AuditService _audit;
+        private readonly SmsDesk _desk;
+        public SmsController(SmsDesk desk) => _desk = desk;
 
-        public SmsController(AppDbContext context, SmsService sms, ReminderWorker worker, AuditService audit)
+        public async Task<IActionResult> Index(SmsStatus? status, CancellationToken ct, int page = 1)
         {
-            _context = context;
-            _sms = sms;
-            _worker = worker;
-            _audit = audit;
-        }
-
-        public IActionResult Index(SmsStatus? status, int page = 1)
-        {
-            var query = _context.SmsMessages.Include(m => m.Patient).AsQueryable();
-            if (status != null)
-                query = query.Where(m => m.Status == status);
-
-            var total = query.Count();
             page = Math.Max(1, page);
-            var rows = query.OrderByDescending(m => m.CreatedAt).Skip((page - 1) * PageSize).Take(PageSize).ToList();
-
-            var today = ClinicTime.Today;
-            var now = ClinicTime.Now;
-            var o = _sms.Options;
+            var p = await _desk.PageAsync(status, page, ct);
             ViewBag.Status = status;
             ViewBag.Page = page;
-            ViewBag.Total = total;
-            ViewBag.PageSize = PageSize;
-            ViewBag.Options = o;
-            ViewBag.SentToday = _context.SmsMessages.Count(m => m.CreatedAt >= today && m.Status != SmsStatus.Failed);
-            ViewBag.FailedToday = _context.SmsMessages.Count(m => m.CreatedAt >= today && m.Status == SmsStatus.Failed);
-            ViewBag.Pending = _context.Reserves.Count(r => r.ReminderSentAt == null && r.AppointmentAt > now
-                && r.AppointmentAt <= now.AddHours(o.ReminderHoursBefore)
-                && (r.Status!.Name == StatusNames.Waiting || r.Status.Name == StatusNames.Confirmed));
-            ViewBag.ConfirmedBySms = _context.AuditLogs.Count(a => a.At >= today.AddDays(-30) && a.Action == "Xəstə SMS linki ilə təsdiq etdi");
-            ViewBag.CancelledBySms = _context.AuditLogs.Count(a => a.At >= today.AddDays(-30) && a.Action == "Xəstə SMS linki ilə ləğv etdi");
-            return View(rows);
+            ViewBag.Total = p.Total;
+            ViewBag.PageSize = SmsDesk.PageSize;
+            ViewBag.Options = p.Options;
+            ViewBag.SentToday = p.SentToday;
+            ViewBag.FailedToday = p.FailedToday;
+            ViewBag.Pending = p.Pending;
+            ViewBag.ConfirmedBySms = p.ConfirmedBySms;
+            ViewBag.CancelledBySms = p.CancelledBySms;
+            return View(p.Rows);
         }
 
         /// <summary>Sends (or re-sends) the reminder for one reservation right now.</summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> Send(int reserveId)
+        public async Task<IActionResult> Send(int reserveId, CancellationToken ct)
         {
-            var res = _context.Reserves.Include(r => r.Status).Include(r => r.Patient).Include(r => r.Doctor)
-                .FirstOrDefault(r => r.Id == reserveId);
-            if (res == null) return NotFound();
-            if (res.Status?.Name is not (StatusNames.Waiting or StatusNames.Confirmed) || res.AppointmentAt <= ClinicTime.Now)
-            {
-                TempData["Error"] = "Xatırlatma yalnız gələcək, aktiv rezervasiyaya göndərilir";
-                return RedirectToAction("Details", "Reservation", new { id = reserveId });
-            }
-
-            var msg = await _sms.SendReminderAsync(res, SmsService.KindManual, User.Identity?.Name);
-            _audit.Log("SMS göndərildi", AuditEntities.Sms, msg.Id, $"{res.Patient.FullName}, {msg.Phone}: {StatusLabel(msg.Status)}");
-            if (msg.Status == SmsStatus.Failed)
-                TempData["Error"] = $"SMS göndərilmədi: {msg.Error}";
-            else
-                TempData["Success"] = msg.Status == SmsStatus.Simulated
-                    ? "SMS test rejimində qeydə alındı (həqiqətən göndərilmədi — SMS jurnalına baxın)"
-                    : $"SMS {msg.Phone} nömrəsinə göndərildi";
+            var r = await _desk.SendReminderAsync(reserveId, ct);
+            if (r == null) return NotFound();
+            TempData[r.Ok ? "Success" : "Error"] = r.Ok ? r.Message : r.ErrorText;
             return RedirectToAction("Details", "Reservation", new { id = reserveId });
         }
 
         /// <summary>Runs the reminder job immediately instead of waiting for the next cycle.</summary>
         [HttpPost]
         [ValidateAntiForgeryToken]
-        public async Task<IActionResult> RunNow()
+        public async Task<IActionResult> RunNow(CancellationToken ct)
         {
-            var count = await _worker.RunOnceAsync(HttpContext.RequestAborted);
-            _audit.Log("SMS xatırlatmaları əl ilə işə salındı", AuditEntities.Sms, null, $"{count} SMS");
-            TempData["Success"] = count == 0
-                ? "Göndəriləcək xatırlatma yoxdur (və ya indi sakit saatlardır)"
-                : $"{count} xatırlatma göndərildi";
+            TempData["Success"] = (await _desk.RunNowAsync(ct)).Message;
             return RedirectToAction(nameof(Index));
         }
-
-        public static string StatusLabel(SmsStatus s) => s switch
-        {
-            SmsStatus.Sent => "Göndərildi",
-            SmsStatus.Simulated => "Test rejimi",
-            _ => "Xəta"
-        };
     }
 }

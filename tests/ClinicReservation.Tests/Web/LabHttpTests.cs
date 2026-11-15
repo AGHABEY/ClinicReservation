@@ -1,5 +1,6 @@
 using ClinicReservation.Data;
 using ClinicReservation.Models;
+using ClinicReservation.Modules.Notifications;
 using ClinicReservation.Tests.Infrastructure;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.DependencyInjection;
@@ -69,7 +70,7 @@ namespace ClinicReservation.Tests.Web
             var last = await lab.PostAsync($"/Lab/Order/{urine.Id}", "/Lab/Save", ("OrderId", urine.Id.ToString()), ("Results[0].Id", proId.ToString()), ("Results[0].Value", "Müsbət"),
                 ("Validate", "1"), ("SendSms", "true"));
             Assert.Contains("SMS", await lab.FollowAsync(last));
-            Assert.True(Db(db => db.SmsMessages.Any(m => m.ReserveId == reserveId && m.Kind == ClinicReservation.Services.SmsService.KindLabResult)));
+            Assert.True(Db(db => db.SmsMessages.Any(m => m.ReserveId == reserveId && m.Kind == ClinicReservation.Modules.Notifications.SmsService.KindLabResult)));
             Assert.Equal(LabFlag.Abnormal, Db(db => db.LabResults.Single(r => r.Id == proId).Flag));
 
             // Validated results are locked; reopening needs a reason.

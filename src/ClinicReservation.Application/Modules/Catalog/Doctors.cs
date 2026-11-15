@@ -190,6 +190,13 @@ namespace ClinicReservation.Modules.Catalog
             return Result.Success("Məzuniyyət silindi", leave.DoctorId);
         }
 
+        /// <summary>A deleted login can't stay linked to a doctor.</summary>
+        public async Task UnlinkUserAsync(string userId, CancellationToken ct = default)
+        {
+            foreach (var d in await _db.Doctors.Where(d => d.UserId == userId).ToListAsync(ct)) d.UserId = null;
+            await _db.SaveChangesAsync(ct);
+        }
+
         private static bool TryTime(string? s, out TimeSpan t) =>
             TimeSpan.TryParseExact(s ?? "", @"hh\:mm", null, out t) && t >= TimeSpan.Zero && t < TimeSpan.FromDays(1);
     }

@@ -4,10 +4,11 @@ using System.Text;
 using ClinicReservation.Data;
 using ClinicReservation.Helpers;
 using ClinicReservation.Models;
+using ClinicReservation.Services;
 using Microsoft.EntityFrameworkCore;
 using Microsoft.Extensions.Options;
 
-namespace ClinicReservation.Services
+namespace ClinicReservation.Modules.Notifications
 {
     public record SmsSendResult(SmsStatus Status, string? Error = null);
 
