@@ -18,9 +18,12 @@ namespace ClinicReservation.Modules.Scheduling
         private readonly AuditService _audit;
         private readonly ICurrentUser _user;
         private readonly Waitlist _waitlist;
+        private readonly NoShows _noShows;
 
-        public Reservations(IAppDbContext db, SlotService slots, QueueService queue, Outbox outbox, AuditService audit, ICurrentUser user, Waitlist waitlist)
+        public Reservations(IAppDbContext db, SlotService slots, QueueService queue, Outbox outbox, AuditService audit, ICurrentUser user,
+            Waitlist waitlist, NoShows noShows)
         {
+            _noShows = noShows;
             _waitlist = waitlist;
             _db = db;
             _slots = slots;
@@ -67,7 +70,9 @@ namespace ClinicReservation.Modules.Scheduling
             var doctorName = await _db.Doctors.Where(d => d.Id == reserve.DoctorId).Select(d => d.FullName).FirstOrDefaultAsync(ct);
             _audit.Log("Rezervasiya yaradıldı", AuditEntities.Reservation, reserve.Id,
                 $"{patient.FullName} — {Fmt.DateTime(reserve.AppointmentAt)}, {doctorName}");
-            return Result.Success($"{patient.FullName} — {Fmt.DateTime(reserve.AppointmentAt)} üçün rezervasiya yaradıldı", reserve.Id);
+            var ok = Result.Success($"{patient.FullName} — {Fmt.DateTime(reserve.AppointmentAt)} üçün rezervasiya yaradıldı", reserve.Id);
+            if (!createdPatient) ok.Warning = _noShows.Warning(await _noShows.CountAsync(patient.Id, ct));
+            return ok;
         }
 
         /// <summary>The existing card (phone refreshed), or a new one from the form.</summary>
@@ -179,7 +184,10 @@ namespace ClinicReservation.Modules.Scheduling
             _audit.Log("Kurs yaradıldı", AuditEntities.Reservation, first.Id,
                 $"{p.FullName}: {series.Pattern}, {series.Count} seans ({Fmt.Date(first.AppointmentAt)} – {Fmt.Date(series.Reserves.Max(x => x.AppointmentAt))})");
             var skipped = form.SeriesCount - series.Count;
-            return Result.Success($"{p.FullName} üçün {series.Count} seanslıq kurs yaradıldı" + (skipped > 0 ? $" ({skipped} gün boş saat olmadığı üçün buraxıldı)" : ""), first.Id);
+            var warning = createdPatient ? null : _noShows.Warning(await _noShows.CountAsync(p.Id, ct));
+            var done = Result.Success($"{p.FullName} üçün {series.Count} seanslıq kurs yaradıldı" + (skipped > 0 ? $" ({skipped} gün boş saat olmadığı üçün buraxıldı)" : ""), first.Id);
+            done.Warning = warning;
+            return done;
         }
 
         /// <summary>Cancels this session and the later ones of its course that can still be cancelled.</summary>
@@ -255,7 +263,14 @@ namespace ClinicReservation.Modules.Scheduling
             switch (to)
             {
                 case StatusNames.Confirmed: res.ConfirmDate = now; break;
+                case StatusNames.NoShow:
+                    res.NoShowAt = now;
+                    res.NoShowAuto = false;
+                    break;
                 case StatusNames.Arrived:
+                    // Late after a «Gəlmədi» mark: the visit counts as attended.
+                    res.NoShowAt = null;
+                    res.NoShowAuto = false;
                     res.ArrivedAt = now;
                     _queue.AssignTicket(res, now);
                     break;

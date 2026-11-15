@@ -18,6 +18,8 @@
     var canIssue = User.CanAny(Permissions.StockIssue, Permissions.StockManage);
     var showStock = stockDocs != null && (stockDocs.Any() || stockPending || (canIssue && visited));
     var showRecord = User.CanAny(Permissions.RecordsView, Permissions.RecordsEdit) && (Model.MedicalRecord != null || visited);
+    var noShowCount = ViewBag.NoShowCount as int? ?? 0;
+    var noShowWarn = ViewBag.NoShowWarn as int? ?? 0;
     ViewData["ReturnTo"] = "details";
     ViewData["Small"] = false;
 }
@@ -25,7 +27,13 @@
 <div class="page-head">
     <div>
         <h2>@Model.Patient.FullName</h2>
-        <p>Rezervasiya #@Model.Id · <partial name="_StatusBadge" model="Model.Status?.Name" /></p>
+        <p>Rezervasiya #@Model.Id · <partial name="_StatusBadge" model="Model.Status?.Name" />
+            @if (noShowCount > 0)
+            {
+                <span class="badge-soft @(noShowWarn > 0 && noShowCount >= noShowWarn ? "badge-failed" : "badge-default")" id="noShowBadge"
+                      title="Son aylarda gəlmədiyi qəbullar">@noShowCount dəfə gəlməyib</span>
+            }
+        </p>
     </div>
     <div class="page-actions">
         <a class="btn btn-light" asp-action="Index"><i class="bi bi-arrow-left"></i> Siyahı</a>
@@ -69,7 +77,11 @@
 else if (Model.Status?.Name == StatusNames.NoShow)
 {
     <div class="alert alert-warning">
-        <i class="bi bi-person-x-fill"></i> Xəstə qəbula gəlməyib.
+        <i class="bi bi-person-x-fill"></i> Xəstə qəbula gəlməyib@(Model.NoShowAuto ? $" — sistem {Fmt.DateTime(Model.NoShowAt)} avtomatik qeyd etdi (qeydiyyat olmadı)" : "").
+        @if (Model.AppointmentAt.Date == ClinicTime.Today && canManage)
+        {
+            <span>Gecikib gəlibsə, «Gecikib gəldi» düyməsini basın.</span>
+        }
         @if (balance < 0)
         {
             <strong>Əvvəlcədən ödənilmiş @Fmt.Money(-balance) qaytarılmalıdır.</strong>

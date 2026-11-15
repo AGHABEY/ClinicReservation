@@ -30,6 +30,16 @@ namespace ClinicReservation.Tests.Unit
         }
 
         [Fact]
+        public void Late_arrival_after_no_show_only_the_same_day()
+        {
+            var user = User(Permissions.ReservationsManage);
+            var now = new DateTime(2026, 11, 16, 15, 0, 0);
+            Assert.True(ReserveFlow.IsAllowed(At(StatusNames.NoShow, now.AddHours(-3)), StatusNames.Arrived, user, now));
+            Assert.False(ReserveFlow.IsAllowed(At(StatusNames.NoShow, now.AddDays(-1)), StatusNames.Arrived, user, now));
+            Assert.False(ReserveFlow.IsAllowed(At(StatusNames.NoShow, now.AddHours(-3)), StatusNames.Completed, user, now));
+        }
+
+        [Fact]
         public void Completed_visit_has_no_further_steps() =>
             Assert.Empty(ReserveFlow.Actions(At(StatusNames.Completed, ClinicTime.Now), User(Permissions.ReservationsManage, Permissions.ReservationsStatus), ClinicTime.Now));
 

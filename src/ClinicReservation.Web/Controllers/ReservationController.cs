@@ -15,9 +15,11 @@ namespace ClinicReservation.Controllers
     {
         private readonly ReservationQueries _queries;
         private readonly Reservations _reservations;
+        private readonly NoShows _noShows;
 
-        public ReservationController(ReservationQueries queries, Reservations reservations)
+        public ReservationController(ReservationQueries queries, Reservations reservations, NoShows noShows)
         {
+            _noShows = noShows;
             _queries = queries;
             _reservations = reservations;
         }
@@ -35,7 +37,9 @@ namespace ClinicReservation.Controllers
             ViewBag.DoctorId = doctorId;
             ViewBag.Query = q;
             ViewBag.Doctors = await _queries.AllDoctorsAsync(ct);
-            return View(await _queries.ListAsync(period, status, doctorId, q, ct));
+            var list = await _queries.ListAsync(period, status, doctorId, q, ct);
+            ViewBag.Risky = await _noShows.RiskyAsync(list.Select(r => r.PatientId), ct);
+            return View(list);
         }
 
         // ---------- Create ----------
@@ -97,6 +101,7 @@ namespace ClinicReservation.Controllers
             if (r.Ok)
             {
                 TempData["Success"] = r.Message;
+                if (r.Warning != null) TempData["Warning"] = r.Warning;
                 return RedirectToAction(nameof(Details), new { id = r.Id });
             }
             ShowErrors(r);
@@ -209,6 +214,8 @@ namespace ClinicReservation.Controllers
             var res = await _queries.ReserveAsync(id, ct);
             if (res == null) return NotFound();
             ViewBag.CancelReasons = await _queries.CancellationReasonsAsync(ct);
+            ViewBag.NoShowCount = await _noShows.CountAsync(res.PatientId, ct);
+            ViewBag.NoShowWarn = _noShows.Options.NoShowWarnAfter;
             if (res.SeriesId != null) ViewBag.SeriesSessions = await _queries.SeriesSessionsAsync(res.SeriesId.Value, ct);
             if (User.CanAny(Permissions.StockView, Permissions.StockIssue, Permissions.StockManage))
             {
@@ -248,6 +255,8 @@ namespace ClinicReservation.Controllers
             ViewBag.Slots = data.Slots;
             ViewBag.LockedPrices = data.LockedPrices;
             ViewBag.Shape = data.Shape;
+            if (!model.IsEdit && model.ExistingPatient != null)
+                ViewBag.NoShowWarning = _noShows.Warning(await _noShows.CountAsync(model.ExistingPatient.Id, ct));
             return View(model);
         }
 

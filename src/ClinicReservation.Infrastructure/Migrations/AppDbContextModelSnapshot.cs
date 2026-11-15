@@ -1064,6 +1064,12 @@ namespace ClinicReservation.Migrations
                     b.Property<int?>("EquipmentId")
                         .HasColumnType("integer");
 
+                    b.Property<DateTime?>("NoShowAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("NoShowAuto")
+                        .HasColumnType("boolean");
+
                     b.Property<int>("PatientId")
                         .HasColumnType("integer");
 

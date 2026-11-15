@@ -40,7 +40,7 @@ namespace ClinicReservation.Controllers
 
         /// <summary>FİN lookup for the reservation form.</summary>
         [HttpGet]
-        public async Task<IActionResult> Lookup(string pin, CancellationToken ct)
+        public async Task<IActionResult> Lookup(string pin, [FromServices] ClinicReservation.Modules.Scheduling.NoShows noShows, CancellationToken ct)
         {
             var found = await _patients.LookupAsync(pin, ct);
             if (found == null) return Json(new { found = false });
@@ -54,6 +54,7 @@ namespace ClinicReservation.Controllers
                 phone = p.Phone,
                 birthday = p.Birthday.ToString("yyyy-MM-dd"),
                 visits,
+                noShowWarning = noShows.Warning(await noShows.CountAsync(p.Id, ct)),
                 url = Url.Action(nameof(Details), new { id = p.Id })
             });
         }

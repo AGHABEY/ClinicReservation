@@ -11,6 +11,7 @@
     if (roleLabel == "—") { roleLabel = ""; }
     var success = TempData["Success"] as string;
     var error = TempData["Error"] as string;
+    var warning = TempData["Warning"] as string;
 }
 <!DOCTYPE html>
 <html lang="az">
@@ -264,6 +265,13 @@
                 {
                     <div class="alert alert-danger flash" role="alert">
                         <i class="bi bi-exclamation-circle-fill"></i> <span>@error</span>
+                        <button type="button" class="flash-close" aria-label="Bağla" onclick="this.parentElement.remove()"><i class="bi bi-x-lg"></i></button>
+                    </div>
+                }
+                @if (!string.IsNullOrEmpty(warning))
+                {
+                    <div class="alert alert-warning flash" role="status">
+                        <i class="bi bi-exclamation-triangle-fill"></i> <span>@warning</span>
                         <button type="button" class="flash-close" aria-label="Bağla" onclick="this.parentElement.remove()"><i class="bi bi-x-lg"></i></button>
                     </div>
                 }

@@ -26,6 +26,11 @@ namespace ClinicReservation.Services
                 new Step(StatusNames.Arrived, "Gəldi", "bi-person-check", "btn-success", Permissions.ReservationsManage),
                 new Step(StatusNames.NoShow, "Gəlmədi", "bi-person-x", "btn-light", Permissions.ReservationsManage),
             },
+            // Marked «Gəlmədi» (often automatically) but turned up late the same day.
+            [StatusNames.NoShow] = new[]
+            {
+                new Step(StatusNames.Arrived, "Gecikib gəldi", "bi-person-check", "btn-light", Permissions.ReservationsManage),
+            },
             [StatusNames.Arrived] = new[]
             {
                 new Step(StatusNames.InProgress, "Qəbula başla", "bi-play-circle", "btn-success", Permissions.ReservationsStatus),
@@ -37,10 +42,13 @@ namespace ClinicReservation.Services
             },
         };
 
-        /// <summary>Actions the user may take now (no-show only once the time has passed).</summary>
+        /// <summary>Actions the user may take now (no-show only once the time has passed; late arrival only that day).</summary>
         public static IEnumerable<Step> Actions(Reserve r, ClaimsPrincipal user, DateTime now)
         {
-            if (!Next.TryGetValue(r.Status?.Name ?? StatusNames.Waiting, out var steps))
+            var from = r.Status?.Name ?? StatusNames.Waiting;
+            if (!Next.TryGetValue(from, out var steps))
+                return Enumerable.Empty<Step>();
+            if (from == StatusNames.NoShow && r.AppointmentAt.Date != now.Date)
                 return Enumerable.Empty<Step>();
             return steps.Where(s => user.Can(s.Permission) && (s.To != StatusNames.NoShow || r.AppointmentAt <= now));
         }

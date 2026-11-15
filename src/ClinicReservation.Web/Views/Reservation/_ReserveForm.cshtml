@@ -48,6 +48,10 @@
                         </span>
                         <a id="pfLink" href="@(existing == null ? "#" : Url.Action("Details", "Patient", new { id = existing.Id }))" target="_blank" rel="noopener">Karta bax <i class="bi bi-box-arrow-up-right"></i></a>
                     </div>
+                    @{ var noShowWarning = ViewBag.NoShowWarning as string; }
+                    <div id="noShowWarn" class="alert alert-warning mt-3" style="margin-bottom:0;" hidden="@(noShowWarning == null)">
+                        <i class="bi bi-person-x-fill"></i> <span>@noShowWarning</span>
+                    </div>
 
                     <div class="form-grid mt-3">
                         <div class="field">
@@ -316,11 +320,15 @@
                 document.getElementById('pfVisits').textContent = p.visits ? '· ' + p.visits + ' tamamlanmış vizit' : '· yeni xəstə';
                 document.getElementById('pfLink').href = p.url;
                 found.hidden = false;
+                const warn = document.getElementById('noShowWarn');
+                warn.querySelector('span').textContent = p.noShowWarning || '';
+                warn.hidden = !p.noShowWarning;
             } catch (e) { /* lookup is a convenience; the server re-checks */ }
         }
         function unlock() {
             if (found.hidden) return;
             found.hidden = true;
+            document.getElementById('noShowWarn').hidden = true;
             lockFields.forEach(f => { f.readOnly = false; f.value = ''; });
             document.getElementById('Phone').value = '';
         }

@@ -50,6 +50,8 @@ namespace ClinicReservation.Tests.Infrastructure
         {
             builder.UseEnvironment("Development");
             builder.UseSetting("Sms:RemindersEnabled", "false");
+            // Tests call NoShows.MarkOverdueAsync themselves; a background round would flip other tests' rows.
+            builder.UseSetting("Scheduling:AutoNoShowAfterMinutes", "0");
             builder.UseSetting("Sms:Provider", "Log");
             builder.ConfigureServices(services =>
             {

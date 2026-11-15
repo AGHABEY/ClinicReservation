@@ -6,6 +6,7 @@
     var status = ViewBag.Status as string;
     var doctorId = ViewBag.DoctorId as int?;
     var doctors = (List<Doctor>)ViewBag.Doctors;
+    var risky = ViewBag.Risky as Dictionary<int, int> ?? new();
     var periods = new (string Key, string Label)[]
     {
         ("today", "Bu gün"), ("tomorrow", "Sabah"), ("week", "7 gün"),
@@ -90,6 +91,10 @@
                         </td>
                         <td>
                             <a asp-controller="Patient" asp-action="Details" asp-route-id="@item.PatientId" class="link-strong">@item.Patient.FullName</a>
+                            @if (risky.TryGetValue(item.PatientId, out var missed))
+                            {
+                                <i class="bi bi-person-x-fill" style="color:var(--bad);" title="@missed dəfə gəlməyib" aria-label="@missed dəfə gəlməyib"></i>
+                            }
                             <div class="hint-text">@item.Patient.PinCode</div>
                         </td>
                         <td>

@@ -11,5 +11,6 @@ namespace ClinicReservation.Services
     {
         public const long Migrations = 7_301_001;
         public const long SmsReminders = 7_301_002;
+        public const long NoShows = 7_301_004;
     }
 }
