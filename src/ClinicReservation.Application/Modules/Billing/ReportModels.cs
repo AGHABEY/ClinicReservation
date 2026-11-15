@@ -36,6 +36,8 @@ namespace ClinicReservation.Modules.Billing
         public decimal TotalIncome { get; set; }
         public decimal CashTotal { get; set; }
         public decimal CardTotal { get; set; }
+        /// <summary>Paid with loyalty points (not money).</summary>
+        public decimal PointsTotal { get; set; }
         public int PaymentCount { get; set; }
         public decimal RefundTotal { get; set; }
 

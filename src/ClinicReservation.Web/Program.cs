@@ -99,6 +99,11 @@ builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.CalendarQueries>
 builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.Referrals>();
 builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.ReferralQueries>();
 builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.PriceQueries>();
+builder.Services.Configure<ClinicReservation.Models.LoyaltyOptions>(builder.Configuration.GetSection("Loyalty"));
+builder.Services.AddScoped<ClinicReservation.Modules.Loyalty.LoyaltyQueries>();
+builder.Services.AddScoped<ClinicReservation.Modules.Loyalty.LoyaltyCards>();
+builder.Services.AddScoped<ClinicReservation.Modules.Loyalty.DiscountCatalog>();
+builder.Services.AddScoped<ClinicReservation.Modules.Loyalty.PatientDiscounts>();
 builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.FollowUps>();
 builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.FollowUpQueries>();
 builder.Services.Configure<ClinicReservation.Models.SchedulingOptions>(builder.Configuration.GetSection("Scheduling"));
@@ -127,6 +132,7 @@ builder.Services.AddScoped<ClinicReservation.Events.IEventHandler, ClinicReserva
 builder.Services.AddScoped<ClinicReservation.Events.IEventHandler, ClinicReservation.Modules.Notifications.SmsOnWaitlistOffered>();
 builder.Services.AddScoped<ClinicReservation.Events.IEventHandler, ClinicReservation.Modules.Notifications.SmsOnFollowUpReminder>();
 builder.Services.AddScoped<ClinicReservation.Events.IEventHandler, ClinicReservation.Modules.Scheduling.PlanFollowUpOnRecord>();
+builder.Services.AddScoped<ClinicReservation.Events.IEventHandler, ClinicReservation.Modules.Loyalty.PointsOnPayment>();
 builder.Services.AddScoped<ClinicReservation.Events.IEventHandler, ClinicReservation.Modules.Pharmacy.TakeMaterialsOnLabSample>();
 builder.Services.AddScoped<ClinicReservation.Events.IEventHandler, ClinicReservation.Modules.Pharmacy.IssueMedicineOnDoseGiven>();
 

@@ -41,7 +41,7 @@
                     <div class="form-grid">
                         <div class="field">
                             <label asp-for="PinCode">FİN kod</label>
-                            <input asp-for="PinCode" id="pinInput" class="form-control" placeholder="5ABC12D" maxlength="7"
+                            <input lang="en" asp-for="PinCode" id="pinInput" class="form-control" placeholder="5ABC12D" maxlength="7"
                                    style="text-transform:uppercase;" autocomplete="off" readonly="@Model.IsEdit" autofocus="@(!Model.IsEdit)" />
                             <span asp-validation-for="PinCode" class="text-danger"></span>
                             @if (!Model.IsEdit)
@@ -187,6 +187,11 @@
                                 @foreach (var src in Enum.GetValues<ReserveSource>()) { <option value="@src">@BookingLabels.Source(src)</option> }
                             </select>
                         </div>
+                        <div class="field mt-3" style="max-width:260px;">
+                            <label asp-for="PromoCode">Promo kod <span class="hint-text">(varsa)</span></label>
+                            <input lang="en" asp-for="PromoCode" id="promoInput" class="form-control" maxlength="30" style="text-transform:uppercase;" autocomplete="off" />
+                            <span asp-validation-for="PromoCode" class="text-danger" id="promoError"></span>
+                        </div>
                     }
                 </div>
             </div>
@@ -278,6 +283,14 @@
                         <span>Cəmi</span>
                         <span class="money" id="examTotal">@Fmt.Money(0)</span>
                     </div>
+                    @if (!Model.IsEdit)
+                    {
+                        <div id="discountPreview" hidden>
+                            <div class="line-total" style="font-weight:500; color:var(--ok);"><span id="discountLabel">Endirim</span><span class="money" id="discountTotal"></span></div>
+                            <div class="line-total"><span>Ödəniləcək</span><span class="money" id="payTotal"></span></div>
+                        </div>
+                        <p class="hint-text" id="promoNote" hidden></p>
+                    }
                     @if (Model.HasPayments)
                     {
                         <p class="hint-text" style="margin-top:12px;"><i class="bi bi-info-circle"></i> Bu rezervasiya üzrə ödəniş var. Müayinələri dəyişsəniz, qalıq borc yenidən hesablanacaq.</p>
@@ -314,6 +327,46 @@
         boxes.forEach(b => b.addEventListener('change', updateTotal));
         updateTotal();
 
+        // ---- Discount preview: the server weighs the patient's discounts (best one per service).
+        const preview = document.getElementById('discountPreview');
+        const promo = document.getElementById('promoInput');
+        let quoteTimer = null, quoteSeq = 0;
+        function scheduleQuote() { clearTimeout(quoteTimer); quoteTimer = setTimeout(quote, 250); }
+        async function quote() {
+            if (!preview) return;
+            const ids = [...boxes].filter(b => b.checked).map(b => b.value);
+            const promoErr = document.getElementById('promoError'), note = document.getElementById('promoNote');
+            if (!ids.length) { preview.hidden = true; note.hidden = true; return; }
+            const p = new URLSearchParams();
+            const pinEl = document.getElementById('pinInput'), docEl = document.getElementById('doctorSelect'), dateEl = document.getElementById('apptDate');
+            if (pinEl && pinEl.value.trim()) p.set('pin', pinEl.value.trim());
+            if (docEl && docEl.value) p.set('doctorId', docEl.value);
+            if (dateEl && dateEl.value) p.set('date', dateEl.value);
+            const t = document.querySelector('input[name="AppointmentTime"]:checked');
+            if (t) p.set('time', t.value);
+            if (promo && promo.value.trim()) p.set('promo', promo.value.trim());
+            ids.forEach(i => p.append('examTypeIds', i));
+            const seq = ++quoteSeq;
+            try {
+                const res = await fetch('@Url.Action("Quote", "Reservation")?' + p, { headers: { 'Accept': 'application/json' } });
+                const q = await res.json();
+                if (seq !== quoteSeq) return;
+                preview.hidden = !(q.discount > 0);
+                if (q.discount > 0) {
+                    document.getElementById('discountTotal').textContent = '−' + fmt(q.discount);
+                    document.getElementById('payTotal').textContent = fmt(q.total);
+                    document.getElementById('discountLabel').textContent = 'Endirim: ' + [...new Set(q.lines.map(l => l.source))].join('; ');
+                }
+                if (promoErr) promoErr.textContent = q.promoError || '';
+                note.hidden = !q.promoNote;
+                note.textContent = q.promoNote || '';
+            } catch (e) { /* preview only; the server prices the booking itself */ }
+        }
+        boxes.forEach(b => b.addEventListener('change', scheduleQuote));
+        if (promo) promo.addEventListener('input', scheduleQuote);
+        document.addEventListener('change', e => { if (e.target.matches('#doctorSelect, #apptDate, input[name="AppointmentTime"]')) scheduleQuote(); });
+        scheduleQuote();
+
         // ---- Patient lookup by FİN
         const pin = document.getElementById('pinInput');
         const found = document.getElementById('patientFound');
@@ -336,7 +389,8 @@
                 document.getElementById('Birthday').value = p.birthday;
                 lockFields.forEach(f => f.readOnly = true);
                 document.getElementById('pfName').textContent = p.name + ' ' + p.surname;
-                document.getElementById('pfVisits').textContent = p.visits ? '· ' + p.visits + ' tamamlanmış vizit' : '· yeni xəstə';
+                document.getElementById('pfVisits').textContent = (p.visits ? '· ' + p.visits + ' tamamlanmış vizit' : '· yeni xəstə') + (p.discounts ? ' · ' + p.discounts : '');
+                scheduleQuote();
                 document.getElementById('pfLink').href = p.url;
                 found.hidden = false;
                 const warn = document.getElementById('noShowWarn');

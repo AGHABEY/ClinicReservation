@@ -51,9 +51,11 @@ namespace ClinicReservation.Modules.Scheduling
             var (examTypes, start, slot) = await ValidateAsync(form, null, validateBirthday: patient == null, r, ct);
             if (!r.Ok) return r;
 
+            var quote = await _prices.QuoteAsync(patient?.Id, form.DoctorId, start, examTypes, null, form.PromoCode, ct);
+            if (quote.PromoError != null) return r.Fail(quote.PromoError, nameof(form.PromoCode));
+
             var (createdPatient, p) = PatientFor(form, patient);
             patient = p;
-            var quote = await _prices.QuoteAsync(createdPatient ? null : patient.Id, form.DoctorId, start, examTypes, null, ct);
 
             var reserve = new Reserve
             {
@@ -159,6 +161,8 @@ namespace ClinicReservation.Modules.Scheduling
 
             var examTypes = await _db.ExaminationTypes.Include(e => e.Equipment).Where(e => form.ExaminationTypeIds!.Contains(e.Id)).ToListAsync(ct);
             var shape = SlotService.Shape(examTypes);
+            var check = await _prices.QuoteAsync(patient?.Id, form.DoctorId, bookable[0].Date, examTypes, null, form.PromoCode, ct);
+            if (check.PromoError != null) return new Result().Fail(check.PromoError, nameof(form.PromoCode));
             var (createdPatient, p) = PatientFor(form, patient);
             var days = form.SeriesDays is { Count: > 0 } ? form.SeriesDays : new List<DayOfWeek> { form.AppointmentDate!.Value.DayOfWeek };
             var series = new ReserveSeries
@@ -182,7 +186,7 @@ namespace ClinicReservation.Modules.Scheduling
                     Patient = p, DoctorId = form.DoctorId, RoomId = slot.RoomId, AppointmentAt = at, DurationMinutes = slot.SlotMinutes,
                     EquipmentId = shape.EquipmentId, Source = Enum.IsDefined(form.Source) ? form.Source : ReserveSource.Reception,
                     AddedDate = ClinicTime.Now, Status = waiting, SeriesNo = ++no,
-                    ReserveExaminationTypes = (await _prices.QuoteAsync(createdPatient ? null : p.Id, form.DoctorId, at, examTypes, null, ct)).Lines.Select(l => l.ToLine()).ToList()
+                    ReserveExaminationTypes = (await _prices.QuoteAsync(createdPatient ? null : p.Id, form.DoctorId, at, examTypes, null, form.PromoCode, ct)).Lines.Select(l => l.ToLine()).ToList()
                 });
             }
             if (series.Reserves.Count == 0) return Result.Failure("Seçilən vaxtlar artıq doludur — tarixləri yenidən yoxlayın");
@@ -255,7 +259,7 @@ namespace ClinicReservation.Modules.Scheduling
             var existingIds = items.Select(i => i.ExaminationTypeId).ToHashSet();
             var added = examTypes.Where(e => !existingIds.Contains(e.Id)).ToList();
             if (added.Count > 0)
-                foreach (var line in (await _prices.QuoteAsync(reserve.PatientId, reserve.DoctorId, reserve.AppointmentAt, added, reserve.Id, ct)).Lines)
+                foreach (var line in (await _prices.QuoteAsync(reserve.PatientId, reserve.DoctorId, reserve.AppointmentAt, added, reserve.Id, null, ct)).Lines)
                     items.Add(line.ToLine());
             if (removed.Count > 0) changes.Add("çıxarıldı: " + string.Join(", ", removed.Select(x => x.ExaminationType.Name)));
             if (added.Count > 0) changes.Add("əlavə edildi: " + string.Join(", ", added.Select(a => a.Name)));
@@ -264,6 +268,62 @@ namespace ClinicReservation.Modules.Scheduling
             _audit.Log("Rezervasiya dəyişdirildi", AuditEntities.Reservation, reserve.Id,
                 $"{reserve.Patient.FullName}: " + (changes.Count > 0 ? string.Join("; ", changes) : "dəyişiklik yoxdur"));
             return Result.Success("Rezervasiya yeniləndi", reserve.Id);
+        }
+
+        /// <summary>
+        /// Əl ilə endirim: % or ₼ on the whole visit (₼ spread over the services by price), reason required, up to the
+        /// user's role limit. Like every discount it doesn't add up: a service keeps its current discount if that is bigger.
+        /// </summary>
+        public async Task<Result?> ManualDiscountAsync(int id, DiscountType type, decimal value, string? reason, CancellationToken ct = default)
+        {
+            var res = await _db.Reserves.Include(r => r.Status).Include(r => r.Patient).Include(r => r.Payments)
+                .Include(r => r.ReserveExaminationTypes!).ThenInclude(x => x.ExaminationType)
+                .FirstOrDefaultAsync(r => r.Id == id, ct);
+            if (res == null) return null;
+            var limit = _user.DiscountLimit;
+            if (limit <= 0) return Result.Failure("Əl ilə endirim etmək icazəniz yoxdur");
+            if (StatusNames.IsClosedWithoutVisit(res.Status?.Name)) return Result.Failure($"«{StatusNames.Label(res.Status?.Name)}» rezervasiyaya endirim edilmir");
+            if (string.IsNullOrWhiteSpace(reason)) return Result.Failure("Endirimin səbəbini yazın");
+            var lines = res.ReserveExaminationTypes!.Where(l => l.ListPrice > 0).OrderBy(l => l.Id).ToList();
+            var listTotal = lines.Sum(l => l.ListPrice);
+            if (listTotal <= 0) return Result.Failure("Endirim ediləcək xidmət yoxdur");
+            if (value <= 0 || (type == DiscountType.Percent && value > 100) || (type == DiscountType.Amount && value > listTotal))
+                return Result.Failure(type == DiscountType.Percent ? "Faiz 0–100 olmalıdır" : $"Məbləğ 0 ilə {Fmt.Money(listTotal)} arasında olmalıdır");
+
+            // Per service: % of its price, or its share of the amount (the last one takes the rounding rest).
+            var wanted = new Dictionary<ReserveExaminationType, decimal>();
+            var left = Math.Round(value, 2);
+            for (var i = 0; i < lines.Count; i++)
+            {
+                var l = lines[i];
+                var a = type == DiscountType.Percent ? Math.Round(l.ListPrice * value / 100m, 2)
+                    : i == lines.Count - 1 ? left : Math.Round(value * l.ListPrice / listTotal, 2);
+                a = Math.Min(a, l.ListPrice);
+                left -= a;
+                wanted[l] = a;
+            }
+            var percent = Math.Round(wanted.Values.Sum() * 100m / listTotal, 2);
+            if (percent > limit) return Result.Failure($"Sizin endirim limitiniz {limit}%-dir (bu endirim {percent:0.##}%)");
+
+            var label = (type == DiscountType.Percent ? $"Əl ilə endirim (−{value:0.##}%)" : $"Əl ilə endirim (−{Fmt.Money(value)})") + $": {reason.Trim()}";
+            if (label.Length > 100) label = label[..100];
+            var changed = 0;
+            foreach (var (l, a) in wanted.Where(x => x.Value > x.Key.Discount))
+            {
+                l.Discount = a;
+                l.Price = l.ListPrice - a;
+                l.DiscountSource = label;
+                l.DiscountKind = DiscountKind.Manual;
+                l.DiscountRefId = null;
+                changed++;
+            }
+            if (changed == 0) return Result.Failure("Xidmətlərin indiki endirimi bundan böyükdür — dəyişiklik edilmədi");
+            await _db.SaveChangesAsync(ct);
+            _audit.Log("Əl ilə endirim", AuditEntities.Reservation, res.Id,
+                $"{res.Patient.FullName}: {(type == DiscountType.Percent ? $"{value:0.##}%" : Fmt.Money(value))} ({percent:0.##}% vizitin), səbəb: {reason.Trim()}; {changed} xidmət");
+            var balance = res.AmountDue - res.Paid;
+            return Result.Success($"Endirim tətbiq edildi ({changed} xidmət). Yeni məbləğ: {Fmt.Money(res.AmountDue)}"
+                + (balance < 0 ? $". Xəstəyə {Fmt.Money(-balance)} qaytarılmalıdır — Kassada qeyd edin." : ""), res.Id);
         }
 
         /// <summary>

@@ -102,6 +102,76 @@
                 </dl>
             </div>
         </div>
+        @{
+            var loyaltyCard = ViewBag.Card as CardView;
+            var benefits = ViewBag.Benefits as List<PatientBenefit> ?? new();
+            var job = ViewBag.Company as PatientCompany;
+            var canEditPatient = User.Can(Permissions.PatientsEdit);
+        }
+        <div class="card card-pad" id="loyaltyCard">
+            <h3 class="card-title"><i class="bi bi-credit-card-2-front"></i> Loyallıq və güzəştlər</h3>
+            @if (loyaltyCard != null)
+            {
+                <div class="flex-between" style="gap:8px;">
+                    <span><a asp-controller="Loyalty" asp-action="Card" asp-route-id="@loyaltyCard.Card.Id" class="barcode-num">@loyaltyCard.Card.Number</a>
+                        @if (loyaltyCard.Card.IsFamily) { <span class="badge-soft badge-arrived">Ailə</span> }
+                        @if (!loyaltyCard.Card.IsActive) { <span class="badge-soft badge-cancelled">bloklanıb</span> }</span>
+                    <span><b>@(loyaltyCard.Tier?.Name ?? "—")</b>@if (loyaltyCard.Tier is { DiscountPercent: > 0 }) { <span class="hint-text"> · @loyaltyCard.Tier.DiscountPercent.ToString("0.##")%</span> }</span>
+                </div>
+                <p class="hint-text" style="margin:6px 0 0;">@loyaltyCard.Points bal ≈ @Fmt.Money(loyaltyCard.PointsMoney) · 12 ayda @Fmt.Money(loyaltyCard.Spend12m)</p>
+            }
+            else if (canEditPatient)
+            {
+                <div class="inline-form">
+                    <form asp-action="IssueCard" asp-route-id="@Model.Id" method="post"><input type="hidden" name="family" value="false" /><button type="submit" class="btn btn-light btn-sm"><i class="bi bi-plus-lg"></i> Kart ver</button></form>
+                    <form asp-action="IssueCard" asp-route-id="@Model.Id" method="post"><input type="hidden" name="family" value="true" /><button type="submit" class="btn btn-light btn-sm"><i class="bi bi-people"></i> Ailə kartı ver</button></form>
+                </div>
+            }
+            else { <p class="hint-text" style="margin:0;">Kart yoxdur.</p> }
+
+            <h4 class="hint-text" style="margin:16px 0 6px; font-weight:600; text-transform:uppercase; letter-spacing:.04em;">Sosial güzəştlər</h4>
+            @foreach (var b in benefits)
+            {
+                var expired = b.ValidUntil != null && b.ValidUntil < ClinicTime.Today;
+                <div class="flex-between" style="margin-bottom:6px; gap:8px;">
+                    <span class="@(expired ? "text-muted" : "")">@b.Category.Name <b>@b.Category.Percent.ToString("0.##")%</b>
+                        <span class="hint-text" style="display:block;">sənəd @b.DocumentNo · @(b.ValidUntil == null ? "müddətsiz" : expired ? $"müddəti bitib ({Fmt.Date(b.ValidUntil)})" : $"{Fmt.Date(b.ValidUntil)}-dək")</span></span>
+                    @if (canEditPatient)
+                    {
+                        <form asp-action="RemoveBenefit" asp-route-id="@Model.Id" method="post"><input type="hidden" name="benefitId" value="@b.Id" />
+                            <button type="submit" class="btn btn-light btn-sm" aria-label="Sil" title="Güzəşti sil"><i class="bi bi-x-lg"></i></button></form>
+                    }
+                </div>
+            }
+            @if (canEditPatient && ViewBag.BenefitCategories is List<BenefitCategory> cats && cats.Any())
+            {
+                <details>
+                    <summary class="btn btn-light btn-sm" style="list-style:none;"><i class="bi bi-plus-lg"></i> Güzəşt əlavə et</summary>
+                    <form asp-action="AddBenefit" asp-route-id="@Model.Id" method="post" class="form-grid" style="margin-top:10px;">
+                        <div class="field"><label>Kateqoriya</label><select name="categoryId" class="form-select">@foreach (var c in cats) { <option value="@c.Id">@c.Name (@c.Percent.ToString("0.##")%)</option> }</select></div>
+                        <div class="field"><label>Sənəd №</label><input name="documentNo" class="form-control" maxlength="50" /></div>
+                        <div class="field"><label>Etibarlıdır <span class="hint-text">(boş — müddətsiz)</span></label><input name="validUntil" type="date" class="form-control" /></div>
+                        <div class="field" style="align-self:end;"><button type="submit" class="btn btn-primary btn-sm">Əlavə et</button></div>
+                    </form>
+                </details>
+            }
+            else if (!benefits.Any()) { <p class="hint-text" style="margin:0;">Yoxdur.</p> }
+
+            <h4 class="hint-text" style="margin:16px 0 6px; font-weight:600; text-transform:uppercase; letter-spacing:.04em;">Korporativ</h4>
+            @if (canEditPatient && ViewBag.Companies is List<Company> companies)
+            {
+                <form asp-action="SetCompany" asp-route-id="@Model.Id" method="post" class="inline-form">
+                    <select name="companyId" class="form-select" aria-label="Şirkət" style="flex:1 1 auto; min-width:0;">
+                        <option value="">— yoxdur —</option>
+                        @foreach (var c in companies) { <option value="@c.Id" selected="@(job?.CompanyId == c.Id)">@c.Name (@c.DiscountPercent.ToString("0.##")%)</option> }
+                    </select>
+                    <input name="employeeNo" value="@job?.EmployeeNo" class="form-control" placeholder="Tabel №" maxlength="50" style="flex:0 0 96px; min-width:0;" aria-label="Tabel nömrəsi" />
+                    <button type="submit" class="btn btn-light btn-sm">Saxla</button>
+                </form>
+            }
+            else { <p class="hint-text" style="margin:0;">@(job == null ? "Yoxdur." : $"{job.Company.Name} ({job.Company.DiscountPercent:0.##}%)")</p> }
+        </div>
+
         @if (ViewBag.Admissions is List<Admission> stays && (stays.Any() || User.CanAny(Permissions.InpatientManage, Permissions.InpatientDoctor)))
         {
             var current = stays.FirstOrDefault(x => x.IsActive);

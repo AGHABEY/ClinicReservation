@@ -33,7 +33,7 @@
             {
                 <div class="field" style="margin-bottom:16px;">
                     <label asp-for="PatientPin">Xəstənin FİN-i</label>
-                    <input asp-for="PatientPin" class="form-control" maxlength="7" autocomplete="off" style="text-transform:uppercase; max-width:260px;" autofocus />
+                    <input lang="en" asp-for="PatientPin" class="form-control" maxlength="7" autocomplete="off" style="text-transform:uppercase; max-width:260px;" autofocus />
                     <span asp-validation-for="PatientPin" class="text-danger"></span>
                     <span class="hint-text" id="pinResult">Xəstə kartı yoxdursa, əvvəlcə <a asp-controller="Patient" asp-action="Create">yeni xəstə</a> yaradın.</span>
                 </div>
@@ -76,7 +76,7 @@
             <div class="form-grid mt-3">
                 <div class="field">
                     <label asp-for="IcdCode">BXT-10 kodu</label>
-                    <input asp-for="IcdCode" class="form-control" list="icdList" maxlength="10" autocomplete="off" placeholder="I10" style="text-transform:uppercase;" />
+                    <input lang="en" asp-for="IcdCode" class="form-control" list="icdList" maxlength="10" autocomplete="off" placeholder="I10" style="text-transform:uppercase;" />
                     <span asp-validation-for="IcdCode" class="text-danger"></span>
                 </div>
                 <div class="field" style="grid-column: span 2;">

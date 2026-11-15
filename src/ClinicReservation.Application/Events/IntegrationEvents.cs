@@ -23,6 +23,9 @@ namespace ClinicReservation.Events
     /// <summary>Reception asked to remind the patient of the follow-up (Scheduling → Notifications).</summary>
     public record FollowUpReminder(int FollowUpId, int PatientId, DateTime DueDate, string DoctorName, string? User) : IIntegrationEvent;
 
+    /// <summary>Money (or points) taken or given back at the cashier (Billing → Loyalty). Amount &lt; 0 = refund.</summary>
+    public record PaymentRecorded(Guid PaymentKey, int ReserveId, int PatientId, decimal Amount, Models.PaymentMethod Method, string? User) : IIntegrationEvent;
+
     /// <summary>Reacts to one event type. Returns a warning for the user (e.g. a stock shortage) or null.</summary>
     public interface IEventHandler
     {

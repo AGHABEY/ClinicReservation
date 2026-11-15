@@ -15,5 +15,8 @@ namespace ClinicReservation.Models
         public DateTime PaidAt { get; set; }
 
         public string? Note { get; set; }
+
+        /// <summary>Known before the insert, so the event about it is stored in the same save.</summary>
+        public Guid Key { get; set; } = Guid.NewGuid();
     }
 }

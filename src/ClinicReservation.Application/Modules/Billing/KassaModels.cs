@@ -51,5 +51,11 @@ namespace ClinicReservation.Modules.Billing
         public decimal Amount { get; set; }
         public PaymentMethod Method { get; set; }
         public string? Note { get; set; }
+
+        // Loyalty card (for «Bonus bal»)
+        public bool HasCard { get; set; }
+        public int Points { get; set; }
+        public decimal PointsMoney { get; set; }
+        public int MinPoints { get; set; }
     }
 }

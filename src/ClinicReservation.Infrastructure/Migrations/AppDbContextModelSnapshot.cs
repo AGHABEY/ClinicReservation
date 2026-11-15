@@ -234,6 +234,110 @@ namespace ClinicReservation.Migrations
                     b.ToTable("BedStays", "inpatient");
                 });
 
+            modelBuilder.Entity("ClinicReservation.Models.BenefitCategory", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<decimal>("Percent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("BenefitCategories", "loyalty");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.Campaign", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Code")
+                        .HasMaxLength(30)
+                        .HasColumnType("character varying(30)");
+
+                    b.Property<int?>("DepartmentId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("EndsOn")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<int?>("MaxUses")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("MaxUsesPerPatient")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
+                    b.Property<bool>("NewPatientsOnly")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTime>("StartsOn")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Type")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("Value")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Code")
+                        .IsUnique()
+                        .HasFilter("\"Code\" IS NOT NULL");
+
+                    b.HasIndex("DepartmentId");
+
+                    b.ToTable("Campaigns", "loyalty");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.CampaignExam", b =>
+                {
+                    b.Property<int>("CampaignId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ExaminationTypeId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("CampaignId", "ExaminationTypeId");
+
+                    b.HasIndex("ExaminationTypeId");
+
+                    b.ToTable("CampaignExams", "loyalty");
+                });
+
             modelBuilder.Entity("ClinicReservation.Models.CancellationReason", b =>
                 {
                     b.Property<int>("Id")
@@ -259,6 +363,45 @@ namespace ClinicReservation.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("CancellationReasons", "scheduling");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.Company", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Contact")
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.Property<DateTime?>("ContractFrom")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("ContractNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<DateTime?>("ContractUntil")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<decimal>("DiscountPercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(150)
+                        .HasColumnType("character varying(150)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("Companies", "loyalty");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.Department", b =>
@@ -726,6 +869,160 @@ namespace ClinicReservation.Migrations
                     b.ToTable("LabTests", "lab");
                 });
 
+            modelBuilder.Entity("ClinicReservation.Models.LoyaltyCard", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<int>("HolderPatientId")
+                        .HasColumnType("integer");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<bool>("IsFamily")
+                        .HasColumnType("boolean");
+
+                    b.Property<string>("Number")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<int?>("TierOverrideId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("HolderPatientId");
+
+                    b.HasIndex("Number")
+                        .IsUnique();
+
+                    b.HasIndex("TierOverrideId");
+
+                    b.ToTable("LoyaltyCards", "loyalty");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.LoyaltyCardMember", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("CardId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("JoinedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("PatientId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CardId");
+
+                    b.HasIndex("PatientId")
+                        .IsUnique();
+
+                    b.ToTable("LoyaltyCardMembers", "loyalty");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.LoyaltyTier", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<decimal>("DiscountPercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<decimal>("MinSpend")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<decimal>("PointsPercent")
+                        .HasPrecision(5, 2)
+                        .HasColumnType("numeric(5,2)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("LoyaltyTiers", "loyalty");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.LoyaltyTransaction", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("At")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("By")
+                        .HasColumnType("text");
+
+                    b.Property<int>("CardId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Note")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<int?>("PatientId")
+                        .HasColumnType("integer");
+
+                    b.Property<Guid?>("PaymentKey")
+                        .HasColumnType("uuid");
+
+                    b.Property<int>("Points")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("ReserveId")
+                        .HasColumnType("integer");
+
+                    b.Property<decimal>("Spend")
+                        .HasPrecision(18, 2)
+                        .HasColumnType("numeric(18,2)");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("PaymentKey")
+                        .IsUnique()
+                        .HasFilter("\"PaymentKey\" IS NOT NULL");
+
+                    b.HasIndex("CardId", "At");
+
+                    b.ToTable("LoyaltyTransactions", "loyalty");
+                });
+
             modelBuilder.Entity("ClinicReservation.Models.MedicalRecord", b =>
                 {
                     b.Property<int>("Id")
@@ -1048,6 +1345,77 @@ namespace ClinicReservation.Migrations
                     b.ToTable("Patients", "core");
                 });
 
+            modelBuilder.Entity("ClinicReservation.Models.PatientBenefit", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("AddedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("AddedBy")
+                        .HasColumnType("text");
+
+                    b.Property<int>("CategoryId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("DocumentNo")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("PatientId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("ValidUntil")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CategoryId");
+
+                    b.HasIndex("PatientId");
+
+                    b.ToTable("PatientBenefits", "loyalty");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.PatientCompany", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime>("AddedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("CompanyId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("EmployeeNo")
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.Property<int>("PatientId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("CompanyId");
+
+                    b.HasIndex("PatientId")
+                        .IsUnique();
+
+                    b.ToTable("PatientCompanies", "loyalty");
+                });
+
             modelBuilder.Entity("ClinicReservation.Models.Payment", b =>
                 {
                     b.Property<int>("Id")
@@ -1058,6 +1426,9 @@ namespace ClinicReservation.Migrations
 
                     b.Property<decimal>("Amount")
                         .HasColumnType("numeric");
+
+                    b.Property<Guid>("Key")
+                        .HasColumnType("uuid");
 
                     b.Property<int>("Method")
                         .HasColumnType("integer");
@@ -1294,6 +1665,12 @@ namespace ClinicReservation.Migrations
 
                     b.Property<decimal>("Discount")
                         .HasColumnType("numeric");
+
+                    b.Property<int?>("DiscountKind")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("DiscountRefId")
+                        .HasColumnType("integer");
 
                     b.Property<string>("DiscountSource")
                         .HasMaxLength(100)
@@ -2172,6 +2549,35 @@ namespace ClinicReservation.Migrations
                     b.Navigation("Bed");
                 });
 
+            modelBuilder.Entity("ClinicReservation.Models.Campaign", b =>
+                {
+                    b.HasOne("ClinicReservation.Models.Department", "Department")
+                        .WithMany()
+                        .HasForeignKey("DepartmentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Department");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.CampaignExam", b =>
+                {
+                    b.HasOne("ClinicReservation.Models.Campaign", "Campaign")
+                        .WithMany("Exams")
+                        .HasForeignKey("CampaignId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ClinicReservation.Models.ExaminationType", "ExaminationType")
+                        .WithMany()
+                        .HasForeignKey("ExaminationTypeId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Campaign");
+
+                    b.Navigation("ExaminationType");
+                });
+
             modelBuilder.Entity("ClinicReservation.Models.Doctor", b =>
                 {
                     b.HasOne("ClinicReservation.Models.Department", "Department")
@@ -2347,6 +2753,54 @@ namespace ClinicReservation.Migrations
                     b.Navigation("LabTest");
                 });
 
+            modelBuilder.Entity("ClinicReservation.Models.LoyaltyCard", b =>
+                {
+                    b.HasOne("ClinicReservation.Models.Patient", "Holder")
+                        .WithMany()
+                        .HasForeignKey("HolderPatientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ClinicReservation.Models.LoyaltyTier", "TierOverride")
+                        .WithMany()
+                        .HasForeignKey("TierOverrideId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Holder");
+
+                    b.Navigation("TierOverride");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.LoyaltyCardMember", b =>
+                {
+                    b.HasOne("ClinicReservation.Models.LoyaltyCard", "Card")
+                        .WithMany("Members")
+                        .HasForeignKey("CardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ClinicReservation.Models.Patient", "Patient")
+                        .WithMany()
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Card");
+
+                    b.Navigation("Patient");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.LoyaltyTransaction", b =>
+                {
+                    b.HasOne("ClinicReservation.Models.LoyaltyCard", "Card")
+                        .WithMany()
+                        .HasForeignKey("CardId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Card");
+                });
+
             modelBuilder.Entity("ClinicReservation.Models.MedicalRecord", b =>
                 {
                     b.HasOne("ClinicReservation.Models.Doctor", "Doctor")
@@ -2411,6 +2865,44 @@ namespace ClinicReservation.Migrations
                         .IsRequired();
 
                     b.Navigation("Admission");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.PatientBenefit", b =>
+                {
+                    b.HasOne("ClinicReservation.Models.BenefitCategory", "Category")
+                        .WithMany()
+                        .HasForeignKey("CategoryId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ClinicReservation.Models.Patient", "Patient")
+                        .WithMany()
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Category");
+
+                    b.Navigation("Patient");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.PatientCompany", b =>
+                {
+                    b.HasOne("ClinicReservation.Models.Company", "Company")
+                        .WithMany()
+                        .HasForeignKey("CompanyId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ClinicReservation.Models.Patient", "Patient")
+                        .WithMany()
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Company");
+
+                    b.Navigation("Patient");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.Payment", b =>
@@ -2801,6 +3293,11 @@ namespace ClinicReservation.Migrations
                     b.Navigation("Stays");
                 });
 
+            modelBuilder.Entity("ClinicReservation.Models.Campaign", b =>
+                {
+                    b.Navigation("Exams");
+                });
+
             modelBuilder.Entity("ClinicReservation.Models.Department", b =>
                 {
                     b.Navigation("Doctors");
@@ -2828,6 +3325,11 @@ namespace ClinicReservation.Migrations
             modelBuilder.Entity("ClinicReservation.Models.LabTest", b =>
                 {
                     b.Navigation("ExaminationTypes");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.LoyaltyCard", b =>
+                {
+                    b.Navigation("Members");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.MedicationOrder", b =>

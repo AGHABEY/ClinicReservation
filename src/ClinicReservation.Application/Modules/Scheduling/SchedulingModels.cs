@@ -46,6 +46,10 @@ namespace ClinicReservation.Modules.Scheduling
         /// <summary>«Araya sal»: book even if the time is taken (permission + the doctor's daily limit).</summary>
         public bool Overbook { get; set; }
 
+        /// <summary>Promo code given by the patient (checked at booking; the best discount still wins).</summary>
+        [StringLength(30)]
+        public string? PromoCode { get; set; }
+
         /// <summary>Booked from this follow-up plan (it becomes «Yazılıb»).</summary>
         public int? FollowUpId { get; set; }
 

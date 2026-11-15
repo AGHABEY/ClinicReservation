@@ -32,6 +32,10 @@
                 {
                     <p class="hint-text" style="margin:0 0 12px;"><i class="bi bi-lock"></i> Administratorun hər şeyə icazəsi var və dəyişdirilmir.</p>
                 }
+                <label class="perm-row" style="gap:10px; margin-bottom:12px;">
+                    <span>Əl ilə endirim limiti, %</span>
+                    <input type="number" name="discountLimit" min="0" max="100" value="@(isAdmin ? 100 : row.DiscountLimit)" class="form-control" style="width:90px;" disabled="@isAdmin" />
+                </label>
                 @foreach (var g in Permissions.All.GroupBy(p => p.Group))
                 {
                     <div class="perm-group">

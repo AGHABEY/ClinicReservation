@@ -13,5 +13,18 @@ namespace ClinicReservation.Authorization
         public string? UserName => _http.HttpContext?.User.Identity?.Name;
         public string? IpAddress => _http.HttpContext?.Connection.RemoteIpAddress?.ToString();
         public bool Can(string permission) => _http.HttpContext?.User is { } u && u.Can(permission);
+
+        public int DiscountLimit
+        {
+            get
+            {
+                var u = _http.HttpContext?.User;
+                if (u == null) return 0;
+                if (u.IsInRole(Models.AppRoles.Admin)) return 100;
+                return u.FindAll(Models.Permissions.DiscountLimitClaim)
+                    .Select(c => int.TryParse(c.Value, out var v) ? Math.Clamp(v, 0, 100) : 0)
+                    .DefaultIfEmpty(0).Max();
+            }
+        }
     }
 }

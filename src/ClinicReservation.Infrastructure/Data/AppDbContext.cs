@@ -50,6 +50,16 @@ namespace ClinicReservation.Data
         public DbSet<WaitlistEntry> WaitlistEntries { get; set; }
         public DbSet<Referral> Referrals { get; set; }
         public DbSet<FollowUp> FollowUps { get; set; }
+        public DbSet<LoyaltyTier> LoyaltyTiers { get; set; }
+        public DbSet<LoyaltyCard> LoyaltyCards { get; set; }
+        public DbSet<LoyaltyCardMember> LoyaltyCardMembers { get; set; }
+        public DbSet<LoyaltyTransaction> LoyaltyTransactions { get; set; }
+        public DbSet<Campaign> Campaigns { get; set; }
+        public DbSet<CampaignExam> CampaignExams { get; set; }
+        public DbSet<BenefitCategory> BenefitCategories { get; set; }
+        public DbSet<PatientBenefit> PatientBenefits { get; set; }
+        public DbSet<Company> Companies { get; set; }
+        public DbSet<PatientCompany> PatientCompanies { get; set; }
         public DbSet<AppUser> AppUsers { get; set; }
 
         /// <summary>Keys that sign login cookies and form tokens — shared by every app instance.</summary>
@@ -348,6 +358,79 @@ namespace ClinicReservation.Data
             });
             builder.Entity<ReserveExaminationType>(e => e.Property(x => x.DiscountSource).HasMaxLength(100));
 
+            // ----- Loyalty -----
+            builder.Entity<LoyaltyTier>(e =>
+            {
+                e.Property(x => x.Name).HasMaxLength(50);
+                e.Property(x => x.MinSpend).HasPrecision(18, 2);
+                e.Property(x => x.DiscountPercent).HasPrecision(5, 2);
+                e.Property(x => x.PointsPercent).HasPrecision(5, 2);
+            });
+            builder.Entity<LoyaltyCard>(e =>
+            {
+                e.HasIndex(x => x.Number).IsUnique();
+                e.Property(x => x.Number).HasMaxLength(20);
+                e.HasOne(x => x.Holder).WithMany().HasForeignKey(x => x.HolderPatientId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(x => x.TierOverride).WithMany().HasForeignKey(x => x.TierOverrideId).OnDelete(DeleteBehavior.SetNull);
+            });
+            builder.Entity<LoyaltyCardMember>(e =>
+            {
+                // A patient belongs to one card.
+                e.HasIndex(x => x.PatientId).IsUnique();
+                e.HasOne(x => x.Card).WithMany(c => c.Members).HasForeignKey(x => x.CardId).OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(x => x.Patient).WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Cascade);
+            });
+            builder.Entity<LoyaltyTransaction>(e =>
+            {
+                e.HasIndex(x => new { x.CardId, x.At });
+                e.HasIndex(x => x.PaymentKey).IsUnique().HasFilter("\"PaymentKey\" IS NOT NULL");
+                e.Property(x => x.Spend).HasPrecision(18, 2);
+                e.Property(x => x.Note).HasMaxLength(300);
+                e.HasOne(x => x.Card).WithMany().HasForeignKey(x => x.CardId).OnDelete(DeleteBehavior.Cascade);
+            });
+            builder.Entity<Campaign>(e =>
+            {
+                e.HasIndex(x => x.Code).IsUnique().HasFilter("\"Code\" IS NOT NULL");
+                e.Property(x => x.Name).HasMaxLength(100);
+                e.Property(x => x.Code).HasMaxLength(30);
+                e.Property(x => x.Value).HasPrecision(18, 2);
+                e.Property(x => x.Note).HasMaxLength(300);
+                e.HasOne(x => x.Department).WithMany().HasForeignKey(x => x.DepartmentId).OnDelete(DeleteBehavior.SetNull);
+            });
+            builder.Entity<CampaignExam>(e =>
+            {
+                e.HasKey(x => new { x.CampaignId, x.ExaminationTypeId });
+                e.HasOne(x => x.Campaign).WithMany(c => c.Exams).HasForeignKey(x => x.CampaignId).OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(x => x.ExaminationType).WithMany().HasForeignKey(x => x.ExaminationTypeId).OnDelete(DeleteBehavior.Cascade);
+            });
+            builder.Entity<BenefitCategory>(e =>
+            {
+                e.Property(x => x.Name).HasMaxLength(100);
+                e.Property(x => x.Percent).HasPrecision(5, 2);
+                e.Property(x => x.Note).HasMaxLength(300);
+            });
+            builder.Entity<PatientBenefit>(e =>
+            {
+                e.HasIndex(x => x.PatientId);
+                e.Property(x => x.DocumentNo).HasMaxLength(50);
+                e.HasOne(x => x.Patient).WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(x => x.Category).WithMany().HasForeignKey(x => x.CategoryId).OnDelete(DeleteBehavior.Restrict);
+            });
+            builder.Entity<Company>(e =>
+            {
+                e.Property(x => x.Name).HasMaxLength(150);
+                e.Property(x => x.ContractNo).HasMaxLength(50);
+                e.Property(x => x.Contact).HasMaxLength(150);
+                e.Property(x => x.DiscountPercent).HasPrecision(5, 2);
+            });
+            builder.Entity<PatientCompany>(e =>
+            {
+                e.HasIndex(x => x.PatientId).IsUnique();
+                e.Property(x => x.EmployeeNo).HasMaxLength(50);
+                e.HasOne(x => x.Patient).WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(x => x.Company).WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
+            });
+
             builder.Entity<FollowUp>(e =>
             {
                 e.HasIndex(x => x.FromReserveId).IsUnique();
@@ -444,6 +527,8 @@ namespace ClinicReservation.Data
             }
             Schema("core", typeof(Patient), typeof(Department), typeof(Room), typeof(Equipment), typeof(Doctor), typeof(DoctorWorkHours), typeof(DoctorLeave), typeof(ExaminationType));
             Schema("scheduling", typeof(Reserve), typeof(ReserveStatus), typeof(ReserveExaminationType), typeof(CancellationReason), typeof(ReserveSeries), typeof(WaitlistEntry), typeof(Referral), typeof(FollowUp));
+            Schema("loyalty", typeof(LoyaltyTier), typeof(LoyaltyCard), typeof(LoyaltyCardMember), typeof(LoyaltyTransaction), typeof(Campaign),
+                typeof(CampaignExam), typeof(BenefitCategory), typeof(PatientBenefit), typeof(Company), typeof(PatientCompany));
             Schema("billing", typeof(Payment));
             Schema("emr", typeof(MedicalRecord));
             Schema("lab", typeof(LabTest), typeof(ExaminationTypeLabTest), typeof(LabOrder), typeof(LabResult));

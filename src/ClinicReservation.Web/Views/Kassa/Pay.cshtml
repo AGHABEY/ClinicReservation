@@ -70,6 +70,7 @@
                                     <select asp-for="Method" class="form-select">
                                         <option value="@((int)PaymentMethod.Cash)">Nağd</option>
                                         <option value="@((int)PaymentMethod.Card)">Kart</option>
+                                        <option value="@((int)PaymentMethod.Points)">Bonus bal</option>
                                     </select>
                                 </div>
                             </div>
@@ -116,8 +117,16 @@
                                 <select asp-for="Method" class="form-select">
                                     <option value="@((int)PaymentMethod.Cash)">Nağd</option>
                                     <option value="@((int)PaymentMethod.Card)">Kart</option>
+                                    @if (Model.HasCard)
+                                    {
+                                        <option value="@((int)PaymentMethod.Points)">Bonus bal (@Model.Points bal ≈ @Fmt.Money(Model.PointsMoney))</option>
+                                    }
                                 </select>
                                 <span asp-validation-for="Method" class="text-danger"></span>
+                                @if (Model.HasCard)
+                                {
+                                    <span class="hint-text">Kartda @Model.Points bal; ən azı @Model.MinPoints bal istifadə olunur.</span>
+                                }
                             </div>
                         </div>
                         <div class="field mt-3">
@@ -177,8 +186,8 @@
                                             {
                                                 <span class="badge-soft badge-refund">Qaytarma</span>
                                             }
-                                            <span class="badge-soft @(p.Method == PaymentMethod.Cash ? "badge-cash" : "badge-card")">
-                                                @(p.Method == PaymentMethod.Cash ? "Nağd" : "Kart")
+                                            <span class="badge-soft @(p.Method switch { PaymentMethod.Cash => "badge-cash", PaymentMethod.Points => "badge-partial", _ => "badge-card" })">
+                                                @(p.Method switch { PaymentMethod.Cash => "Nağd", PaymentMethod.Points => "Bonus bal", _ => "Kart" })
                                             </span>
                                         </td>
                                     </tr>

@@ -51,6 +51,16 @@ namespace ClinicReservation.Data
         DbSet<WaitlistEntry> WaitlistEntries { get; }
         DbSet<Referral> Referrals { get; }
         DbSet<FollowUp> FollowUps { get; }
+        DbSet<LoyaltyTier> LoyaltyTiers { get; }
+        DbSet<LoyaltyCard> LoyaltyCards { get; }
+        DbSet<LoyaltyCardMember> LoyaltyCardMembers { get; }
+        DbSet<LoyaltyTransaction> LoyaltyTransactions { get; }
+        DbSet<Campaign> Campaigns { get; }
+        DbSet<CampaignExam> CampaignExams { get; }
+        DbSet<BenefitCategory> BenefitCategories { get; }
+        DbSet<PatientBenefit> PatientBenefits { get; }
+        DbSet<Company> Companies { get; }
+        DbSet<PatientCompany> PatientCompanies { get; }
 
         ChangeTracker ChangeTracker { get; }
         int SaveChanges();

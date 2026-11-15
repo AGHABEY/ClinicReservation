@@ -53,7 +53,7 @@
         <div class="icon blue"><i class="bi bi-credit-card-2-front"></i></div>
         <div>
             <div class="value">@Fmt.Money(Model.CardTotal)</div>
-            <div class="label">Kart</div>
+            <div class="label">Kart@(Model.PointsTotal != 0 ? $" · bonus bal ilə {Fmt.Money(Model.PointsTotal)} (gəlirə daxil deyil)" : "")</div>
         </div>
     </div>
     <div class="stat">
@@ -182,8 +182,8 @@
                             {
                                 <span class="badge-soft badge-refund">Qaytarma</span>
                             }
-                            <span class="badge-soft @(p.Method == PaymentMethod.Cash ? "badge-cash" : "badge-card")">
-                                @(p.Method == PaymentMethod.Cash ? "Nağd" : "Kart")
+                            <span class="badge-soft @(p.Method switch { PaymentMethod.Cash => "badge-cash", PaymentMethod.Points => "badge-partial", _ => "badge-card" })">
+                                @(p.Method switch { PaymentMethod.Cash => "Nağd", PaymentMethod.Points => "Bonus bal", _ => "Kart" })
                             </span>
                         </td>
                         <td class="text-muted wrap">@(string.IsNullOrEmpty(p.Note) ? "—" : p.Note)</td>

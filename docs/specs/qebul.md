@@ -19,13 +19,13 @@ onlayn yazılış = D mərhələsində. Sıra: A → B → E → C → D → F.
 - [x] B2. Kontrol qəbulu: «kontrol vaxtı çatanlar», SMS, N gün ərzində pulsuz / endirimli (Scheduling: FollowUpWindowDays, FollowUpDiscountPercent; xidmətdə «kontrol endirimi»; sətirdə ilkin qiymət / endirim / mənbə)
 
 ## E. Loyallıq və endirimlər
-- [ ] E1. Əl ilə endirim (faiz / məbləğ, səbəb məcburi, rol limiti, audit)
-- [ ] E2. Kampaniyalar və promo kodlar (müddət, xidmət / kateqoriya, istifadə limiti)
-- [ ] E3. Loyallıq kartı: səviyyələr (avtomatik keçid) + bal (yığılır / xərclənir), barkod / QR
-- [ ] E4. Ailə kartı
-- [ ] E5. Sosial güzəştlər kataloqu (sənəd nömrəsi, etibarlılıq müddəti)
-- [ ] E6. Korporativ müştərilər (müqavilə endirimi)
-- [ ] E7. Hesablama: toplanmır, ən sərfəlisi; sətirdə ilkin qiymət / endirim / son qiymət / mənbə
+- [x] E1. Əl ilə endirim (faiz / məbləğ, səbəb məcburi, rol limiti, audit) — limit Rollar səhifəsində (Resepsiya/Kassir 10%, Admin 100%)
+- [x] E2. Kampaniyalar və promo kodlar (müddət, xidmət / kateqoriya, istifadə limiti) — ümumi və xəstəyə limit, yalnız yeni xəstələr, kurs = 1 istifadə, ləğv limiti qaytarır
+- [x] E3. Loyallıq kartı: səviyyələr (avtomatik keçid) + bal (yığılır / xərclənir), barkod — Kassada «Bonus bal», sabit səviyyə, bal düzəlişi, kart çapı
+- [x] E4. Ailə kartı (bal və səviyyə ortaq)
+- [x] E5. Sosial güzəştlər kataloqu (sənəd nömrəsi, etibarlılıq müddəti)
+- [x] E6. Korporativ müştərilər (müqavilə endirimi, müqavilə müddəti)
+- [x] E7. Hesablama: toplanmır, ən sərfəlisi; sətirdə ilkin qiymət / endirim / son qiymət / mənbə — formada canlı önbaxış
 
 ## C. Növbə
 - [ ] C1. Prioritet (hamilə, 65+, əlillik, təcili)

@@ -1,0 +1,45 @@
+@model CardView
+@{
+    Layout = null;
+    var c = Model.Card;
+}
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Kart @c.Number</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;700&display=swap" rel="stylesheet">
+    <style>
+        * { box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; }
+        body { margin: 0; background: #F4F5F7; color: #101828; }
+        .bar { text-align: center; margin: 16px; }
+        .bar button { font: inherit; padding: 8px 16px; border-radius: 8px; border: 0; background: #0E7C74; color: #fff; cursor: pointer; }
+        /* ID-1 card size */
+        .card { width: 85.6mm; height: 54mm; margin: 0 auto; border-radius: 3.2mm; padding: 4mm 5mm; color: #fff; position: relative; overflow: hidden;
+                background: linear-gradient(135deg, #0A5C56, #0E7C74 55%, #2DD4BF); box-shadow: 0 10px 28px rgba(16,24,40,.25); }
+        .brand { font-weight: 700; font-size: 13pt; }
+        .tier { position: absolute; top: 4mm; right: 5mm; font-size: 8pt; font-weight: 700; text-transform: uppercase; letter-spacing: .08em; background: rgba(255,255,255,.18); padding: 1mm 2.5mm; border-radius: 2mm; }
+        .name { margin-top: 3mm; font-size: 10pt; font-weight: 600; }
+        .family { font-size: 7.5pt; opacity: .85; }
+        .bc { position: absolute; left: 5mm; right: 5mm; bottom: 4mm; background: #fff; border-radius: 1.5mm; padding: 1mm 2mm 0; }
+        .bc svg { width: 100%; height: 14mm; display: block; }
+        @@media print { body { background: #fff; } .bar { display: none; } .card { box-shadow: none; margin: 0; -webkit-print-color-adjust: exact; print-color-adjust: exact; } }
+    </style>
+</head>
+<body>
+    <div class="bar"><button onclick="window.print()">Çap et</button></div>
+    <div class="card">
+        <div class="brand">MedClinic</div>
+        <div class="tier">@(Model.Tier?.Name ?? "Kart")</div>
+        <div class="name">@c.Holder.FullName</div>
+        @if (c.IsFamily) { <div class="family">Ailə kartı · @c.Members.Count üzv</div> }
+        <div class="bc"><svg id="bc" data-code="@c.Number"></svg></div>
+    </div>
+    <script src="~/lib/jsbarcode/JsBarcode.all.min.js"></script>
+    <script>
+        const el = document.getElementById('bc');
+        JsBarcode(el, el.dataset.code, { format: 'CODE128', displayValue: true, fontSize: 12, height: 34, margin: 0 });
+    </script>
+</body>
+</html>

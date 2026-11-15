@@ -127,6 +127,14 @@
                     {
                         <div class="nav-section">Klinika</div>
                         <ul class="sidebar-nav">
+                            @if (User.CanAny(Permissions.PatientsView, Permissions.LoyaltyManage))
+                            {
+                                <li>
+                                    <a class="@Active("Loyalty")" aria-current="@Current("Loyalty")" asp-controller="Loyalty" asp-action="Index">
+                                        <i class="bi bi-credit-card-2-front-fill"></i> Loyallıq və endirimlər
+                                    </a>
+                                </li>
+                            }
                             @if (User.CanAny(Permissions.CatalogManage, Permissions.ReservationsView))
                             {
                                 <li>

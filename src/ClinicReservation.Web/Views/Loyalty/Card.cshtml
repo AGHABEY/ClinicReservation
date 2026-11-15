@@ -1,0 +1,95 @@
+@model CardView
+@{
+    var c = Model.Card;
+    ViewData["Title"] = $"Kart {c.Number}";
+    var history = (List<LoyaltyTransaction>)ViewBag.History;
+    var tiers = (List<LoyaltyTier>)ViewBag.Tiers;
+    var canEdit = User.Can(Permissions.PatientsEdit);
+    var canManage = User.Can(Permissions.LoyaltyManage);
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+}
+
+<div class="page-head">
+    <div>
+        <h2><span class="barcode-num">@c.Number</span> @(c.IsFamily ? "Ailə kartı" : "Loyallıq kartı")</h2>
+        <p>Sahibi: <a asp-controller="Patient" asp-action="Details" asp-route-id="@c.HolderPatientId">@c.Holder.FullName</a> · @Fmt.Date(c.CreatedAt) tarixindən@(c.IsActive ? "" : " · BLOKLANIB")</p>
+    </div>
+    <div class="page-actions">
+        <a class="btn btn-light" asp-action="Index"><i class="bi bi-arrow-left"></i> Kartlar</a>
+        <a class="btn btn-primary" asp-action="CardPrint" asp-route-id="@c.Id" target="_blank" rel="noopener"><i class="bi bi-printer"></i> Kartı çap et</a>
+    </div>
+</div>
+
+<div class="stat-grid">
+    <div class="stat"><div class="icon amber"><i class="bi bi-award"></i></div><div><div class="value">@(Model.Tier?.Name ?? "—")</div><div class="label">Səviyyə@(Model.Tier != null ? $" · {Model.Tier.DiscountPercent.ToString("0.##", inv)}% endirim" : "")@(c.TierOverrideId != null ? " · sabit" : "")</div></div></div>
+    <div class="stat"><div class="icon teal"><i class="bi bi-coin"></i></div><div><div class="value">@Model.Points</div><div class="label">Bal ≈ @Fmt.Money(Model.PointsMoney)</div></div></div>
+    <div class="stat"><div class="icon blue"><i class="bi bi-graph-up"></i></div><div><div class="value">@Fmt.Money(Model.Spend12m)</div><div class="label">Son 12 ayda ödəniş@(Model.NextTier != null ? $" · «{Model.NextTier.Name}» üçün {Fmt.Money(Model.NextTier.MinSpend - Model.Spend12m)} qalıb" : "")</div></div></div>
+</div>
+
+<div class="detail-grid">
+    <div class="card card-pad">
+        <h3 class="card-title"><i class="bi bi-clock-history"></i> Bal tarixçəsi</h3>
+        @if (history.Any())
+        {
+            <table class="data compact">
+                <thead><tr><th>Tarix</th><th>Əməliyyat</th><th>Ödəniş</th><th>Bal</th></tr></thead>
+                <tbody>
+                    @foreach (var t in history)
+                    {
+                        <tr><td>@Fmt.DateTime(t.At)</td><td>@t.Note <span class="hint-text">@t.By</span></td><td class="money">@(t.Spend == 0 ? "" : Fmt.Money(t.Spend))</td>
+                            <td style="font-weight:600; color:@(t.Points < 0 ? "var(--bad)" : "var(--ok)");">@t.Points.ToString("+#;-#;0")</td></tr>
+                    }
+                </tbody>
+            </table>
+        }
+        else { <p class="hint-text">Hələ əməliyyat yoxdur. Bal Kassada ödəniş qəbul olunanda yazılır.</p> }
+    </div>
+    <div class="stack">
+        <div class="card card-pad">
+            <h3 class="card-title"><i class="bi bi-people"></i> Üzvlər</h3>
+            <div class="line-list">
+                @foreach (var m in c.Members.OrderBy(m => m.PatientId != c.HolderPatientId).ThenBy(m => m.JoinedAt))
+                {
+                    <div class="line-item">
+                        <span><a asp-controller="Patient" asp-action="Details" asp-route-id="@m.PatientId">@m.Patient.FullName</a> <span class="hint-text">@(m.PatientId == c.HolderPatientId ? "sahib" : Fmt.Date(m.JoinedAt))</span></span>
+                        @if (canEdit && m.PatientId != c.HolderPatientId)
+                        {
+                            <form asp-action="RemoveMember" asp-route-id="@c.Id" method="post"><input type="hidden" name="patientId" value="@m.PatientId" />
+                                <button type="submit" class="btn btn-light btn-sm" aria-label="Çıxar" title="Kartdan çıxar"><i class="bi bi-x-lg"></i></button></form>
+                        }
+                    </div>
+                }
+            </div>
+            @if (canEdit)
+            {
+                <form asp-action="AddMember" asp-route-id="@c.Id" method="post" class="inline-form mt-3">
+                    <input lang="en" name="pin" class="form-control" placeholder="Ailə üzvünün FİN kodu" maxlength="7" style="text-transform:uppercase;" aria-label="FİN" />
+                    <button type="submit" class="btn btn-light btn-sm"><i class="bi bi-person-plus"></i> Əlavə et</button>
+                </form>
+                <p class="hint-text" style="margin:6px 0 0;">Ailə üzvləri balı və səviyyəni bölüşür.</p>
+            }
+        </div>
+        @if (canManage)
+        {
+            <div class="card card-pad">
+                <h3 class="card-title"><i class="bi bi-sliders"></i> İdarə</h3>
+                <form asp-action="AdjustPoints" asp-route-id="@c.Id" method="post" class="inline-form">
+                    <input name="points" type="number" class="form-control" placeholder="±bal" style="width:100px;" aria-label="Bal" />
+                    <input name="note" class="form-control" placeholder="Səbəb (məcburi)" maxlength="300" aria-label="Səbəb" />
+                    <button type="submit" class="btn btn-light btn-sm">Bal yaz</button>
+                </form>
+                <form asp-action="SetTier" asp-route-id="@c.Id" method="post" class="inline-form mt-3">
+                    <select name="tierId" class="form-select" aria-label="Səviyyə">
+                        <option value="">Xərcə görə (avtomatik)</option>
+                        @foreach (var t in tiers) { <option value="@t.Id" selected="@(c.TierOverrideId == t.Id)">Sabit: @t.Name</option> }
+                    </select>
+                    <button type="submit" class="btn btn-light btn-sm">Saxla</button>
+                </form>
+                <form asp-action="SetActive" asp-route-id="@c.Id" method="post" class="mt-3">
+                    <input type="hidden" name="active" value="@(c.IsActive ? "false" : "true")" />
+                    <button type="submit" class="btn btn-@(c.IsActive ? "danger" : "success") btn-sm">@(c.IsActive ? "Kartı blokla" : "Kartı aktivləşdir")</button>
+                </form>
+            </div>
+        }
+    </div>
+</div>

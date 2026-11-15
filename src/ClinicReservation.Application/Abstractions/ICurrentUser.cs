@@ -8,6 +8,8 @@ namespace ClinicReservation.Services
         string? IpAddress { get; }
         /// <summary>Has this permission (Admin has all). Use cases check rules that go beyond the page's own permission.</summary>
         bool Can(string permission);
+        /// <summary>Largest manual discount (% of a visit) this user may give: 100 for Admin, else the best of their roles.</summary>
+        int DiscountLimit { get; }
     }
 
     /// <summary>For background jobs and tools: no user.</summary>
@@ -17,5 +19,6 @@ namespace ClinicReservation.Services
         public string? UserName => null;
         public string? IpAddress => null;
         public bool Can(string permission) => false;
+        public int DiscountLimit => 0;
     }
 }

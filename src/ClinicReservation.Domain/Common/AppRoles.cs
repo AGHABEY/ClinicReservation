@@ -84,15 +84,26 @@ namespace ClinicReservation.Models
             {
                 Permissions.PatientsView, Permissions.ReservationsView, Permissions.KassaTotals,
                 Permissions.ReportsView, Permissions.AuditView, Permissions.QueueView, Permissions.StockView,
-                Permissions.InpatientView
+                Permissions.InpatientView, Permissions.LoyaltyManage
             },
             _ => Array.Empty<string>()
+        };
+
+        /// <summary>Manual discount limit (%) a built-in role starts with (editable on the Roles page).</summary>
+        public static int DefaultDiscountLimit(string role) => role switch
+        {
+            Reception or Cashier => 10,
+            Staff => 5,
+            Manager => 50,
+            _ => 0
         };
     }
 
     public static class Permissions
     {
         public const string ClaimType = "permission";
+        /// <summary>Role claim: the largest manual discount (% of the visit) its members may give.</summary>
+        public const string DiscountLimitClaim = "discount.limit";
 
         public const string PatientsView = "patients.view";
         public const string PatientsEdit = "patients.edit";
@@ -122,6 +133,7 @@ namespace ClinicReservation.Models
         public const string InpatientManage = "inpatient.manage";
         public const string InpatientDoctor = "inpatient.doctor";
         public const string InpatientNurse = "inpatient.nurse";
+        public const string LoyaltyManage = "loyalty.manage";
 
         public record Info(string Code, string Group, string Label);
 
@@ -155,6 +167,7 @@ namespace ClinicReservation.Models
             new(CatalogManage, "Sazlamalar", "Həkimlər, şöbələr, kabinetlər, müayinələr, analiz kataloqu"),
             new(UsersManage, "Sazlamalar", "İstifadəçilər və rollar"),
             new(SmsManage, "Sazlamalar", "SMS jurnalı, xatırlatma göndərmək"),
+            new(LoyaltyManage, "Loyallıq və endirimlər", "Kart səviyyələri, kampaniyalar və promo kodlar, sosial güzəşt kataloqu, korporativ müqavilələr, bal düzəlişi"),
         };
     }
 }

@@ -1,5 +1,7 @@
 using ClinicReservation.Data;
+using ClinicReservation.Events;
 using ClinicReservation.Helpers;
+using ClinicReservation.Modules.Loyalty;
 using ClinicReservation.Models;
 using ClinicReservation.Services;
 using Microsoft.EntityFrameworkCore;
@@ -11,12 +13,26 @@ namespace ClinicReservation.Modules.Billing
     {
         private readonly IAppDbContext _db;
         private readonly AuditService _audit;
+        private readonly Outbox _outbox;
+        private readonly LoyaltyQueries _loyalty;
+        private readonly ICurrentUser _user;
 
-        public Kassa(IAppDbContext db, AuditService audit)
+        public Kassa(IAppDbContext db, AuditService audit, Outbox outbox, LoyaltyQueries loyalty, ICurrentUser user)
         {
             _db = db;
             _audit = audit;
+            _outbox = outbox;
+            _loyalty = loyalty;
+            _user = user;
         }
+
+        public static string MethodLabel(PaymentMethod m) => m switch
+        {
+            PaymentMethod.Cash => "nağd",
+            PaymentMethod.Card => "kart",
+            PaymentMethod.Points => "bonus bal",
+            _ => m.ToString()
+        };
 
         // filter: unpaid | paid | refund | (empty = all)
         public async Task<KassaListViewModel> ListAsync(string? filter, string? q, CancellationToken ct = default)
@@ -66,7 +82,18 @@ namespace ClinicReservation.Modules.Billing
             if (reserve == null) return null;
             var model = Build(reserve);
             model.Amount = Math.Abs(model.Balance);
+            await PointsAsync(model, ct);
             return model;
+        }
+
+        /// <summary>The patient's spendable points, for the «Bonus bal» option.</summary>
+        private async Task PointsAsync(PaymentViewModel model, CancellationToken ct)
+        {
+            var (cardId, points) = await _loyalty.BalanceAsync(model.Reserve.PatientId, ct);
+            model.HasCard = cardId != null;
+            model.Points = points;
+            model.PointsMoney = points * _loyalty.Options.PointValue;
+            model.MinPoints = _loyalty.Options.MinPointsToSpend;
         }
 
         /// <summary>Takes a payment. Errors use PaymentViewModel field names; the page model comes back for redisplay.</summary>
@@ -84,12 +111,22 @@ namespace ClinicReservation.Modules.Billing
             else if (amount > model.Balance)
                 r.Fail(model.Balance > 0 ? $"Məbləğ qalıq borcdan ({Fmt.Money(model.Balance)}) çox ola bilməz" : "Bu rezervasiya artıq tam ödənilib", nameof(input.Amount));
             if (!Enum.IsDefined(input.Method)) r.Fail("Ödəniş üsulu düzgün deyil", nameof(input.Method));
+            await PointsAsync(model, ct);
+            if (r.Ok && input.Method == PaymentMethod.Points)
+            {
+                var need = (int)Math.Round(amount / _loyalty.Options.PointValue);
+                if (!model.HasCard) r.Fail("Xəstənin loyallıq kartı yoxdur", nameof(input.Method));
+                else if (need < model.MinPoints) r.Fail($"Ən azı {model.MinPoints} bal ({Fmt.Money(model.MinPoints * _loyalty.Options.PointValue)}) istifadə etmək olar", nameof(input.Amount));
+                else if (need > model.Points) r.Fail($"Kartda {model.Points} bal ({Fmt.Money(model.PointsMoney)}) var", nameof(input.Amount));
+            }
             if (!r.Ok) return (r, Keep(model, input));
 
-            await AddAsync(reserve.Id, amount, input, ct);
+            var warnings = await AddAsync(reserve, amount, input, ct);
             _audit.Log("Ödəniş qəbul edildi", AuditEntities.Payment, reserve.Id,
-                $"{reserve.Patient.FullName}: {Fmt.Money(amount)} ({(input.Method == PaymentMethod.Cash ? "nağd" : "kart")})");
-            return (Result.Success($"{Fmt.Money(amount)} ödəniş qeydə alındı", reserve.Id), null);
+                $"{reserve.Patient.FullName}: {Fmt.Money(amount)} ({MethodLabel(input.Method)})");
+            var ok = Result.Success($"{Fmt.Money(amount)} ödəniş qeydə alındı", reserve.Id);
+            if (warnings.Count > 0) ok.Warning = string.Join(" ", warnings);
+            return (ok, null);
         }
 
         /// <summary>Gives money back when more was paid than is due (e.g. the reservation was cancelled).</summary>
@@ -105,25 +142,36 @@ namespace ClinicReservation.Modules.Billing
             else if (amount <= 0) r.Fail("Məbləğ 0-dan böyük olmalıdır", nameof(input.Amount));
             else if (amount > refundable) r.Fail($"Ən çox {Fmt.Money(refundable)} qaytarmaq olar", nameof(input.Amount));
             if (!Enum.IsDefined(input.Method)) r.Fail("Ödəniş üsulu düzgün deyil", nameof(input.Method));
+            // Points go back as points, at most what was paid with them.
+            var paidWithPoints = reserve.Payments?.Where(p => p.Method == PaymentMethod.Points).Sum(p => p.Amount) ?? 0;
+            if (r.Ok && input.Method == PaymentMethod.Points && amount > paidWithPoints)
+                r.Fail(paidWithPoints > 0 ? $"Bal ilə ən çox {Fmt.Money(paidWithPoints)} qaytarmaq olar" : "Bu rezervasiya bal ilə ödənilməyib", nameof(input.Amount));
+            await PointsAsync(model, ct);
             if (!r.Ok) return (r, Keep(model, input));
 
-            await AddAsync(reserve.Id, -amount, input, ct);
+            var warnings = await AddAsync(reserve, -amount, input, ct);
             _audit.Log("Geri qaytarma", AuditEntities.Payment, reserve.Id,
-                $"{reserve.Patient.FullName}: {Fmt.Money(amount)} ({(input.Method == PaymentMethod.Cash ? "nağd" : "kart")})");
-            return (Result.Success($"{Fmt.Money(amount)} xəstəyə qaytarıldı", reserve.Id), null);
+                $"{reserve.Patient.FullName}: {Fmt.Money(amount)} ({MethodLabel(input.Method)})");
+            var ok = Result.Success($"{Fmt.Money(amount)} xəstəyə qaytarıldı", reserve.Id);
+            if (warnings.Count > 0) ok.Warning = string.Join(" ", warnings);
+            return (ok, null);
         }
 
-        private async Task AddAsync(int reserveId, decimal amount, PaymentViewModel input, CancellationToken ct)
+        /// <summary>Stores the payment and tells Loyalty in the same save (points earned / spent).</summary>
+        private async Task<List<string>> AddAsync(Reserve reserve, decimal amount, PaymentViewModel input, CancellationToken ct)
         {
-            _db.Payments.Add(new Payment
+            var payment = new Payment
             {
-                ReserveId = reserveId,
+                ReserveId = reserve.Id,
                 Amount = amount,
                 Method = input.Method,
                 PaidAt = ClinicTime.Now,
                 Note = string.IsNullOrWhiteSpace(input.Note) ? null : input.Note.Trim()
-            });
+            };
+            _db.Payments.Add(payment);
+            _outbox.Add(new PaymentRecorded(payment.Key, reserve.Id, reserve.PatientId, amount, input.Method, _user.UserName));
             await _db.SaveChangesAsync(ct);
+            return await _outbox.DispatchAddedAsync(ct);
         }
 
         private static PaymentViewModel Keep(PaymentViewModel model, PaymentViewModel input)

@@ -25,6 +25,7 @@ namespace ClinicReservation.Data
                 await SeedStatusesAsync(context);
                 await SeedWarehouseAsync(context);
                 await SeedCancellationReasonsAsync(context);
+                await SeedLoyaltyAsync(context);
                 await SeedRolesAndAdminAsync(provider);
             }
 
@@ -67,6 +68,29 @@ namespace ClinicReservation.Data
             var order = 0;
             foreach (var (name, party) in BookingLabels.DefaultReasons)
                 context.CancellationReasons.Add(new CancellationReason { Name = name, Party = party, SortOrder = order += 10 });
+            await context.SaveChangesAsync();
+        }
+
+        /// <summary>Starting card levels and social discount categories (edited later on the Loyalty page).</summary>
+        private static async Task SeedLoyaltyAsync(AppDbContext context)
+        {
+            if (!await context.LoyaltyTiers.AnyAsync())
+                context.LoyaltyTiers.AddRange(
+                    new LoyaltyTier { Name = "Standart", MinSpend = 0, DiscountPercent = 0, PointsPercent = 1 },
+                    new LoyaltyTier { Name = "Gümüş", MinSpend = 500, DiscountPercent = 5, PointsPercent = 2 },
+                    new LoyaltyTier { Name = "Qızıl", MinSpend = 1500, DiscountPercent = 10, PointsPercent = 3 },
+                    new LoyaltyTier { Name = "Platin", MinSpend = 3000, DiscountPercent = 15, PointsPercent = 5 });
+            if (!await context.BenefitCategories.AnyAsync())
+                context.BenefitCategories.AddRange(
+                    new BenefitCategory { Name = "Müharibə veteranı", Percent = 50 },
+                    new BenefitCategory { Name = "Şəhid ailəsi", Percent = 50 },
+                    new BenefitCategory { Name = "I qrup əlillik", Percent = 30 },
+                    new BenefitCategory { Name = "II qrup əlillik", Percent = 20 },
+                    new BenefitCategory { Name = "III qrup əlillik", Percent = 10 },
+                    new BenefitCategory { Name = "Sağlamlıq imkanları məhdud uşaq", Percent = 30 },
+                    new BenefitCategory { Name = "Təqaüdçü", Percent = 10 },
+                    new BenefitCategory { Name = "Çoxuşaqlı ailə", Percent = 10 },
+                    new BenefitCategory { Name = "Tələbə", Percent = 5 });
             await context.SaveChangesAsync();
         }
 
@@ -120,6 +144,12 @@ namespace ClinicReservation.Data
                 foreach (var (role, _) in targets)
                     await roleManager.AddClaimAsync(role, new System.Security.Claims.Claim(Permissions.ClaimType, permission));
             }
+
+            // Manual discount limits: given once (when no role has one yet); after that only the Roles page changes them.
+            if (!allRoleClaims.Any(x => x.Claims.Any(c => c.Type == Permissions.DiscountLimitClaim)))
+                foreach (var (role, _) in allRoleClaims)
+                    if (AppRoles.DefaultDiscountLimit(role.Name!) is var limit && limit > 0)
+                        await roleManager.AddClaimAsync(role, new System.Security.Claims.Claim(Permissions.DiscountLimitClaim, limit.ToString()));
 
             await EnsureUserAsync(userManager, "admin", "admin123", "Administrator", "admin@clinic.local", AppRoles.Admin);
             await EnsureUserAsync(userManager, "kassir", "kassir123", "Kassir", "kassir@clinic.local", AppRoles.Staff);

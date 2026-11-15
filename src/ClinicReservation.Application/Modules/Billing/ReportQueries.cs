@@ -68,9 +68,11 @@ namespace ClinicReservation.Modules.Billing
                 To = toDate,
                 Payments = payments,
                 PaymentCount = payments.Count,
-                TotalIncome = payments.Sum(p => p.Amount),
+                // Money only: bonus points paid part of the bill but brought no cash in.
+                TotalIncome = payments.Where(p => p.Method != PaymentMethod.Points).Sum(p => p.Amount),
                 CashTotal = payments.Where(p => p.Method == PaymentMethod.Cash).Sum(p => p.Amount),
                 CardTotal = payments.Where(p => p.Method == PaymentMethod.Card).Sum(p => p.Amount),
+                PointsTotal = payments.Where(p => p.Method == PaymentMethod.Points).Sum(p => p.Amount),
                 RefundTotal = -payments.Where(p => p.Amount < 0).Sum(p => p.Amount),
                 ExamTypeStats = examStats,
                 DoctorStats = doctorStats,

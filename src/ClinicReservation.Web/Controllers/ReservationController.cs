@@ -253,6 +253,33 @@ namespace ClinicReservation.Controllers
             return View(res);
         }
 
+        /// <summary>Əl ilə endirim on the whole visit (role limit, reason required).</summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [HasPermission(Permissions.ReservationsManage, Permissions.PaymentsTake)]
+        public async Task<IActionResult> Discount(int id, DiscountType type, decimal value, string? reason, CancellationToken ct)
+        {
+            var r = await _reservations.ManualDiscountAsync(id, type, value, reason, ct);
+            if (r == null) return NotFound();
+            TempData[r.Ok ? "Success" : "Error"] = r.Ok ? r.Message : r.ErrorText;
+            return RedirectToAction(nameof(Details), new { id });
+        }
+
+        /// <summary>JSON price preview for the form: what each chosen service will cost after the best discount.</summary>
+        [HttpGet]
+        public async Task<IActionResult> Quote(string? pin, int? doctorId, DateTime? date, string? time, [FromQuery] List<int>? examTypeIds, string? promo,
+            [FromServices] PriceQueries prices, CancellationToken ct)
+        {
+            var at = (date ?? ClinicTime.Today).Date + (TimeSpan.TryParse(time, out var t) ? t : TimeSpan.FromHours(12));
+            var q = await prices.PreviewAsync(pin, doctorId, at, examTypeIds ?? new(), promo, ct);
+            return Json(new
+            {
+                listTotal = q.ListTotal, discount = q.Discount, total = q.Total,
+                lines = q.Lines.Where(l => l.Discount > 0).Select(l => new { id = l.ExaminationTypeId, discount = l.Discount, source = l.Source }),
+                promoError = q.PromoError, promoNote = q.PromoNote
+            });
+        }
+
         /// <summary>JSON slots for the reservation form (length and device follow the chosen services).</summary>
         [HttpGet]
         public IActionResult Slots(int doctorId, DateTime date, int? exclude, [FromQuery] List<int>? examTypeIds)

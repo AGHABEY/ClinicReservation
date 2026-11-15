@@ -20,6 +20,9 @@
         public decimal Discount { get; set; }
         /// <summary>Why it is cheaper (e.g. «Kontrol qəbulu», a campaign, a card); null = no discount.</summary>
         public string? DiscountSource { get; set; }
+        public DiscountKind? DiscountKind { get; set; }
+        /// <summary>The campaign / card / benefit / company behind the discount (for usage limits and reports).</summary>
+        public int? DiscountRefId { get; set; }
 
         /// <summary>When this line's materials were taken from stock (null = not yet).</summary>
         public DateTime? StockConsumedAt { get; set; }

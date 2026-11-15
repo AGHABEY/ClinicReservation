@@ -1,0 +1,175 @@
+@{
+    ViewData["Title"] = "Loyallıq və endirimlər";
+    var tab = (string)ViewBag.Tab;
+    var q = ViewBag.Query as string;
+    var cards = (List<CardView>)ViewBag.Cards;
+    var tiers = (List<LoyaltyTier>)ViewBag.Tiers;
+    var campaigns = (List<Campaign>)ViewBag.Campaigns;
+    var categories = (List<BenefitCategory>)ViewBag.Categories;
+    var companies = (List<Company>)ViewBag.Companies;
+    var canManage = User.Can(Permissions.LoyaltyManage);
+    var today = ClinicTime.Today;
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+    string N(decimal d) => d.ToString("0.##", inv);
+    var tabs = new (string Key, string Label, string Icon)[]
+    {
+        ("cards", "Kartlar", "bi-credit-card-2-front"), ("tiers", "Səviyyələr", "bi-award"), ("campaigns", "Kampaniyalar və promo kodlar", "bi-megaphone"),
+        ("social", "Sosial güzəştlər", "bi-heart"), ("companies", "Korporativ", "bi-building")
+    };
+}
+
+<div class="page-head">
+    <div>
+        <h2>Loyallıq və endirimlər</h2>
+        <p>Endirimlər toplanmır: hər xidmətə xəstənin ən sərfəli endirimi tətbiq olunur (kontrol qəbulu, kampaniya, promo kod, kart, sosial güzəşt, korporativ, əl ilə).</p>
+    </div>
+    @if (tab == "campaigns" && canManage)
+    {
+        <a class="btn btn-primary" asp-action="Campaign"><i class="bi bi-plus-lg"></i> Yeni kampaniya</a>
+    }
+</div>
+
+<div class="toolbar">
+    <div class="seg seg-scroll">
+        @foreach (var t in tabs)
+        {
+            <a class="@(tab == t.Key ? "on" : "")" asp-action="Index" asp-route-tab="@t.Key"><i class="bi @t.Icon"></i> @t.Label</a>
+        }
+    </div>
+    @if (tab == "cards")
+    {
+        <form method="get" class="toolbar-right" role="search">
+            <input type="hidden" name="tab" value="cards" />
+            <div class="search">
+                <i class="bi bi-search"></i>
+                <input type="search" name="q" value="@q" class="form-control" placeholder="Kart nömrəsi, ad və ya FİN..." aria-label="Axtarış" />
+            </div>
+        </form>
+    }
+</div>
+
+@if (tab == "cards")
+{
+    @if (cards.Any())
+    {
+        <div class="table-wrap">
+            <table class="data">
+                <thead><tr><th>Kart</th><th>Sahibi</th><th>Səviyyə</th><th>12 ayda</th><th>Bal</th><th class="actions"></th></tr></thead>
+                <tbody>
+                    @foreach (var c in cards)
+                    {
+                        <tr class="@(c.Card.IsActive ? "" : "row-muted")">
+                            <td><span class="barcode-num">@c.Card.Number</span>@if (c.Card.IsFamily) { <span class="badge-soft badge-arrived" style="margin-left:6px;">Ailə · @c.Card.Members.Count</span> }</td>
+                            <td><a asp-controller="Patient" asp-action="Details" asp-route-id="@c.Card.HolderPatientId" class="link-strong">@c.Card.Holder.FullName</a></td>
+                            <td>@(c.Tier?.Name ?? "—")@if (c.Card.TierOverrideId != null) { <span class="hint-text"> (sabit)</span> }</td>
+                            <td class="money">@Fmt.Money(c.Spend12m)</td>
+                            <td>@c.Points <span class="hint-text">≈ @Fmt.Money(c.PointsMoney)</span></td>
+                            <td class="actions"><a class="btn btn-ghost btn-sm" asp-action="Card" asp-route-id="@c.Card.Id"><i class="bi bi-eye"></i> Bax</a></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="card"><div class="empty-state"><i class="bi bi-credit-card-2-front"></i><p>Kart tapılmadı. Kart xəstənin səhifəsindən verilir.</p></div></div>
+    }
+}
+else if (tab == "tiers")
+{
+    <div class="card card-pad">
+        <p class="hint-text" style="margin-top:0;">Kartın səviyyəsi son 12 ayda kart üzvlərinin ödədiyi məbləğə görə avtomatik dəyişir. Bal — ödənişin faizi qədər (1 bal = @Fmt.Money(0.01m)), Kassada «Bonus bal» kimi xərclənir.</p>
+        <div class="line-list">
+            @foreach (var t in tiers.Append(new LoyaltyTier()))
+            {
+                var isNew = t.Id == 0;
+                <form asp-action="SaveTier" method="post" class="line-item inline-form @(t.IsActive ? "" : "row-muted")">
+                    <input type="hidden" name="id" value="@t.Id" />
+                    <input name="name" value="@t.Name" class="form-control" placeholder="@(isNew ? "Yeni səviyyə" : "")" maxlength="50" aria-label="Ad" disabled="@(!canManage)" />
+                    <label class="hint-text">Ödəniş, ₼ <input name="minSpend" value="@N(t.MinSpend)" type="number" min="0" step="1" class="form-control" style="width:110px;" disabled="@(!canManage)" /></label>
+                    <label class="hint-text">Endirim, % <input name="discountPercent" value="@N(t.DiscountPercent)" type="number" min="0" max="100" step="0.5" class="form-control" style="width:90px;" disabled="@(!canManage)" /></label>
+                    <label class="hint-text">Bal, % <input name="pointsPercent" value="@N(t.PointsPercent)" type="number" min="0" max="100" step="0.5" class="form-control" style="width:90px;" disabled="@(!canManage)" /></label>
+                    <label class="hint-text" style="display:flex; gap:6px; align-items:center;"><input type="checkbox" name="isActive" value="true" checked="@(isNew || t.IsActive)" disabled="@(!canManage)" /><input type="hidden" name="isActive" value="false" /> Aktiv</label>
+                    @if (canManage) { <button type="submit" class="btn btn-@(isNew ? "primary" : "light") btn-sm">@(isNew ? "Əlavə et" : "Saxla")</button> }
+                </form>
+            }
+        </div>
+    </div>
+}
+else if (tab == "campaigns")
+{
+    @if (campaigns.Any())
+    {
+        <div class="table-wrap">
+            <table class="data">
+                <thead><tr><th>Ad</th><th>Kod</th><th>Endirim</th><th>Müddət</th><th>Nəyə</th><th>Limit</th><th class="actions"></th></tr></thead>
+                <tbody>
+                    @foreach (var c in campaigns)
+                    {
+                        var running = c.IsActive && c.StartsOn <= today && c.EndsOn >= today;
+                        <tr class="@(running ? "" : "row-muted")">
+                            <td><b>@c.Name</b>@if (c.NewPatientsOnly) { <div class="hint-text">yalnız yeni xəstələr</div> }</td>
+                            <td>@if (c.Code != null) { <span class="barcode-num">@c.Code</span> } else { <span class="hint-text">avtomatik</span> }</td>
+                            <td>@(c.Type == DiscountType.Percent ? $"{N(c.Value)}%" : $"{Fmt.Money(c.Value)} / xidmət")</td>
+                            <td>@Fmt.Date(c.StartsOn) – @Fmt.Date(c.EndsOn)
+                                <div class="hint-text">@(running ? "gedir" : !c.IsActive ? "dayandırılıb" : c.StartsOn > today ? "başlamayıb" : "bitib")</div></td>
+                            <td style="white-space:normal; max-width:260px;">@(c.Department?.Name ?? "")@(c.Exams.Any() ? (c.Department != null ? ": " : "") + string.Join(", ", c.Exams.Select(x => x.ExaminationType.Name)) : c.Department == null ? "bütün xidmətlər" : "")</td>
+                            <td class="hint-text">@(c.MaxUses == null ? "" : $"cəmi {c.MaxUses}")@(c.MaxUsesPerPatient == null ? "" : $" · xəstəyə {c.MaxUsesPerPatient}")</td>
+                            <td class="actions">@if (canManage) { <a class="btn btn-ghost btn-sm" asp-action="Campaign" asp-route-id="@c.Id"><i class="bi bi-pencil"></i> Düzəliş</a> }</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="card"><div class="empty-state"><i class="bi bi-megaphone"></i><p>Hələ kampaniya yoxdur</p></div></div>
+    }
+}
+else if (tab == "social")
+{
+    <div class="card card-pad">
+        <p class="hint-text" style="margin-top:0;">Xəstəyə güzəşt onun səhifəsində sənəd nömrəsi və etibarlılıq tarixi ilə yazılır; müddəti bitəndə avtomatik işləmir.</p>
+        <div class="line-list">
+            @foreach (var c in categories.Append(new BenefitCategory()))
+            {
+                var isNew = c.Id == 0;
+                <form asp-action="SaveCategory" method="post" class="line-item inline-form @(c.IsActive ? "" : "row-muted")">
+                    <input type="hidden" name="id" value="@c.Id" />
+                    <input name="name" value="@c.Name" class="form-control" placeholder="@(isNew ? "Yeni kateqoriya, məs: Donor" : "")" maxlength="100" aria-label="Ad" disabled="@(!canManage)" />
+                    <label class="hint-text">Endirim, % <input name="percent" value="@(isNew ? "" : N(c.Percent))" type="number" min="1" max="100" step="0.5" class="form-control" style="width:90px;" disabled="@(!canManage)" /></label>
+                    <input name="note" value="@c.Note" class="form-control" placeholder="Qeyd (hansı sənəd)" maxlength="300" disabled="@(!canManage)" />
+                    <label class="hint-text" style="display:flex; gap:6px; align-items:center;"><input type="checkbox" name="isActive" value="true" checked="@(isNew || c.IsActive)" disabled="@(!canManage)" /><input type="hidden" name="isActive" value="false" /> Aktiv</label>
+                    @if (canManage) { <button type="submit" class="btn btn-@(isNew ? "primary" : "light") btn-sm">@(isNew ? "Əlavə et" : "Saxla")</button> }
+                </form>
+            }
+        </div>
+    </div>
+}
+else
+{
+    <div class="card card-pad">
+        <p class="hint-text" style="margin-top:0;">Şirkətin əməkdaşı xəstənin səhifəsində bu şirkətə bağlanır; müqavilə müddətində endirim avtomatik tətbiq olunur.</p>
+        <div class="line-list">
+            @foreach (var c in companies.Append(new Company()))
+            {
+                var isNew = c.Id == 0;
+                var expired = c.ContractUntil != null && c.ContractUntil < today;
+                <form asp-action="SaveCompany" method="post" class="line-item inline-form @(c.IsActive && !expired ? "" : "row-muted")" style="flex-wrap:wrap;">
+                    <input type="hidden" name="id" value="@c.Id" />
+                    <input name="name" value="@c.Name" class="form-control" placeholder="@(isNew ? "Yeni şirkət" : "")" maxlength="150" aria-label="Şirkət" style="min-width:180px;" disabled="@(!canManage)" />
+                    <input name="contractNo" value="@c.ContractNo" class="form-control" placeholder="Müqavilə №" maxlength="50" style="width:130px;" disabled="@(!canManage)" />
+                    <label class="hint-text">% <input name="discountPercent" value="@(isNew ? "" : N(c.DiscountPercent))" type="number" min="0" max="100" step="0.5" class="form-control" style="width:80px;" disabled="@(!canManage)" /></label>
+                    <input name="contractFrom" type="date" value="@c.ContractFrom?.ToString("yyyy-MM-dd")" class="form-control" style="width:auto;" aria-label="Müqavilə başlanğıcı" disabled="@(!canManage)" />
+                    <input name="contractUntil" type="date" value="@c.ContractUntil?.ToString("yyyy-MM-dd")" class="form-control" style="width:auto;" aria-label="Müqavilənin sonu" disabled="@(!canManage)" />
+                    <input name="contact" value="@c.Contact" class="form-control" placeholder="Əlaqə" maxlength="150" style="width:160px;" disabled="@(!canManage)" />
+                    <label class="hint-text" style="display:flex; gap:6px; align-items:center;"><input type="checkbox" name="isActive" value="true" checked="@(isNew || c.IsActive)" disabled="@(!canManage)" /><input type="hidden" name="isActive" value="false" /> Aktiv</label>
+                    @if (expired) { <span class="badge-soft badge-noshow">müqavilə bitib</span> }
+                    @if (canManage) { <button type="submit" class="btn btn-@(isNew ? "primary" : "light") btn-sm">@(isNew ? "Əlavə et" : "Saxla")</button> }
+                </form>
+            }
+        </div>
+    </div>
+}
