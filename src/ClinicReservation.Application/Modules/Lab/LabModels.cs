@@ -1,6 +1,6 @@
 using ClinicReservation.Models;
 
-namespace ClinicReservation.ViewModels
+namespace ClinicReservation.Modules.Lab
 {
     public class LabPendingRow
     {

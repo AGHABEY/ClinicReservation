@@ -2,9 +2,10 @@ using System.Globalization;
 using ClinicReservation.Data;
 using ClinicReservation.Helpers;
 using ClinicReservation.Models;
+using ClinicReservation.Services;
 using Microsoft.EntityFrameworkCore;
 
-namespace ClinicReservation.Services
+namespace ClinicReservation.Modules.Lab
 {
     public class LabService
     {

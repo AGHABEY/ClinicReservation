@@ -3,6 +3,7 @@ using ClinicReservation.Authorization;
 using ClinicReservation.Data;
 using ClinicReservation.Helpers;
 using ClinicReservation.Models;
+using ClinicReservation.Modules.Lab;
 using ClinicReservation.Modules.Pharmacy;
 using ClinicReservation.Services;
 using ClinicReservation.ViewModels;

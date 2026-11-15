@@ -1,6 +1,6 @@
 using ClinicReservation.Models;
 
-namespace ClinicReservation.Services
+namespace ClinicReservation.Modules.Lab
 {
     /// <summary>
     /// Starter set of common tests with typical adult reference ranges.
