@@ -1,0 +1,14 @@
+@model ReserveFormViewModel
+@{
+    ViewData["Title"] = "Rezervasiyaya düzəliş";
+}
+
+<div class="page-head">
+    <div>
+        <h2>Rezervasiyaya düzəliş</h2>
+        <p>Rezervasiya #@Model.Id</p>
+    </div>
+    <a class="btn btn-light" asp-action="Details" asp-route-id="@Model.Id"><i class="bi bi-arrow-left"></i> Detallara qayıt</a>
+</div>
+
+<partial name="_ReserveForm" model="Model" />

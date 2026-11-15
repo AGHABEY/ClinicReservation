@@ -1,123 +1,137 @@
 @model DashboardViewModel
 @{
     ViewData["Title"] = "İdarə paneli";
-    string Badge(string? s) => s switch
-    {
-        "Waiting" => "badge-waiting",
-        "Confirmed" => "badge-confirmed",
-        _ => "badge-default"
-    };
-    string StatusText(string? s) => s switch
-    {
-        "Waiting" => "Gözləyir",
-        "Confirmed" => "Təsdiqləndi",
-        _ => s ?? "—"
-    };
+    var showMoney = User.Can(Permissions.KassaTotals);
+    var now = DateTime.Now;
+    var nextId = Model.TodayAppointments
+        .FirstOrDefault(r => r.Status?.Name is StatusNames.Waiting or StatusNames.Confirmed && r.AppointmentAt >= now.AddMinutes(-15))?.Id;
+    ViewData["ReturnTo"] = "home";
 }
 
 <div class="page-head">
     <div>
-        <h2>İdarə paneli</h2>
-        <p>Klinikanın ümumi statistikası</p>
+        <h2>Xoş gəlmisiniz, @User.Identity?.Name</h2>
+        <p>@(Model.MyDoctor != null ? $"{Model.MyDoctor.FullName} — bugünkü qəbullarınız" : "Klinikanın bugünkü vəziyyəti")</p>
     </div>
-    <a class="btn btn-primary" asp-controller="Reservation" asp-action="Add">
-        <i class="bi bi-plus-lg"></i> Yeni rezervasiya
-    </a>
+    @if (User.Can(Permissions.ReservationsManage))
+    {
+        <a class="btn btn-primary" asp-controller="Reservation" asp-action="Add">
+            <i class="bi bi-plus-lg"></i> Yeni rezervasiya
+        </a>
+    }
 </div>
 
 <div class="stat-grid">
-    <div class="stat">
-        <div class="icon teal"><i class="bi bi-calendar2-check-fill"></i></div>
+    <a class="stat stat-link" asp-controller="Reservation" asp-action="Index" asp-route-period="today">
+        <div class="icon teal"><i class="bi bi-calendar2-event"></i></div>
         <div>
-            <div class="value">@Model.TotalReservations</div>
-            <div class="label">Ümumi rezervasiya</div>
+            <div class="value">@Model.TodayCount</div>
+            <div class="label">Bu günkü qəbul</div>
+        </div>
+    </a>
+    <a class="stat stat-link" asp-controller="Reservation" asp-action="Index" asp-route-period="today" asp-route-status="@StatusNames.Arrived">
+        <div class="icon blue"><i class="bi bi-hourglass-split"></i></div>
+        <div>
+            <div class="value">@Model.WaitingRoomCount</div>
+            <div class="label">Gözləmə zalında</div>
+        </div>
+    </a>
+    <div class="stat">
+        <div class="icon violet"><i class="bi bi-activity"></i></div>
+        <div>
+            <div class="value">@Model.InProgressCount</div>
+            <div class="label">Hazırda qəbulda</div>
         </div>
     </div>
     <div class="stat">
-        <div class="icon amber"><i class="bi bi-hourglass-split"></i></div>
+        <div class="icon green"><i class="bi bi-check2-all"></i></div>
+        <div>
+            <div class="value">@Model.CompletedToday</div>
+            <div class="label">Bu gün tamamlandı</div>
+        </div>
+    </div>
+</div>
+
+<div class="stat-grid">
+    <a class="stat stat-link" asp-controller="Reservation" asp-action="Index" asp-route-status="@StatusNames.Waiting">
+        <div class="icon amber"><i class="bi bi-clock"></i></div>
         <div>
             <div class="value">@Model.WaitingReservations</div>
-            <div class="label">Gözləyən</div>
+            <div class="label">Təsdiq gözləyən</div>
         </div>
-    </div>
-    <div class="stat">
-        <div class="icon green"><i class="bi bi-check2-circle"></i></div>
+    </a>
+    <a class="stat stat-link" asp-controller="Reservation" asp-action="Index" asp-route-period="tomorrow">
+        <div class="icon teal"><i class="bi bi-calendar-plus"></i></div>
         <div>
-            <div class="value">@Model.ConfirmedReservations</div>
-            <div class="label">Təsdiqlənmiş</div>
+            <div class="value">@Model.TomorrowCount</div>
+            <div class="label">Sabahkı qəbul</div>
         </div>
-    </div>
-    <div class="stat">
-        <div class="icon blue"><i class="bi bi-clipboard2-pulse-fill"></i></div>
-        <div>
-            <div class="value">@Model.ExaminationTypeCount</div>
-            <div class="label">Müayinə növü</div>
-        </div>
-    </div>
-    <div class="stat">
-        <div class="icon violet"><i class="bi bi-people-fill"></i></div>
-        <div>
-            <div class="value">@Model.UserCount</div>
-            <div class="label">İstifadəçi</div>
-        </div>
-    </div>
-    @if (User.IsInRole(AppRoles.Admin))
+    </a>
+    @if (showMoney)
     {
         <div class="stat">
-            <div class="icon green"><i class="bi bi-cash-stack"></i></div>
+            <div class="icon green"><i class="bi bi-wallet2"></i></div>
             <div>
-                <div class="value">@Model.TotalIncome.ToString("0.00") ₼</div>
-                <div class="label">Ümumi gəlir</div>
-            </div>
-        </div>
-        <div class="stat">
-            <div class="icon teal"><i class="bi bi-wallet2"></i></div>
-            <div>
-                <div class="value">@Model.TodayIncome.ToString("0.00") ₼</div>
+                <div class="value">@Fmt.Money(Model.TodayIncome)</div>
                 <div class="label">Bu gün kassa</div>
             </div>
         </div>
-        <div class="stat">
-            <div class="icon amber"><i class="bi bi-hourglass-split"></i></div>
+        <a class="stat stat-link" asp-controller="Kassa" asp-action="Index" asp-route-filter="unpaid">
+            <div class="icon red"><i class="bi bi-exclamation-circle"></i></div>
             <div>
-                <div class="value">@Model.Outstanding.ToString("0.00") ₼</div>
+                <div class="value">@Fmt.Money(Model.Outstanding)</div>
                 <div class="label">Qalıq borc</div>
             </div>
-        </div>
+        </a>
     }
 </div>
 
 <div class="card">
-    <div class="card-pad flex-between" style="border-bottom:1px solid var(--line);">
-        <h3 style="margin:0; font-size:1.05rem; font-weight:700;">Son rezervasiyalar</h3>
-        <a class="btn btn-light btn-sm" asp-controller="Reservation" asp-action="Index">Hamısına bax</a>
+    <div class="card-head">
+        <h3 class="card-title"><i class="bi bi-calendar2-event"></i> Bu günün qəbulları</h3>
+        <a class="btn btn-light btn-sm" asp-controller="Reservation" asp-action="Index" asp-route-period="today">Hamısı <i class="bi bi-arrow-right"></i></a>
     </div>
-    @if (Model.RecentReservations.Any())
+    @if (Model.TodayAppointments.Any())
     {
-        <table class="data">
-            <thead>
-                <tr><th>Ad Soyad</th><th>Telefon</th><th>Status</th><th></th></tr>
-            </thead>
-            <tbody>
-                @foreach (var r in Model.RecentReservations)
-                {
-                    <tr>
-                        <td style="font-weight:600;">@r.Name @r.Surname</td>
-                        <td class="text-muted">@r.Phone</td>
-                        <td><span class="badge-soft @Badge(r.Status?.Name)">@StatusText(r.Status?.Name)</span></td>
-                        <td style="text-align:right;">
-                            <a class="btn btn-ghost btn-sm" asp-controller="Reservation" asp-action="Details" asp-route-id="@r.Id">Detallar</a>
-                        </td>
-                    </tr>
-                }
-            </tbody>
-        </table>
+        <div class="table-scroll">
+            <table class="data">
+                <thead>
+                    <tr><th>Saat</th><th>Xəstə</th>@if (Model.MyDoctor == null) {<th>Həkim</th>}<th>Müayinələr</th><th>Status</th><th class="actions">Əməliyyat</th></tr>
+                </thead>
+                <tbody>
+                    @foreach (var r in Model.TodayAppointments)
+                    {
+                        var done = r.Status?.Name == StatusNames.Completed;
+                        <tr class="@(r.Id == nextId ? "row-next" : done ? "row-muted" : "")">
+                            <td>
+                                <span class="time-pill">@Fmt.Time(r.AppointmentAt)</span>
+                                @if (r.Id == nextId)
+                                {
+                                    <span class="hint-text" style="margin-left:6px;">növbəti</span>
+                                }
+                            </td>
+                            <td>
+                                <a asp-controller="Reservation" asp-action="Details" asp-route-id="@r.Id" class="link-strong">@r.Patient.FullName</a>
+                                <div class="hint-text">@r.Patient.Phone</div>
+                            </td>
+                            @if (Model.MyDoctor == null)
+                            {
+                                <td>@(r.Doctor?.FullName ?? "—")<div class="hint-text">@r.Room?.Name</div></td>
+                            }
+                            <td class="text-muted wrap">@string.Join(", ", r.ReserveExaminationTypes!.Select(x => x.ExaminationType.Name))</td>
+                            <td><partial name="_StatusBadge" model="r.Status?.Name" /></td>
+                            <td class="actions"><div class="actions-inner"><partial name="_StatusActions" model="r" /></div></td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
     }
     else
     {
         <div class="empty-state">
-            <i class="bi bi-calendar2-x"></i>
-            <p>Hələ rezervasiya yoxdur</p>
+            <i class="bi bi-calendar2-check"></i>
+            <p>Bu gün üçün qəbul yoxdur</p>
         </div>
     }
 </div>

@@ -6,26 +6,34 @@
 <div class="page-head">
     <div>
         <h2>Yeni istifadəçi</h2>
-        <p>İstifadəçi adı və şifrə təyin edin</p>
+        <p>İstifadəçi adı, şifrə və rol təyin edin</p>
     </div>
     <a class="btn btn-light" asp-action="Index"><i class="bi bi-arrow-left"></i> Siyahıya qayıt</a>
 </div>
 
 <div class="card" style="max-width:560px;">
     <div class="card-pad">
-        <form asp-controller="Account" asp-action="CreateUser" method="post">
-            <div asp-validation-summary="All" class="alert alert-danger" style="display:@(ViewData.ModelState.IsValid ? "none" : "block")"></div>
+        <form asp-controller="Account" asp-action="CreateUser" method="post" novalidate>
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
             <div class="field">
                 <label asp-for="UserName">İstifadəçi adı</label>
-                <input class="form-control" asp-for="UserName" placeholder="istifadeci" />
+                <input class="form-control" asp-for="UserName" placeholder="istifadeci" autocomplete="off" />
                 <span asp-validation-for="UserName" class="text-danger"></span>
             </div>
             <div class="field mt-3">
                 <label asp-for="Password">Şifrə</label>
-                <input class="form-control" type="password" asp-for="Password" placeholder="••••••••" />
+                <input class="form-control" type="password" asp-for="Password" placeholder="••••••••" autocomplete="new-password" />
                 <span asp-validation-for="Password" class="text-danger"></span>
+                <span class="hint-text">Ən azı 6 simvol</span>
             </div>
-            <div class="mt-3" style="display:flex; gap:10px;">
+            <div class="field mt-3">
+                <label asp-for="RoleId">Rol</label>
+                <select class="form-select" asp-for="RoleId" asp-items="@(((List<Microsoft.AspNetCore.Identity.IdentityRole>)ViewBag.Roles).Select(r => new SelectListItem(AppRoles.Label(r.Name), r.Id)))">
+                    <option value="">Rol seçin</option>
+                </select>
+                <span asp-validation-for="RoleId" class="text-danger"></span>
+            </div>
+            <div class="form-actions">
                 <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Yarat</button>
                 <a class="btn btn-light" asp-action="Index">İmtina</a>
             </div>

@@ -6,7 +6,7 @@
 <div class="page-head">
     <div>
         <h2>Maliyyə hesabatı</h2>
-        <p>@Model.From.ToString("dd.MM.yyyy") — @Model.To.ToString("dd.MM.yyyy")</p>
+        <p>@Fmt.Date(Model.From) — @Fmt.Date(Model.To)</p>
     </div>
 </div>
 
@@ -14,16 +14,21 @@
 <div class="card mb-3">
     <div class="card-pad">
         <form method="get" class="filter-bar">
+            <div class="seg" style="align-self:flex-end;">
+                <a asp-action="Index" asp-route-from="@DateTime.Today.ToString("yyyy-MM-dd")" asp-route-to="@DateTime.Today.ToString("yyyy-MM-dd")">Bu gün</a>
+                <a asp-action="Index" asp-route-from="@DateTime.Today.AddDays(-6).ToString("yyyy-MM-dd")">7 gün</a>
+                <a asp-action="Index">30 gün</a>
+                <a asp-action="Index" asp-route-from="@(new DateTime(DateTime.Today.Year, DateTime.Today.Month, 1).ToString("yyyy-MM-dd"))">Bu ay</a>
+            </div>
             <div class="field" style="margin:0;">
                 <label>Başlanğıc</label>
-                <input type="date" name="from" value="@Model.From.ToString("yyyy-MM-dd")" class="form-control" />
+                <input type="date" name="from" max="@DateTime.Today.ToString("yyyy-MM-dd")" value="@Model.From.ToString("yyyy-MM-dd")" class="form-control" />
             </div>
             <div class="field" style="margin:0;">
                 <label>Son</label>
                 <input type="date" name="to" value="@Model.To.ToString("yyyy-MM-dd")" class="form-control" />
             </div>
             <button type="submit" class="btn btn-primary"><i class="bi bi-funnel"></i> Filtrlə</button>
-            <a class="btn btn-light" asp-action="Index"><i class="bi bi-arrow-clockwise"></i> Son 30 gün</a>
         </form>
     </div>
 </div>
@@ -33,21 +38,21 @@
     <div class="stat">
         <div class="icon green"><i class="bi bi-graph-up-arrow"></i></div>
         <div>
-            <div class="value">@Model.TotalIncome.ToString("0.00") ₼</div>
-            <div class="label">Ümumi gəlir</div>
+            <div class="value">@Fmt.Money(Model.TotalIncome)</div>
+            <div class="label">Xalis gəlir@(Model.RefundTotal > 0 ? $" (qaytarma: {Fmt.Money(Model.RefundTotal)})" : "")</div>
         </div>
     </div>
     <div class="stat">
         <div class="icon teal"><i class="bi bi-cash-stack"></i></div>
         <div>
-            <div class="value">@Model.CashTotal.ToString("0.00") ₼</div>
+            <div class="value">@Fmt.Money(Model.CashTotal)</div>
             <div class="label">Nağd</div>
         </div>
     </div>
     <div class="stat">
         <div class="icon blue"><i class="bi bi-credit-card-2-front"></i></div>
         <div>
-            <div class="value">@Model.CardTotal.ToString("0.00") ₼</div>
+            <div class="value">@Fmt.Money(Model.CardTotal)</div>
             <div class="label">Kart</div>
         </div>
     </div>
@@ -64,16 +69,16 @@
     <!-- Daily totals -->
     <div class="card">
         <div class="card-pad">
-            <h3 style="margin:0 0 16px; font-size:1.05rem; font-weight:700;"><i class="bi bi-calendar3 text-muted"></i> Günlük gəlir</h3>
+            <h3 class="card-title"><i class="bi bi-calendar3"></i> Günlük gəlir</h3>
             @if (Model.DailyTotals.Any())
             {
                 @foreach (var d in Model.DailyTotals)
                 {
-                    var pct = Model.MaxDaily > 0 ? (int)(d.Total / Model.MaxDaily * 100) : 0;
+                    var pct = Model.MaxDaily > 0 ? (int)(Math.Max(0, d.Total) / Model.MaxDaily * 100) : 0;
                     <div class="bar-row">
-                        <span class="bar-label">@d.Date.ToString("dd.MM (ddd)")</span>
+                        <span class="bar-label">@Fmt.DayShort(d.Date)</span>
                         <div class="bar-track"><div class="bar-fill" style="width:@pct%"></div></div>
-                        <span class="bar-val">@d.Total.ToString("0.00") ₼</span>
+                        <span class="bar-val">@Fmt.Money(d.Total)</span>
                     </div>
                 }
             }
@@ -87,12 +92,13 @@
     <!-- By examination type -->
     <div class="card">
         <div class="card-pad">
-            <h3 style="margin:0 0 16px; font-size:1.05rem; font-weight:700;"><i class="bi bi-clipboard2-pulse text-muted"></i> Müayinə növləri üzrə (gözlənilən)</h3>
+            <h3 class="card-title"><i class="bi bi-clipboard2-pulse"></i> Müayinə növləri üzrə (gözlənilən)</h3>
             @if (Model.ExamTypeStats.Any())
             {
-                <table class="data" style="margin:-8px 0;">
+                <div class="table-scroll">
+                <table class="data compact">
                     <thead>
-                        <tr><th>Müayinə</th><th style="text-align:center;">Say</th><th style="text-align:right;">Məbləğ</th></tr>
+                        <tr><th>Müayinə</th><th style="text-align:center;">Say</th><th class="num">Məbləğ</th></tr>
                     </thead>
                     <tbody>
                         @foreach (var e in Model.ExamTypeStats)
@@ -100,11 +106,12 @@
                             <tr>
                                 <td style="font-weight:600;">@e.Name</td>
                                 <td style="text-align:center;"><span class="badge-soft badge-default">@e.Count</span></td>
-                                <td style="text-align:right;" class="money">@e.Expected.ToString("0.00") ₼</td>
+                                <td style="text-align:right;" class="money">@Fmt.Money(e.Expected)</td>
                             </tr>
                         }
                     </tbody>
                 </table>
+                </div>
             }
             else
             {
@@ -114,13 +121,46 @@
     </div>
 </div>
 
+<!-- By doctor -->
+<div class="card mt-3">
+    <div class="card-head">
+        <h3 class="card-title"><i class="bi bi-person-badge"></i> Həkimlər üzrə (qəbul tarixinə görə)</h3>
+    </div>
+    @if (Model.DoctorStats.Any())
+    {
+        <div class="table-scroll">
+            <table class="data">
+                <thead><tr><th>Həkim</th><th class="num">Yazılış</th><th class="num">Tamamlandı</th><th class="num">Gəlmədi</th><th class="num">Ləğv</th><th class="num">Gözlənilən gəlir</th></tr></thead>
+                <tbody>
+                    @foreach (var d in Model.DoctorStats)
+                    {
+                        <tr>
+                            <td style="font-weight:600;">@d.Name</td>
+                            <td class="num">@d.Booked</td>
+                            <td class="num">@d.Completed</td>
+                            <td class="num">@d.NoShow <span class="hint-text">(@d.NoShowPercent%)</span></td>
+                            <td class="num">@d.Cancelled</td>
+                            <td class="num money">@Fmt.Money(d.Revenue)</td>
+                        </tr>
+                    }
+                </tbody>
+            </table>
+        </div>
+    }
+    else
+    {
+        <div class="empty-state"><i class="bi bi-person-badge"></i><p>Bu dövrdə həkimə bağlı qəbul yoxdur</p></div>
+    }
+</div>
+
 <!-- Transactions -->
 <div class="card mt-3">
-    <div class="card-pad" style="border-bottom:1px solid var(--line);">
-        <h3 style="margin:0; font-size:1.05rem; font-weight:700;"><i class="bi bi-list-ul text-muted"></i> Əməliyyatlar (@Model.PaymentCount)</h3>
+    <div class="card-head">
+        <h3 class="card-title"><i class="bi bi-list-ul"></i> Əməliyyatlar (@Model.PaymentCount)</h3>
     </div>
     @if (Model.Payments.Any())
     {
+        <div class="table-scroll">
         <table class="data">
             <thead>
                 <tr>
@@ -128,32 +168,37 @@
                     <th>Xəstə</th>
                     <th>Üsul</th>
                     <th>Qeyd</th>
-                    <th style="text-align:right;">Məbləğ</th>
+                    <th class="num">Məbləğ</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var p in Model.Payments)
                 {
                     <tr>
-                        <td class="text-muted">@p.PaidAt.ToString("dd.MM.yyyy HH:mm")</td>
-                        <td style="font-weight:600;">@p.Reserve?.Name @p.Reserve?.Surname</td>
+                        <td class="text-muted">@Fmt.DateTime(p.PaidAt)</td>
+                        <td style="font-weight:600;">@p.Reserve?.Patient.FullName</td>
                         <td>
+                            @if (p.Amount < 0)
+                            {
+                                <span class="badge-soft badge-refund">Qaytarma</span>
+                            }
                             <span class="badge-soft @(p.Method == PaymentMethod.Cash ? "badge-cash" : "badge-card")">
                                 @(p.Method == PaymentMethod.Cash ? "Nağd" : "Kart")
                             </span>
                         </td>
-                        <td class="text-muted">@(string.IsNullOrEmpty(p.Note) ? "—" : p.Note)</td>
-                        <td style="text-align:right;" class="money pos">@p.Amount.ToString("0.00") ₼</td>
+                        <td class="text-muted wrap">@(string.IsNullOrEmpty(p.Note) ? "—" : p.Note)</td>
+                        <td class="num money @(p.Amount < 0 ? "neg" : "pos")">@(p.Amount < 0 ? "−" : "")@Fmt.Money(Math.Abs(p.Amount))</td>
                     </tr>
                 }
             </tbody>
             <tfoot>
-                <tr style="border-top:2px solid var(--line);">
-                    <td colspan="4" style="text-align:right; font-weight:700;">Cəmi:</td>
-                    <td style="text-align:right;" class="money pos">@Model.TotalIncome.ToString("0.00") ₼</td>
+                <tr>
+                    <td colspan="4" class="num">Cəmi</td>
+                    <td class="num money pos">@Fmt.Money(Model.TotalIncome)</td>
                 </tr>
             </tfoot>
         </table>
+        </div>
     }
     else
     {

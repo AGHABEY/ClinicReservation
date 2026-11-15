@@ -59,21 +59,57 @@ Tələblər: .NET 8 SDK + işləyən PostgreSQL.
 
 ## 🧩 Əsas funksiyalar
 
-- **İdarə paneli (Dashboard)** — ümumi statistikalar, gəlir göstəriciləri və son rezervasiyalar
-- **Kassa** — rezervasiyalar üzrə ödənişlər (nağd/kart), qismən ödəniş, ödəniş tarixçəsi
-- **Hesabatlar** — tarix filtri ilə detallı maliyyə hesabatı: ümumi gəlir, nağd/kart
-  bölgüsü, günlük gəlir qrafiki, müayinə növləri üzrə bölgü və əməliyyat siyahısı
-- **Rezervasiyalar** — əlavə etmə (çoxlu müayinə seçimi), siyahı, detallar, təsdiq
-- **Müayinələr** — müayinə növləri üçün CRUD (ad, təsvir, qiymət)
-- **İstifadəçilər** — istifadəçi yaratma və rol təyinetmə
+- **Xəstə kartı** — hər xəstə FİN ilə bir dəfə qeyd olunur; vizit tarixçəsi, borc, qeydlər
+  (məs. allergiya). Rezervasiya formasında FİN yazanda məlumatlar avtomatik dolur
+- **Həkimlər** — ixtisas, şöbə, kabinet, qəbul müddəti, həftəlik iş qrafiki (fasilə ilə),
+  məzuniyyətlər; həkimə sistem istifadəçisi bağlana bilər (yalnız öz qəbullarını görür)
+- **Şöbə və kabinetlər** — eyni kabinetdə iki həkimin qəbulu üst-üstə düşə bilməz
+- **Rezervasiyalar** — həkimin qrafikinə görə boş saatlar; status axını:
+  Gözləyir → Təsdiqləndi → Gəldi → Qəbulda → Tamamlandı (+ Gəlmədi, Ləğv)
+- **Kassa** — ödəniş, qismən ödəniş, geri qaytarma; ləğv və «gəlmədi» rezervasiyalar borc yaratmır
+- **Hesabatlar** — xalis gəlir, nağd/kart, günlük qrafik, müayinə və həkim üzrə statistika
+  («gəlmədi» faizi daxil)
+- **Rollar və icazələr** — Admin, İşçi, Resepsiya, Kassir, Həkim, Rəhbərlik; hər rolun icazələri
+  «Rollar və icazələr» səhifəsində seçilir (Admin həmişə hər şeyə icazəlidir)
+- **Audit jurnalı** — kim nə vaxt nə etdi: girişlər, xəstə kartına baxış, rezervasiya və
+  status dəyişiklikləri, ödənişlər, istifadəçi və icazə dəyişiklikləri
+- **İstifadəçilər** — yaratma, rol, şifrə sıfırlama, silmə; öz şifrəsini dəyişmə
+
+## 🚦 İlk quraşdırma
+
+1. «Şöbə və kabinetlər» səhifəsində şöbələri və kabinetləri əlavə edin.
+2. «Həkimlər» səhifəsində həkimləri və onların həftəlik qrafikini qurun.
+3. «Müayinələr»də müayinələri şöbələrə bağlayın (istəyə bağlı).
+4. «İstifadəçilər»də işçilərə rol verin, həkimlərə öz loginini bağlayın.
+
+## 🕘 Default iş saatı
+
+Yeni həkim əlavə edilərkən qrafik bu dəyərlərlə doldurulur (sonra hər həkim üçün ayrıca
+dəyişdirilir). `appsettings.json` → `Clinic`:
+
+```json
+"Clinic": {
+  "WorkStart": "09:00",
+  "WorkEnd": "18:00",
+  "SlotMinutes": 30
+}
+```
+
+Qəbul saatları həkimin öz qrafikindən hesablanır: bir həkim eyni anda bir xəstə qəbul edir,
+bir kabinetdə eyni anda bir qəbul olur.
 
 ## 📁 Struktur
 
 ```
-Controllers/   Home, Account, Reservation, ExaminationType
-Models/        Reserve, ExaminationType, ReserveStatus, AppUser, ...
+Controllers/   Home, Account, Reservation, Patient, Doctor, Department, Role, Audit,
+               ExaminationType, Kassa, Report
+Authorization/ İcazə əsaslı avtorizasiya ([HasPermission])
+Models/        Reserve, ExaminationType, ReserveStatus, Payment, AppUser, ClinicOptions, ...
+Services/      SlotService (həkim qrafikinə görə saatlar), ReserveFlow (status axını),
+               AuditService
+Helpers/       Fmt (Azərbaycan formatında tarix/məbləğ)
 Data/          AppDbContext, SeedData (migration + seed)
-ViewModels/    Account, UserList, AdminRole, Dashboard
+ViewModels/    Form, Kassa, Report, Dashboard, Account, ...
 Views/         Modern dizaynlı Razor səhifələri
 wwwroot/css/   site.css (custom tema)
 Migrations/    PostgreSQL migration-ları

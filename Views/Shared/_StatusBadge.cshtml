@@ -1,0 +1,15 @@
+@model string?
+@{
+    var css = Model switch
+    {
+        StatusNames.Waiting => "badge-waiting",
+        StatusNames.Confirmed => "badge-confirmed",
+        StatusNames.Arrived => "badge-arrived",
+        StatusNames.InProgress => "badge-inprogress",
+        StatusNames.Completed => "badge-completed",
+        StatusNames.NoShow => "badge-noshow",
+        StatusNames.Cancelled => "badge-cancelled",
+        _ => "badge-default"
+    };
+}
+<span class="badge-soft @css">@StatusNames.Label(Model)</span>

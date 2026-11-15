@@ -1,4 +1,4 @@
-@model AccountViewModel
+@model UpdateUserViewModel
 @{
     ViewData["Title"] = "İstifadəçiyə düzəliş";
 }
@@ -6,28 +6,28 @@
 <div class="page-head">
     <div>
         <h2>İstifadəçiyə düzəliş</h2>
-        <p>@Model.User?.UserName üçün rol təyin edin</p>
+        <p>@Model.UserName üçün rol təyin edin</p>
     </div>
     <a class="btn btn-light" asp-action="Index"><i class="bi bi-arrow-left"></i> Siyahıya qayıt</a>
 </div>
 
 <div class="card" style="max-width:560px;">
     <div class="card-pad">
-        <form asp-controller="Account" asp-action="UpdateUser" method="post">
-            <div asp-validation-summary="All" class="alert alert-danger" style="display:@(ViewData.ModelState.IsValid ? "none" : "block")"></div>
-            <input asp-for="User!.Id" hidden />
+        <form asp-controller="Account" asp-action="UpdateUser" method="post" novalidate>
+            <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
+            <input type="hidden" asp-for="Id" />
             <div class="field">
-                <label asp-for="User!.UserName">İstifadəçi adı</label>
-                <input asp-for="User!.UserName" class="form-control" readonly style="background:#f8fafc;" />
+                <label for="UserNameDisplay">İstifadəçi adı</label>
+                <input id="UserNameDisplay" value="@Model.UserName" class="form-control" readonly />
             </div>
             <div class="field mt-3">
-                <label asp-for="User!.RoleId">Rol</label>
-                <select class="form-select" asp-for="User!.RoleId" asp-items="@(new SelectList(ViewBag.Roles, "Id", "Name"))">
+                <label asp-for="RoleId">Rol</label>
+                <select class="form-select" asp-for="RoleId" asp-items="@(((List<Microsoft.AspNetCore.Identity.IdentityRole>)ViewBag.Roles).Select(r => new SelectListItem(AppRoles.Label(r.Name), r.Id)))">
                     <option value="">Rol seçin</option>
                 </select>
-                <span asp-validation-for="User!.RoleId" class="text-danger"></span>
+                <span asp-validation-for="RoleId" class="text-danger"></span>
             </div>
-            <div class="mt-3" style="display:flex; gap:10px;">
+            <div class="form-actions">
                 <button type="submit" class="btn btn-primary"><i class="bi bi-check-lg"></i> Yenilə</button>
                 <a class="btn btn-light" asp-action="Index">İmtina</a>
             </div>

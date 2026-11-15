@@ -1,69 +1,192 @@
 @model Reserve
 @{
     ViewData["Title"] = "Rezervasiya detalları";
-    string Badge(string? s) => s switch
-    {
-        "Waiting" => "badge-waiting",
-        "Confirmed" => "badge-confirmed",
-        _ => "badge-default"
-    };
-    string StatusText(string? s) => s switch
-    {
-        "Waiting" => "Gözləyir",
-        "Confirmed" => "Təsdiqləndi",
-        _ => s ?? "—"
-    };
+    var paid = Model.Paid;
+    var due = Model.AmountDue;
+    var balance = due - paid;
+    var closed = StatusNames.IsClosedWithoutVisit(Model.Status?.Name);
+    var canManage = User.Can(Permissions.ReservationsManage);
+    var canPay = User.CanAny(Permissions.PaymentsTake, Permissions.KassaTotals);
+    ViewData["ReturnTo"] = "details";
+    ViewData["Small"] = false;
 }
 
 <div class="page-head">
     <div>
-        <h2>@Model.Name @Model.Surname</h2>
-        <p>Rezervasiya #@Model.Id</p>
+        <h2>@Model.Patient.FullName</h2>
+        <p>Rezervasiya #@Model.Id · <partial name="_StatusBadge" model="Model.Status?.Name" /></p>
     </div>
-    <a class="btn btn-light" asp-action="Index"><i class="bi bi-arrow-left"></i> Siyahıya qayıt</a>
+    <div class="page-actions">
+        <a class="btn btn-light" asp-action="Index"><i class="bi bi-arrow-left"></i> Siyahı</a>
+        @if (canManage && ReserveFlow.CanEdit(Model))
+        {
+            <a class="btn btn-light" asp-action="Edit" asp-route-id="@Model.Id"><i class="bi bi-pencil"></i> Düzəliş</a>
+        }
+        @if (canManage && ReserveFlow.CanCancel(Model))
+        {
+            <button type="button" class="btn btn-danger" onclick="document.getElementById('cancelDialog').showModal()"><i class="bi bi-x-circle"></i> Ləğv et</button>
+        }
+        <partial name="_StatusActions" model="Model" view-data="ViewData" />
+        @if (canPay)
+        {
+            <a class="btn btn-primary" asp-controller="Kassa" asp-action="Pay" asp-route-id="@Model.Id">
+                <i class="bi bi-cash-coin"></i> @(balance > 0 ? "Ödəniş qəbul et" : balance < 0 ? "Geri qaytarma" : "Ödənişlər")
+            </a>
+        }
+    </div>
 </div>
 
-<div style="display:grid; grid-template-columns: 2fr 1fr; gap:18px; align-items:start;">
-    <div class="card">
-        <div class="card-pad">
-            <h3 style="margin:0 0 8px; font-size:1.05rem; font-weight:700;"><i class="bi bi-person-vcard text-muted"></i> Xəstə məlumatları</h3>
-            <dl class="detail-list">
-                <div class="detail-row"><dt>Ad</dt><dd>@Model.Name</dd></div>
-                <div class="detail-row"><dt>Soyad</dt><dd>@Model.Surname</dd></div>
-                <div class="detail-row"><dt>FİN kod</dt><dd>@Model.PinCode</dd></div>
-                <div class="detail-row"><dt>Telefon</dt><dd>@Model.Phone</dd></div>
-                <div class="detail-row"><dt>Doğum tarixi</dt><dd>@Model.Birthday.ToString("dd.MM.yyyy")</dd></div>
-                <div class="detail-row"><dt>Əlavə olunma</dt><dd>@(Model.AddedDate?.ToString("dd.MM.yyyy HH:mm") ?? "—")</dd></div>
-                <div class="detail-row"><dt>Təsdiq tarixi</dt><dd>@(Model.ConfirmDate?.ToString("dd.MM.yyyy HH:mm") ?? "—")</dd></div>
-                <div class="detail-row">
-                    <dt>Status</dt>
-                    <dd><span class="badge-soft @Badge(Model.Status?.Name)">@StatusText(Model.Status?.Name)</span></dd>
-                </div>
-            </dl>
-        </div>
+@if (Model.IsCancelled)
+{
+    <div class="alert alert-danger">
+        <i class="bi bi-x-circle-fill"></i>
+        Bu rezervasiya @Fmt.DateTime(Model.CancelDate) tarixində ləğv edilib.
+        @if (!string.IsNullOrEmpty(Model.CancelReason))
+        {
+            <br /><strong>Səbəb:</strong> @Model.CancelReason
+        }
+        @if (balance < 0)
+        {
+            <br /><strong>Xəstəyə @Fmt.Money(-balance) qaytarılmalıdır.</strong>
+        }
     </div>
+}
+else if (Model.Status?.Name == StatusNames.NoShow)
+{
+    <div class="alert alert-warning">
+        <i class="bi bi-person-x-fill"></i> Xəstə qəbula gəlməyib.
+        @if (balance < 0)
+        {
+            <strong>Əvvəlcədən ödənilmiş @Fmt.Money(-balance) qaytarılmalıdır.</strong>
+        }
+    </div>
+}
 
-    <div class="card">
-        <div class="card-pad">
-            <h3 style="margin:0 0 14px; font-size:1.05rem; font-weight:700;"><i class="bi bi-clipboard2-pulse text-muted"></i> Müayinələr</h3>
-            @if (Model.ReserveExaminationTypes != null && Model.ReserveExaminationTypes.Any())
+<div class="detail-grid">
+    <div class="stack">
+        <div class="card appt-card @(closed ? "cancelled" : "")">
+            <div class="appt-icon"><i class="bi bi-calendar-event"></i></div>
+            <div style="flex:1;">
+                <div class="appt-label">Qəbul vaxtı</div>
+                <div class="appt-value">@Fmt.Appointment(Model.AppointmentAt)</div>
+                <div class="appt-sub">@Fmt.Long(Model.AppointmentAt) · @Model.DurationMinutes dəq</div>
+            </div>
+            @if (Model.Doctor != null)
             {
-                <div style="display:flex; flex-direction:column; gap:10px;">
-                    @foreach (var examType in Model.ReserveExaminationTypes)
+                <div style="text-align:right;">
+                    <div class="appt-label">Həkim</div>
+                    <div style="font-weight:700;">@Model.Doctor.FullName</div>
+                    <div class="appt-sub">@(Model.Doctor.Specialty ?? Model.Doctor.Department?.Name)@(Model.Room == null ? "" : $" · {Model.Room.Name}")</div>
+                </div>
+            }
+        </div>
+
+        <div class="card">
+            <div class="card-pad">
+                <div class="flex-between" style="margin-bottom:6px;">
+                    <h3 class="card-title" style="margin:0;"><i class="bi bi-person-vcard"></i> Xəstə</h3>
+                    @if (User.Can(Permissions.PatientsView))
                     {
-                        <div style="display:flex; justify-content:space-between; align-items:center; padding:12px 14px; background:var(--brand-soft); border-radius:11px;">
-                            <span style="font-weight:600; color:var(--brand-dark);">
-                                <i class="bi bi-check-circle-fill"></i> @examType.ExaminationType.Name
-                            </span>
-                            <span class="text-muted" style="font-size:.85rem;">@examType.ExaminationType.Price ₼</span>
-                        </div>
+                        <a class="btn btn-ghost btn-sm" asp-controller="Patient" asp-action="Details" asp-route-id="@Model.PatientId">Xəstə kartı <i class="bi bi-arrow-right"></i></a>
                     }
                 </div>
-            }
-            else
-            {
-                <p class="text-muted" style="font-size:.9rem;">Müayinə təyin edilməyib.</p>
-            }
+                <dl class="detail-list">
+                    <div class="detail-row"><dt>Ad Soyad</dt><dd>@Model.Patient.FullName</dd></div>
+                    <div class="detail-row"><dt>FİN kod</dt><dd>@Model.Patient.PinCode</dd></div>
+                    <div class="detail-row"><dt>Telefon</dt><dd><a href="tel:@Model.Patient.Phone.Replace(" ", "")" style="color:inherit;">@Model.Patient.Phone</a></dd></div>
+                    <div class="detail-row"><dt>Doğum tarixi</dt><dd>@Fmt.Date(Model.Patient.Birthday) <span class="text-muted" style="font-weight:500;">(@Fmt.Age(Model.Patient.Birthday) yaş)</span></dd></div>
+                </dl>
+                @if (!string.IsNullOrEmpty(Model.Patient.Notes))
+                {
+                    <div class="alert alert-warning" style="margin:12px 0 0;"><i class="bi bi-sticky"></i> @Model.Patient.Notes</div>
+                }
+            </div>
+        </div>
+
+        <div class="card">
+            <div class="card-pad">
+                <h3 class="card-title"><i class="bi bi-clock-history"></i> Gediş</h3>
+                <ol class="timeline">
+                    <li class="done"><span>Yaradıldı</span><span class="hint-text">@Fmt.DateTime(Model.AddedDate)</span></li>
+                    @if (Model.ConfirmDate != null) { <li class="done"><span>Təsdiqləndi</span><span class="hint-text">@Fmt.DateTime(Model.ConfirmDate)</span></li> }
+                    @if (Model.ArrivedAt != null) { <li class="done"><span>Gəldi</span><span class="hint-text">@Fmt.DateTime(Model.ArrivedAt)</span></li> }
+                    @if (Model.StartedAt != null) { <li class="done"><span>Qəbula başlandı</span><span class="hint-text">@Fmt.DateTime(Model.StartedAt)@(Model.ArrivedAt != null ? $" · {(int)(Model.StartedAt.Value - Model.ArrivedAt.Value).TotalMinutes} dəq gözlədi" : "")</span></li> }
+                    @if (Model.CompletedAt != null) { <li class="done"><span>Tamamlandı</span><span class="hint-text">@Fmt.DateTime(Model.CompletedAt)</span></li> }
+                    @if (Model.Status?.Name == StatusNames.NoShow) { <li class="bad"><span>Gəlmədi</span></li> }
+                    @if (Model.IsCancelled) { <li class="bad"><span>Ləğv edildi</span><span class="hint-text">@Fmt.DateTime(Model.CancelDate)</span></li> }
+                </ol>
+                @if (User.Can(Permissions.AuditView))
+                {
+                    <a class="hint-text" asp-controller="Audit" asp-action="Index" asp-route-entity="@AuditEntities.Reservation" asp-route-entityId="@Model.Id">Tam tarixçə (audit) <i class="bi bi-arrow-right"></i></a>
+                }
+            </div>
         </div>
     </div>
+
+    <div class="stack">
+        <div class="card">
+            <div class="card-pad">
+                <h3 class="card-title"><i class="bi bi-clipboard2-pulse"></i> Müayinələr</h3>
+                @if (Model.ReserveExaminationTypes != null && Model.ReserveExaminationTypes.Any())
+                {
+                    <div class="line-list">
+                        @foreach (var examType in Model.ReserveExaminationTypes)
+                        {
+                            <div class="line-item">
+                                <span style="font-weight:600;">@examType.ExaminationType.Name</span>
+                                <span class="money">@Fmt.Money(examType.Price)</span>
+                            </div>
+                        }
+                    </div>
+                    <div class="line-total"><span>Cəmi</span><span class="money">@Fmt.Money(Model.Total)</span></div>
+                }
+                else
+                {
+                    <p class="text-muted" style="font-size:.9rem;">Müayinə təyin edilməyib.</p>
+                }
+            </div>
+        </div>
+
+        @if (canPay)
+        {
+            <div class="card">
+                <div class="card-pad">
+                    <h3 class="card-title"><i class="bi bi-wallet2"></i> Ödəniş</h3>
+                    <dl class="detail-list">
+                        <div class="detail-row"><dt>Ödənilməli</dt><dd class="money">@Fmt.Money(due)</dd></div>
+                        <div class="detail-row"><dt>Ödənilib</dt><dd class="money pos">@Fmt.Money(paid)</dd></div>
+                        <div class="detail-row">
+                            <dt>@(balance < 0 ? "Qaytarılmalı" : "Qalıq")</dt>
+                            <dd class="money @(balance != 0 ? "neg" : "")">@Fmt.Money(Math.Abs(balance))</dd>
+                        </div>
+                    </dl>
+                </div>
+            </div>
+        }
+    </div>
 </div>
+
+@if (canManage && ReserveFlow.CanCancel(Model))
+{
+    <dialog id="cancelDialog" class="modal" aria-labelledby="cancelTitle">
+        <form asp-action="Cancel" method="post">
+            <input type="hidden" name="Id" value="@Model.Id" />
+            <h3 id="cancelTitle" class="card-title"><i class="bi bi-x-circle" style="color:#b91c1c;"></i> Rezervasiyanı ləğv et</h3>
+            <p class="text-muted" style="margin:0 0 16px; font-size:.9rem;">
+                @Model.Patient.FullName — @Fmt.Appointment(Model.AppointmentAt). Ləğv edilən rezervasiya geri qaytarılmır, saat isə başqa xəstə üçün boşalır.
+            </p>
+            @if (paid > 0)
+            {
+                <div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> Xəstə @Fmt.Money(paid) ödəyib. Ləğvdən sonra məbləği Kassada «geri qaytarma» kimi qeyd edin.</div>
+            }
+            <div class="field">
+                <label for="cancelReason">Səbəb <span class="hint-text">(istəyə bağlı)</span></label>
+                <input id="cancelReason" name="Reason" class="form-control" maxlength="250" placeholder="Məs: xəstə zəng edib imtina etdi" />
+            </div>
+            <div class="form-actions">
+                <button type="submit" class="btn btn-danger-solid"><i class="bi bi-x-circle"></i> Ləğv et</button>
+                <button type="button" class="btn btn-light" onclick="this.closest('dialog').close()">Bağla</button>
+            </div>
+        </form>
+    </dialog>
+}

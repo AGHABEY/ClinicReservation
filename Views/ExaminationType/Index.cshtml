@@ -8,7 +8,10 @@
         <h2>Müayinə növləri</h2>
         <p>Klinikada təklif olunan müayinələr (@Model.Count)</p>
     </div>
-    <a class="btn btn-primary" asp-action="Add"><i class="bi bi-plus-lg"></i> Yeni müayinə</a>
+    @if (User.Can(Permissions.CatalogManage))
+    {
+        <a class="btn btn-primary" asp-action="Add"><i class="bi bi-plus-lg"></i> Yeni müayinə</a>
+    }
 </div>
 
 @if (Model.Any())
@@ -18,9 +21,10 @@
             <thead>
                 <tr>
                     <th>Ad</th>
+                    <th>Şöbə</th>
                     <th>Təsvir</th>
-                    <th>Qiymət</th>
-                    <th style="text-align:right;">Əməliyyatlar</th>
+                    <th class="num">Qiymət</th>
+                    <th class="actions">Əməliyyatlar</th>
                 </tr>
             </thead>
             <tbody>
@@ -28,12 +32,16 @@
                 {
                     <tr>
                         <td style="font-weight:600;"><i class="bi bi-clipboard2-pulse text-muted"></i> @item.Name</td>
-                        <td class="text-muted">@(string.IsNullOrEmpty(item.Description) ? "—" : item.Description)</td>
-                        <td><span style="font-weight:600; color:var(--brand-dark);">@item.Price ₼</span></td>
-                        <td style="text-align:right;">
-                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-warning btn-sm">
+                        <td class="text-muted">@(item.Department?.Name ?? "Ümumi")</td>
+                        <td class="text-muted wrap">@(string.IsNullOrEmpty(item.Description) ? "—" : item.Description)</td>
+                        <td class="num money">@Fmt.Money(item.Price)</td>
+                        <td class="actions">
+                            @if (User.Can(Permissions.CatalogManage))
+                            {
+                            <a asp-action="Edit" asp-route-id="@item.Id" class="btn btn-ghost btn-sm">
                                 <i class="bi bi-pencil"></i> Düzəliş
                             </a>
+                            }
                         </td>
                     </tr>
                 }

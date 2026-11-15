@@ -25,13 +25,14 @@ namespace ClinicReservation.Data
 
         private static async Task SeedStatusesAsync(AppDbContext context)
         {
-            if (!await context.ReserveStatuses.AnyAsync())
+            // Add any status that is missing, so new statuses also reach existing databases.
+            var existing = await context.ReserveStatuses.Select(s => s.Name).ToListAsync();
+            foreach (var name in StatusNames.All)
             {
-                context.ReserveStatuses.AddRange(
-                    new ReserveStatus { Name = "Waiting" },
-                    new ReserveStatus { Name = "Confirmed" });
-                await context.SaveChangesAsync();
+                if (!existing.Contains(name))
+                    context.ReserveStatuses.Add(new ReserveStatus { Name = name });
             }
+            await context.SaveChangesAsync();
         }
 
         private static async Task SeedRolesAndAdminAsync(IServiceProvider provider)
@@ -39,10 +40,23 @@ namespace ClinicReservation.Data
             var roleManager = provider.GetRequiredService<RoleManager<IdentityRole>>();
             var userManager = provider.GetRequiredService<UserManager<IdentityUser>>();
 
-            foreach (var role in new[] { AppRoles.Admin, AppRoles.Staff })
+            foreach (var roleName in AppRoles.BuiltIn)
             {
-                if (!await roleManager.RoleExistsAsync(role))
-                    await roleManager.CreateAsync(new IdentityRole(role));
+                var role = await roleManager.FindByNameAsync(roleName);
+                if (role == null)
+                {
+                    role = new IdentityRole(roleName);
+                    await roleManager.CreateAsync(role);
+                }
+
+                // Give a role its default permissions only once (when it has none),
+                // so later edits on the Roles page are never overwritten.
+                var claims = await roleManager.GetClaimsAsync(role);
+                if (!claims.Any(c => c.Type == Permissions.ClaimType))
+                {
+                    foreach (var permission in AppRoles.DefaultPermissions(roleName))
+                        await roleManager.AddClaimAsync(role, new System.Security.Claims.Claim(Permissions.ClaimType, permission));
+                }
             }
 
             await EnsureUserAsync(userManager, "admin", "admin123", "Administrator", "admin@clinic.local", AppRoles.Admin);

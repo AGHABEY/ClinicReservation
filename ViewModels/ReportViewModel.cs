@@ -16,6 +16,17 @@ namespace ClinicReservation.ViewModels
         public decimal Expected { get; set; }
     }
 
+    public class DoctorStat
+    {
+        public string Name { get; set; } = "";
+        public int Booked { get; set; }
+        public int Completed { get; set; }
+        public int NoShow { get; set; }
+        public int Cancelled { get; set; }
+        public decimal Revenue { get; set; }
+        public int NoShowPercent => Booked == 0 ? 0 : (int)Math.Round(NoShow * 100.0 / Booked);
+    }
+
     public class ReportViewModel
     {
         public DateTime From { get; set; }
@@ -26,12 +37,14 @@ namespace ClinicReservation.ViewModels
         public decimal CashTotal { get; set; }
         public decimal CardTotal { get; set; }
         public int PaymentCount { get; set; }
+        public decimal RefundTotal { get; set; }
 
         public List<DailyTotal> DailyTotals { get; set; } = new();
         public List<ExamTypeStat> ExamTypeStats { get; set; } = new();
+        public List<DoctorStat> DoctorStats { get; set; } = new();
         public List<Payment> Payments { get; set; } = new();
 
         // Helpers for chart bars
-        public decimal MaxDaily => DailyTotals.Count > 0 ? DailyTotals.Max(d => d.Total) : 0;
+        public decimal MaxDaily => DailyTotals.Count > 0 ? DailyTotals.Max(d => Math.Abs(d.Total)) : 0;
     }
 }

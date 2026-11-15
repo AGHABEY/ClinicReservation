@@ -1,52 +1,82 @@
 @model KassaListViewModel
 @{
     ViewData["Title"] = "Kassa";
-    var isAdmin = User.IsInRole(AppRoles.Admin);
-    string statusBadge(string s) => s switch { "Paid" => "badge-paid", "Partial" => "badge-partial", _ => "badge-unpaid" };
-    string statusText(string s) => s switch { "Paid" => "Ödənilib", "Partial" => "Qismən", _ => "Ödənilməyib" };
+    var isAdmin = User.Can(Permissions.KassaTotals);
+    string statusBadge(string s) => s switch
+    {
+        PayStatus.Paid => "badge-paid",
+        PayStatus.Partial => "badge-partial",
+        PayStatus.Refund => "badge-refund",
+        PayStatus.Cancelled => "badge-cancelled",
+        _ => "badge-unpaid"
+    };
+    string statusText(string s) => s switch
+    {
+        PayStatus.Paid => "Ödənilib",
+        PayStatus.Partial => "Qismən",
+        PayStatus.Refund => "Qaytarılmalı",
+        PayStatus.Cancelled => "Ləğv edilib",
+        _ => "Ödənilməyib"
+    };
 }
 
 <div class="page-head">
     <div>
         <h2>Kassa</h2>
-        <p>Rezervasiyalar üzrə ödənişlər</p>
+        <p>Rezervasiyalar üzrə ödənişlər (@Model.Items.Count)</p>
     </div>
 </div>
 
-@if (User.IsInRole(AppRoles.Admin))
+@if (isAdmin)
 {
     <div class="stat-grid">
         <div class="stat">
             <div class="icon teal"><i class="bi bi-wallet2"></i></div>
             <div>
-                <div class="value">@Model.TotalExpected.ToString("0.00") ₼</div>
+                <div class="value">@Fmt.Money(Model.TotalExpected)</div>
                 <div class="label">Gözlənilən gəlir</div>
             </div>
         </div>
         <div class="stat">
             <div class="icon green"><i class="bi bi-cash-stack"></i></div>
             <div>
-                <div class="value">@Model.TotalCollected.ToString("0.00") ₼</div>
+                <div class="value">@Fmt.Money(Model.TotalCollected)</div>
                 <div class="label">Yığılan</div>
             </div>
         </div>
         <div class="stat">
             <div class="icon amber"><i class="bi bi-hourglass-split"></i></div>
             <div>
-                <div class="value">@Model.TotalOutstanding.ToString("0.00") ₼</div>
+                <div class="value">@Fmt.Money(Model.TotalOutstanding)</div>
                 <div class="label">Qalıq borc</div>
             </div>
         </div>
+        @if (Model.TotalToRefund > 0)
+        {
+            <a class="stat stat-link" asp-action="Index" asp-route-filter="refund">
+                <div class="icon red"><i class="bi bi-arrow-counterclockwise"></i></div>
+                <div>
+                    <div class="value">@Fmt.Money(Model.TotalToRefund)</div>
+                    <div class="label">Qaytarılmalı</div>
+                </div>
+            </a>
+        }
     </div>
 }
 
-<div class="flex-between mb-3">
+<form method="get" class="toolbar" role="search">
     <div class="seg">
-        <a class="@(string.IsNullOrEmpty(Model.Filter) ? "on" : "")" asp-action="Index">Hamısı</a>
-        <a class="@(Model.Filter == "unpaid" ? "on" : "")" asp-action="Index" asp-route-filter="unpaid">Ödənilməyib</a>
-        <a class="@(Model.Filter == "paid" ? "on" : "")" asp-action="Index" asp-route-filter="paid">Ödənilib</a>
+        <a class="@(string.IsNullOrEmpty(Model.Filter) ? "on" : "")" asp-action="Index" asp-route-q="@Model.Query">Hamısı</a>
+        <a class="@(Model.Filter == "unpaid" ? "on" : "")" asp-action="Index" asp-route-filter="unpaid" asp-route-q="@Model.Query">Borclu</a>
+        <a class="@(Model.Filter == "paid" ? "on" : "")" asp-action="Index" asp-route-filter="paid" asp-route-q="@Model.Query">Ödənilib</a>
+        <a class="@(Model.Filter == "refund" ? "on" : "")" asp-action="Index" asp-route-filter="refund" asp-route-q="@Model.Query">Qaytarılmalı</a>
     </div>
-</div>
+    <input type="hidden" name="filter" value="@Model.Filter" />
+    <div class="search">
+        <i class="bi bi-search"></i>
+        <input type="search" name="q" value="@Model.Query" class="form-control" placeholder="Xəstə, FİN və ya telefon..." aria-label="Axtarış" />
+    </div>
+</form>
 
 @if (Model.Items.Any())
 {
@@ -54,35 +84,47 @@
         <table class="data">
             <thead>
                 <tr>
+                    <th>Qəbul</th>
                     <th>Xəstə</th>
                     <th>Telefon</th>
                     @if (isAdmin)
                     {
-                        <th style="text-align:right;">Cəmi</th>
-                        <th style="text-align:right;">Ödənilib</th>
-                        <th style="text-align:right;">Qalıq</th>
+                        <th class="num">Cəmi</th>
+                        <th class="num">Ödənilib</th>
+                        <th class="num">Qalıq</th>
                     }
                     <th>Status</th>
-                    <th style="text-align:right;">Əməliyyat</th>
+                    <th class="actions">Əməliyyat</th>
                 </tr>
             </thead>
             <tbody>
                 @foreach (var item in Model.Items)
                 {
-                    <tr>
-                        <td style="font-weight:600;">@item.Reserve.Name @item.Reserve.Surname</td>
-                        <td class="text-muted">@item.Reserve.Phone</td>
+                    <tr class="@(item.PaymentStatus == PayStatus.Cancelled ? "row-muted" : "")">
+                        <td class="text-muted">@Fmt.Appointment(item.Reserve.AppointmentAt)</td>
+                        <td>
+                            <a asp-controller="Reservation" asp-action="Details" asp-route-id="@item.Reserve.Id" class="link-strong">@item.Reserve.Patient.FullName</a>
+                            <div class="hint-text">@item.Reserve.Doctor?.FullName</div>
+                        </td>
+                        <td class="text-muted">@item.Reserve.Patient.Phone</td>
                         @if (isAdmin)
                         {
-                            <td style="text-align:right;" class="money">@item.Total.ToString("0.00") ₼</td>
-                            <td style="text-align:right;" class="money pos">@item.Paid.ToString("0.00") ₼</td>
-                            <td style="text-align:right;" class="money @(item.Balance > 0 ? "neg" : "")">@item.Balance.ToString("0.00") ₼</td>
+                            <td class="num money">@Fmt.Money(item.Total)</td>
+                            <td class="num money pos">@Fmt.Money(item.Paid)</td>
+                            <td class="num money @(item.Balance != 0 ? "neg" : "")">@(item.Balance < 0 ? "−" : "")@Fmt.Money(Math.Abs(item.Balance))</td>
                         }
                         <td><span class="badge-soft @statusBadge(item.PaymentStatus)">@statusText(item.PaymentStatus)</span></td>
-                        <td style="text-align:right;">
-                            <a class="btn @(item.PaymentStatus == "Paid" ? "btn-light" : "btn-primary") btn-sm" asp-action="Pay" asp-route-id="@item.Reserve.Id">
-                                <i class="bi bi-cash-coin"></i> @(item.PaymentStatus == "Paid" ? "Bax" : "Ödəniş")
-                            </a>
+                        <td class="actions">
+                            @{
+                                var st = item.PaymentStatus;
+                                var (btnCss, icon, text) = st switch
+                                {
+                                    PayStatus.Unpaid or PayStatus.Partial => ("btn-primary", "bi-cash-coin", "Ödəniş"),
+                                    PayStatus.Refund => ("btn-danger", "bi-arrow-counterclockwise", "Qaytar"),
+                                    _ => ("btn-light", "bi-receipt", "Bax")
+                                };
+                            }
+                            <a class="btn @btnCss btn-sm" asp-action="Pay" asp-route-id="@item.Reserve.Id"><i class="bi @icon"></i> @text</a>
                         </td>
                     </tr>
                 }

@@ -1,6 +1,8 @@
 @model AccountViewModel
+@inject Microsoft.AspNetCore.Hosting.IWebHostEnvironment Env
 @{
     Layout = null;
+    var returnUrl = ViewBag.ReturnUrl as string;
 }
 <!DOCTYPE html>
 <html lang="az">
@@ -10,7 +12,8 @@
     <title>Giriş · MedClinic</title>
     <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;500;600;700&display=swap" rel="stylesheet">
     <link rel="stylesheet" href="~/lib/bootstrap-icons/bootstrap-icons.min.css">
-    <link rel="stylesheet" href="~/css/site.css">
+    <link rel="stylesheet" href="~/css/site.css" asp-append-version="true">
+    <link rel="icon" href="data:image/svg+xml,%3Csvg xmlns='http://www.w3.org/2000/svg' viewBox='0 0 32 32'%3E%3Crect width='32' height='32' rx='8' fill='%230d9488'/%3E%3Cpath d='M6 17h5l2-5 4 10 3-7h6' fill='none' stroke='white' stroke-width='2.5' stroke-linecap='round' stroke-linejoin='round'/%3E%3C/svg%3E">
     <style>
         body {
             display: grid;
@@ -44,6 +47,8 @@
         .login-aside li { display: flex; align-items: center; gap: 10px; margin-bottom: 12px; font-size: .92rem; }
         .login-aside li i { background: rgba(255,255,255,.2); width: 28px; height: 28px; border-radius: 8px; display: grid; place-items: center; }
         .login-body { padding: 48px 44px; }
+        .login-body .field + .field { margin-top: 14px; }
+        @@media (max-width: 480px) { .login-body { padding: 32px 22px; } }
         .login-body h1 { font-size: 1.6rem; font-weight: 700; margin: 0 0 6px; }
         .login-body .sub { color: var(--muted); font-size: .92rem; margin-bottom: 28px; }
         .input-icon { position: relative; }
@@ -69,30 +74,35 @@
             <h1>Xoş gəlmisiniz 👋</h1>
             <p class="sub">Davam etmək üçün hesabınıza daxil olun</p>
 
-            <form asp-controller="Account" asp-action="Login" method="post">
-                <div asp-validation-summary="All" class="text-danger mb-3"></div>
+            <form asp-controller="Account" asp-action="Login" asp-route-returnUrl="@returnUrl" method="post" novalidate>
+                <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
                 <div class="field">
                     <label asp-for="UserName">İstifadəçi adı</label>
                     <div class="input-icon">
                         <i class="bi bi-person"></i>
-                        <input class="form-control" asp-for="UserName" placeholder="admin" autofocus>
+                        <input class="form-control" asp-for="UserName" placeholder="İstifadəçi adı" autocomplete="username" autofocus>
                     </div>
+                    <span asp-validation-for="UserName" class="text-danger"></span>
                 </div>
                 <div class="field">
                     <label asp-for="Password">Şifrə</label>
                     <div class="input-icon">
                         <i class="bi bi-lock"></i>
-                        <input type="password" class="form-control" asp-for="Password" placeholder="••••••••">
+                        <input type="password" class="form-control" asp-for="Password" placeholder="••••••••" autocomplete="current-password">
                     </div>
+                    <span asp-validation-for="Password" class="text-danger"></span>
                 </div>
                 <button type="submit" class="btn btn-primary w-100 mt-3" style="justify-content:center;">
                     <i class="bi bi-box-arrow-in-right"></i> Daxil ol
                 </button>
             </form>
 
-            <div class="hint">
-                <i class="bi bi-info-circle"></i> Demo: <strong>admin</strong> / <strong>admin123</strong>
-            </div>
+            @if (Env.IsDevelopment())
+            {
+                <div class="hint">
+                    <i class="bi bi-info-circle"></i> Demo: <strong>admin</strong> / <strong>admin123</strong>
+                </div>
+            }
         </div>
     </div>
 </body>

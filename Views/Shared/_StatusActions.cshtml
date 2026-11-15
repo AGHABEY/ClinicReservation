@@ -1,0 +1,16 @@
+@model Reserve
+@* Buttons for the next lifecycle steps the current user may take. ViewData["ReturnTo"]: details | home | (list) *@
+@{
+    var returnTo = ViewData["ReturnTo"] as string;
+    var small = ViewData["Small"] as bool? ?? true;
+}
+@foreach (var step in ReserveFlow.Actions(Model, User, DateTime.Now))
+{
+    <form asp-controller="Reservation" asp-action="Transition" asp-route-id="@Model.Id" method="post"
+          data-confirm="@(step.To == StatusNames.NoShow ? $"{Model.Patient.FullName} gəlmədi kimi qeyd edilsin?" : null)">
+        <input type="hidden" name="to" value="@step.To" />
+        <input type="hidden" name="returnTo" value="@returnTo" />
+        <input type="hidden" name="period" value="@(ViewBag.Period as string)" />
+        <button type="submit" class="btn @step.Css @(small ? "btn-sm" : "")"><i class="bi @step.Icon"></i> @step.Label</button>
+    </form>
+}

@@ -1,10 +1,11 @@
-﻿using Microsoft.AspNetCore.Identity;
+﻿using System.ComponentModel.DataAnnotations;
 
 namespace ClinicReservation.ViewModels
 {
     public class AdminRoleViewModel
     {
-        public IdentityRole Role { get; set; }
-        public List<IdentityRole> Roles { get; set; }
+        [Required(ErrorMessage = "Rolun adı daxil edilməlidir")]
+        [StringLength(50)]
+        public string? Name { get; set; }
     }
 }

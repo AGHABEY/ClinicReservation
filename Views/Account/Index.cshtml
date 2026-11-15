@@ -1,6 +1,7 @@
 @model UserListViewModel
 @{
     ViewData["Title"] = "İstifadəçilər";
+    var currentUserId = User.FindFirst(System.Security.Claims.ClaimTypes.NameIdentifier)?.Value;
 }
 
 <div class="page-head">
@@ -9,7 +10,7 @@
         <p>Sistem istifadəçiləri və rolları (@Model.Users.Count)</p>
     </div>
     <div style="display:flex; gap:10px;">
-        <a class="btn btn-light" asp-action="CreateRole"><i class="bi bi-shield-plus"></i> Yeni rol</a>
+        <a class="btn btn-light" asp-controller="Role" asp-action="Index"><i class="bi bi-shield-lock"></i> Rollar və icazələr</a>
         <a class="btn btn-primary" asp-action="CreateUser"><i class="bi bi-person-plus"></i> Yeni istifadəçi</a>
     </div>
 </div>
@@ -21,7 +22,7 @@
                 <th>#</th>
                 <th>İstifadəçi adı</th>
                 <th>Rol</th>
-                <th style="text-align:right;">Əməliyyatlar</th>
+                <th class="actions">Əməliyyatlar</th>
             </tr>
         </thead>
         <tbody>
@@ -39,22 +40,42 @@
                                 <span class="avatar">@(item.UserName?.Substring(0,1).ToUpper())</span>
                             </span>
                             <span style="font-weight:600;">@item.UserName</span>
+                            @if (item.Id == currentUserId)
+                            {
+                                <span class="hint-text">(siz)</span>
+                            }
+                            @if (item.LockoutEnd > DateTimeOffset.UtcNow)
+                            {
+                                <span class="badge-soft badge-unpaid">Bloklanıb</span>
+                            }
                         </div>
                     </td>
                     <td>
                         @if (!string.IsNullOrEmpty(role))
                         {
-                            <span class="badge-soft badge-confirmed">@role</span>
+                            <span class="badge-soft @(role == AppRoles.Admin ? "badge-card" : "badge-confirmed")">@AppRoles.Label(role)</span>
                         }
                         else
                         {
                             <span class="badge-soft badge-default">Rol yoxdur</span>
                         }
                     </td>
-                    <td style="text-align:right;">
-                        <a class="btn btn-ghost btn-sm" asp-action="UpdateUser" asp-route-id="@item.Id">
-                            <i class="bi bi-pencil"></i> Düzəliş
-                        </a>
+                    <td class="actions">
+                        <div class="actions-inner">
+                            <a class="btn btn-ghost btn-sm" asp-action="UpdateUser" asp-route-id="@item.Id">
+                                <i class="bi bi-shield"></i> Rol
+                            </a>
+                            <a class="btn btn-light btn-sm" asp-action="ResetPassword" asp-route-id="@item.Id">
+                                <i class="bi bi-key"></i> Şifrə
+                            </a>
+                            @if (item.Id != currentUserId)
+                            {
+                                <form asp-action="DeleteUser" asp-route-id="@item.Id" method="post"
+                                      data-confirm="@($"«{item.UserName}» istifadəçisi silinsin? Bu əməliyyat geri qaytarılmır.")">
+                                    <button type="submit" class="btn btn-danger btn-sm" aria-label="Sil"><i class="bi bi-trash"></i></button>
+                                </form>
+                            }
+                        </div>
                     </td>
                 </tr>
             }
