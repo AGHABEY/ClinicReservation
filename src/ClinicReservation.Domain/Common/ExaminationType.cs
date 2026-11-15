@@ -7,6 +7,9 @@ namespace ClinicReservation.Models
         /// <summary>Discounted in a follow-up visit (consultations yes, lab tests usually no).</summary>
         public bool FollowUpDiscount { get; set; }
 
+        /// <summary>Shown on the online booking portal.</summary>
+        public bool OnlineBookable { get; set; } = true;
+
         [Required(ErrorMessage = "Ad daxil edilməlidir")]
         public string Name { get; set; } = "";
 

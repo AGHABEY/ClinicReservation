@@ -32,5 +32,23 @@ namespace ClinicReservation.Models
         public int KioskEarlyMinutes { get; set; } = 120;
         /// <summary>…until this many minutes after its start (later: go to reception).</summary>
         public int KioskLateMinutes { get; set; } = 30;
+
+        // ----- Online portal and the SMS link -----
+        public bool OnlineEnabled { get; set; } = true;
+        public int OnlineMaxDaysAhead { get; set; } = 30;
+        /// <summary>Online bookings (and moves) close this long before the visit.</summary>
+        public int OnlineMinLeadMinutes { get; set; } = 120;
+        /// <summary>Future visits one patient may hold that were booked online.</summary>
+        public int OnlineMaxActive { get; set; } = 3;
+        public int OtpMinutes { get; set; } = 5;
+        public int OtpMaxAttempts { get; set; } = 5;
+        public int OtpPerPhonePerHour { get; set; } = 3;
+        public int OtpResendSeconds { get; set; } = 60;
+        /// <summary>Requests per minute from one address to the public pages.</summary>
+        public int PublicRequestsPerMinute { get; set; } = 30;
+        /// <summary>A patient may move a visit with the link this many times.</summary>
+        public int RescheduleMax { get; set; } = 2;
+        /// <summary>A visit can be rated this many days after it.</summary>
+        public int RatingDays { get; set; } = 14;
     }
 }

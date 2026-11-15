@@ -1,0 +1,65 @@
+@model OnlineBookingForm
+@{
+    Layout = "~/Views/Public/_PublicLayout.cshtml";
+    ViewData["Title"] = "Onlayn yazılış";
+    ViewData["Foot"] = "Yazılış SMS kodu ilə təsdiqlənir. Məlumatlarınız yalnız qəbul üçün istifadə olunur.";
+    var doctor = (OnlineDoctor)ViewBag.Doctor;
+    var slots = (SlotResult)ViewBag.Slots;
+    var maxDate = (DateTime)ViewBag.MaxDate;
+    var chosen = Model.ExamIds ?? new List<int>();
+    var today = ClinicTime.Today;
+}
+<div class="pub-card">
+    <div class="pub-steps"><span>1. Həkim</span>›<span class="on">2. Vaxt və məlumat</span>›<span>3. SMS kodu</span></div>
+    <p class="pub-hello">@Fmt.Doctor(doctor.Doctor.FullName) <small class="hint-text" style="display:block; font-weight:400;">@doctor.Doctor.Specialty</small></p>
+    <div asp-validation-summary="ModelOnly" class="pub-result bad" style="display:block;"></div>
+
+    @* Changing a service or the day reloads the free times (GET); the booking itself is the POST below. *@
+    <form method="get" id="pick">
+        <div class="pub-label">Xidmət</div>
+        <div class="chip-group" style="margin:8px 0 14px;">
+            @foreach (var e in doctor.Exams)
+            {
+                <label class="chip"><input type="checkbox" name="examIds" value="@e.Id" checked="@chosen.Contains(e.Id)" onchange="this.form.submit()" /> @e.Name <span class="price">@Fmt.Money(e.Price)</span></label>
+            }
+        </div>
+        <label class="pub-label" for="date">Gün</label>
+        <input id="date" type="date" name="date" value="@Model.Date?.ToString("yyyy-MM-dd")" min="@today.ToString("yyyy-MM-dd")" max="@maxDate.ToString("yyyy-MM-dd")" class="form-control" onchange="this.form.submit()" />
+    </form>
+
+    <form method="post" novalidate style="margin-top:14px;">
+        @foreach (var id in chosen) { <input type="hidden" name="ExamIds" value="@id" /> }
+        <input type="hidden" name="Date" value="@Model.Date?.ToString("yyyy-MM-dd")" />
+        <div class="pub-label">Saat</div>
+        @if (slots.Slots.Any())
+        {
+            <div class="slot-grid" style="margin-top:8px;">
+                @foreach (var s in slots.Slots)
+                {
+                    <label class="slot"><input type="radio" name="Time" value="@s.Time" checked="@(s.Time == Model.Time)" /><span>@s.Time</span></label>
+                }
+            </div>
+        }
+        else
+        {
+            <p class="pub-note" style="margin-top:6px;">@(slots.Message ?? "Bu gün üçün boş vaxt yoxdur — başqa gün seçin")</p>
+        }
+        <span asp-validation-for="Time" class="text-danger"></span>
+        <span asp-validation-for="Date" class="text-danger" style="display:block;"></span>
+        <span asp-validation-for="ExamIds" class="text-danger" style="display:block;"></span>
+
+        <div class="pub-label" style="margin-top:18px;">Məlumatlarınız</div>
+        <div class="form-grid" style="margin-top:8px;">
+            <div class="field"><label asp-for="PinCode">FİN kod</label><input asp-for="PinCode" lang="en" class="form-control" maxlength="7" style="text-transform:uppercase;" autocomplete="off" /><span asp-validation-for="PinCode" class="text-danger"></span></div>
+            <div class="field"><label asp-for="Phone">Mobil nömrə</label><input asp-for="Phone" type="tel" class="form-control" placeholder="050 123 45 67" autocomplete="tel" /><span asp-validation-for="Phone" class="text-danger"></span></div>
+            <div class="field"><label asp-for="Name">Ad</label><input asp-for="Name" class="form-control" autocomplete="given-name" /><span asp-validation-for="Name" class="text-danger"></span></div>
+            <div class="field"><label asp-for="Surname">Soyad</label><input asp-for="Surname" class="form-control" autocomplete="family-name" /><span asp-validation-for="Surname" class="text-danger"></span></div>
+            <div class="field"><label asp-for="Birthday">Doğum tarixi</label><input asp-for="Birthday" type="date" class="form-control" value="@Model.Birthday?.ToString("yyyy-MM-dd")" /><span asp-validation-for="Birthday" class="text-danger"></span></div>
+        </div>
+        <p class="hint-text">Kartınız varsa FİN və kartdakı mobil nömrə kifayətdir.</p>
+        @* Not for people: bots fill every field. *@
+        <div aria-hidden="true" style="position:absolute; left:-9999px;"><label>Sayt <input name="Website" tabindex="-1" autocomplete="off" /></label></div>
+        <button type="submit" class="btn btn-primary" style="width:100%; height:48px; margin-top:8px;"><i class="bi bi-chat-dots"></i> SMS kodu göndər</button>
+    </form>
+    <p class="pub-note"><a href="@Url.Action("Index")">← Başqa həkim</a></p>
+</div>

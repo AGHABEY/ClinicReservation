@@ -38,6 +38,9 @@ namespace ClinicReservation.Tests.Infrastructure
         }
 
         public IServiceScope Scope() => Factory.Services.CreateScope();
+
+        /// <summary>Every SMS the app "sent" during the tests.</summary>
+        public CapturingSmsSender Sms => (CapturingSmsSender)Factory.Services.GetRequiredService<ClinicReservation.Modules.Notifications.ISmsSender>();
     }
 
     public sealed class TestAppFactory : WebApplicationFactory<Program>
@@ -52,12 +55,16 @@ namespace ClinicReservation.Tests.Infrastructure
             builder.UseSetting("Sms:RemindersEnabled", "false");
             // Tests call NoShows.MarkOverdueAsync themselves; a background round would flip other tests' rows.
             builder.UseSetting("Scheduling:AutoNoShowAfterMinutes", "0");
+            // All test requests come from one address.
+            builder.UseSetting("Scheduling:PublicRequestsPerMinute", "100000");
             builder.UseSetting("Sms:Provider", "Log");
             builder.ConfigureServices(services =>
             {
                 var options = services.Single(d => d.ServiceType == typeof(DbContextOptions<AppDbContext>));
                 services.Remove(options);
                 services.AddDbContext<AppDbContext>(o => o.UseNpgsql(_connectionString));
+                foreach (var d in services.Where(d => d.ServiceType == typeof(ClinicReservation.Modules.Notifications.ISmsSender)).ToList()) services.Remove(d);
+                services.AddSingleton<ClinicReservation.Modules.Notifications.ISmsSender, CapturingSmsSender>();
             });
         }
     }

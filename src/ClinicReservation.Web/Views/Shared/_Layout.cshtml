@@ -194,6 +194,11 @@
                                         <i class="bi bi-bar-chart-line-fill"></i> Hesabatlar
                                     </a>
                                 </li>
+                                <li>
+                                    <a class="@Active("Rating")" aria-current="@Current("Rating")" asp-controller="Rating" asp-action="Index">
+                                        <i class="bi bi-star-half"></i> Qiymətləndirmələr
+                                    </a>
+                                </li>
                             }
                             @if (User.Can(Permissions.UsersManage))
                             {

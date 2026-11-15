@@ -109,6 +109,8 @@ builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.FollowUpQueries>
 builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.DeskQueue>();
 builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.DeskQueries>();
 builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.Kiosk>();
+builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.OnlineBooking>();
+builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.RatingQueries>();
 builder.Services.Configure<ClinicReservation.Models.SchedulingOptions>(builder.Configuration.GetSection("Scheduling"));
 builder.Services.AddHostedService<ClinicReservation.Modules.Scheduling.NoShowWorker>();
 builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.WaitlistQueries>();
@@ -134,6 +136,7 @@ builder.Services.AddHostedService<ClinicReservation.Events.OutboxWorker>();
 builder.Services.AddScoped<ClinicReservation.Events.IEventHandler, ClinicReservation.Modules.Pharmacy.TakeMaterialsOnVisitCompleted>();
 builder.Services.AddScoped<ClinicReservation.Events.IEventHandler, ClinicReservation.Modules.Notifications.SmsOnWaitlistOffered>();
 builder.Services.AddScoped<ClinicReservation.Events.IEventHandler, ClinicReservation.Modules.Notifications.SmsOnFollowUpReminder>();
+builder.Services.AddScoped<ClinicReservation.Events.IEventHandler, ClinicReservation.Modules.Notifications.SmsRatingOnVisitCompleted>();
 builder.Services.AddScoped<ClinicReservation.Events.IEventHandler, ClinicReservation.Modules.Scheduling.PlanFollowUpOnRecord>();
 builder.Services.AddScoped<ClinicReservation.Events.IEventHandler, ClinicReservation.Modules.Loyalty.PointsOnPayment>();
 builder.Services.AddScoped<ClinicReservation.Events.IEventHandler, ClinicReservation.Modules.Pharmacy.TakeMaterialsOnLabSample>();
@@ -172,6 +175,18 @@ builder.Services.ConfigureApplicationCookie(options =>
     options.Cookie.SameSite = SameSiteMode.Lax;
     options.ExpireTimeSpan = TimeSpan.FromHours(10);
     options.SlidingExpiration = true;
+});
+
+// Anonymous pages (online booking, the SMS link): a fixed number of requests per minute per address.
+builder.Services.AddRateLimiter(o =>
+{
+    o.RejectionStatusCode = StatusCodes.Status429TooManyRequests;
+    o.AddPolicy(ClinicReservation.Controllers.RateLimits.Public, http =>
+    {
+        var perMinute = builder.Configuration.GetValue("Scheduling:PublicRequestsPerMinute", 30);
+        return System.Threading.RateLimiting.RateLimitPartition.GetFixedWindowLimiter(http.Connection.RemoteIpAddress?.ToString() ?? "unknown",
+            _ => new System.Threading.RateLimiting.FixedWindowRateLimiterOptions { PermitLimit = perMinute, Window = TimeSpan.FromMinutes(1), QueueLimit = 0 });
+    });
 });
 
 var app = builder.Build();
@@ -218,6 +233,7 @@ app.UseRequestLocalization(new RequestLocalizationOptions
 app.UseStaticFiles();
 
 app.UseRouting();
+app.UseRateLimiter();
 app.UseAuthentication();
 
 app.UseAuthorization();

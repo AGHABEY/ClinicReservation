@@ -21,6 +21,7 @@ namespace ClinicReservation.Tests.Architecture
         private static readonly Dictionary<(string From, string To), string> Allowed = new()
         {
             [("Lab.LabWork", "Notifications.SmsService")] = "the lab texts the patient when results are ready",
+            [("Scheduling.OnlineBooking", "Notifications.SmsService")] = "the booking code is texted at once and never stored (an event would keep it in the outbox)",
         };
 
         private static IEnumerable<string> References(Assembly a) => a.GetReferencedAssemblies().Select(r => r.Name!);

@@ -211,6 +211,7 @@ namespace ClinicReservation.Modules.Catalog
             existing.DurationMinutes = model.DurationMinutes;
             existing.EquipmentId = model.EquipmentId;
             existing.FollowUpDiscount = model.FollowUpDiscount;
+            existing.OnlineBookable = model.OnlineBookable;
             existing.Name = model.Name.Trim();
             existing.Description = model.Description;
             existing.Price = model.Price;

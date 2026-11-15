@@ -108,6 +108,10 @@ else if (Model.Status?.Name == StatusNames.NoShow)
         <b>@(fromReferral.FromDoctor?.FullName ?? fromReferral.ExternalFrom)</b> → @ReferralFlow.Target(fromReferral) — @fromReferral.Reason
         <a asp-controller="Referral" asp-action="Print" asp-route-id="@fromReferral.Id" target="_blank" rel="noopener">vərəqə</a></div>
 }
+@if (ViewBag.Rating is VisitRating rated)
+{
+    <div class="alert @(rated.Score <= 2 ? "alert-danger" : "alert-success")"><i class="bi bi-star-fill"></i> Xəstənin qiyməti: <b>@rated.Score/5</b>@(string.IsNullOrEmpty(rated.Comment) ? "" : $" — «{rated.Comment}»")</div>
+}
 @if (issued.Any())
 {
     <div class="alert alert-info"><i class="bi bi-send"></i> Bu vizitdə yazılan göndərişlər:

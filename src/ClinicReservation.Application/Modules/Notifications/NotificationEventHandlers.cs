@@ -1,6 +1,7 @@
 using ClinicReservation.Data;
 using ClinicReservation.Events;
 using ClinicReservation.Models;
+using Microsoft.EntityFrameworkCore;
 
 namespace ClinicReservation.Modules.Notifications
 {
@@ -41,6 +42,25 @@ namespace ClinicReservation.Modules.Notifications
                 return null;
             var msg = await _sms.SendToPatientAsync(e.PatientId, text, SmsService.KindFollowUp, e.User, ct);
             return msg is { Status: SmsStatus.Failed } ? $"{patient.FullName}: SMS göndərilmədi ({msg.Error})" : null;
+        }
+    }
+
+    /// <summary>After a completed visit, asks the patient to rate it (once per visit; off when the template is empty).</summary>
+    public sealed class SmsRatingOnVisitCompleted : Events.EventHandler<VisitCompleted>
+    {
+        private readonly SmsService _sms;
+        private readonly IAppDbContext _db;
+        public SmsRatingOnVisitCompleted(SmsService sms, IAppDbContext db) { _sms = sms; _db = db; }
+
+        protected override async Task<string?> HandleAsync(VisitCompleted e, CancellationToken ct)
+        {
+            if (_db.SmsMessages.Any(m => m.ReserveId == e.ReserveId && m.Kind == SmsService.KindRating)) return null;
+            var reserve = await _db.Reserves.Include(r => r.Patient).FirstOrDefaultAsync(r => r.Id == e.ReserveId, ct);
+            if (reserve == null) return null;
+            var text = _sms.RatingText(reserve);
+            if (text == null) return null;
+            await _sms.SendAsync(reserve, text, SmsService.KindRating, e.User, ct);
+            return null; // a failed rating request is not worth bothering the doctor with
         }
     }
 }

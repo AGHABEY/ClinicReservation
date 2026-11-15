@@ -87,6 +87,9 @@
                         <span class="hint-text">Dolu saata yazıla bilən əlavə xəstə sayı; 0 — icazə yoxdur</span>
                         <span asp-validation-for="MaxOverbookPerDay" class="text-danger"></span>
                     </div>
+                    <div class="field" style="align-self:end;">
+                        <label style="display:flex; gap:8px; align-items:center;"><input asp-for="OnlineBooking" type="checkbox" /> Onlayn yazılış açıqdır</label>
+                    </div>
                     <div class="field">
                         <label asp-for="Phone">Telefon</label>
                         <input asp-for="Phone" type="tel" class="form-control" />

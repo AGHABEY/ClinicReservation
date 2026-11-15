@@ -59,6 +59,9 @@ namespace ClinicReservation.Models
         public string? QueueTicket { get; set; }
         /// <summary>Goes ahead in the doctor's queue (65+ set at check-in by age; others by reception).</summary>
         public QueuePriority Priority { get; set; }
+
+        /// <summary>Times the patient moved it themselves with the SMS link.</summary>
+        public int RescheduleCount { get; set; }
         /// <summary>Last time the doctor called this patient in (shown on the hall screen).</summary>
         public DateTime? CalledAt { get; set; }
 

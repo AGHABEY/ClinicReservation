@@ -34,9 +34,9 @@ onlayn yazılış = D mərhələsində. Sıra: A → B → E → C → D → F.
 - [x] C4. Kiosk: FİN / loyallıq kartı / SMS QR ilə gəldim, talon çapı (vaxt pəncərəsi, ad gizli, «Kiosk» rolu)
 
 ## D. Xəstə tərəfi
-- [ ] D1. Onlayn yazılış portalı (SMS kodu, limitlər, qoruma)
-- [ ] D2. Linklə vaxt dəyişmə
-- [ ] D3. Qəbuldan sonra qiymətləndirmə (1–5, şərh)
+- [x] D1. Onlayn yazılış portalı /online (SMS kodu, limitlər, qoruma) — kod heşlə, 5 dəq, 5 cəhd, saatda 3 kod; FİN + kartdakı telefon; 3 aktiv onlayn qəbul, 30 gün irəli, 2 saat əvvəl; IP limiti, bot tələsi
+- [x] D2. Linklə vaxt dəyişmə (eyni həkim və xidmətlər, ən çox 2 dəfə; boşalan vaxt gözləmə siyahısına)
+- [x] D3. Qəbuldan sonra qiymətləndirmə (1–5, şərh; SMS ilə dəvət, 14 gün; rəhbərlik üçün «Qiymətləndirmələr»)
 
 ## F. Hesabatlar
 - [ ] F1. Doluluq, gəlməmə, ləğv səbəbləri, yazılışdan qəbula müddət, yeni / təkrar xəstə,

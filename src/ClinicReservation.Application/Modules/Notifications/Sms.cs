@@ -77,6 +77,8 @@ namespace ClinicReservation.Modules.Notifications
         public const string KindLabResult = "Analiz nəticəsi";
         public const string KindWaitlist = "Gözləmə siyahısı";
         public const string KindFollowUp = "Kontrol qəbulu";
+        public const string KindOtp = "Təsdiq kodu";
+        public const string KindRating = "Qiymətləndirmə";
 
         private readonly IAppDbContext _context;
         private readonly ISmsSender _sender;
@@ -95,6 +97,46 @@ namespace ClinicReservation.Modules.Notifications
             $"{_options.PublicBaseUrl.TrimEnd('/')}/r/{EnsureToken(reserve)}";
 
         public string ResultsLink(Reserve reserve) => ConfirmLink(reserve) + "/lab";
+        public string RatingLink(Reserve reserve) => ConfirmLink(reserve) + "/rate";
+
+        public string OtpText(string code)
+        {
+            var text = _options.OtpTemplate.Replace("{kod}", code).Replace("{klinika}", _options.ClinicName);
+            return _options.AsciiOnly ? SmsText.ToAscii(text) : text;
+        }
+
+        /// <summary>Null when rating requests are switched off (empty template). Reserve with Patient.</summary>
+        public string? RatingText(Reserve reserve)
+        {
+            if (string.IsNullOrWhiteSpace(_options.RatingTemplate)) return null;
+            var text = _options.RatingTemplate.Replace("{ad}", reserve.Patient.Name).Replace("{klinika}", _options.ClinicName).Replace("{link}", RatingLink(reserve));
+            return _options.AsciiOnly ? SmsText.ToAscii(text) : text;
+        }
+
+        /// <summary>A text to a phone number with no card yet (the online booking code). Not linked to a patient.</summary>
+        public async Task<SmsMessage> SendToPhoneAsync(string phone, string text, string kind, CancellationToken ct = default)
+        {
+            var message = new SmsMessage { CreatedAt = ClinicTime.Now, Kind = kind, Text = text, SentBy = "Onlayn yazılış" };
+            var normalized = SmsText.NormalizePhone(phone);
+            if (normalized == null)
+            {
+                message.Phone = phone;
+                message.Status = SmsStatus.Failed;
+                message.Error = "Telefon nömrəsi düzgün deyil";
+            }
+            else
+            {
+                message.Phone = normalized;
+                var result = await _sender.SendAsync(normalized, text, ct);
+                message.Status = result.Status;
+                message.Error = result.Error;
+            }
+            // The code itself is never stored.
+            if (kind == KindOtp) message.Text = "•••• (təsdiq kodu)";
+            _context.SmsMessages.Add(message);
+            await _context.SaveChangesAsync(ct);
+            return message;
+        }
 
         /// <summary>The reservation must be loaded with Patient.</summary>
         public string LabResultText(Reserve reserve)

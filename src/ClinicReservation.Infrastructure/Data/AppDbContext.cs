@@ -52,6 +52,8 @@ namespace ClinicReservation.Data
         public DbSet<FollowUp> FollowUps { get; set; }
         public DbSet<ServiceWindow> ServiceWindows { get; set; }
         public DbSet<DeskTicket> DeskTickets { get; set; }
+        public DbSet<OtpCode> OtpCodes { get; set; }
+        public DbSet<VisitRating> VisitRatings { get; set; }
         public DbSet<LoyaltyTier> LoyaltyTiers { get; set; }
         public DbSet<LoyaltyCard> LoyaltyCards { get; set; }
         public DbSet<LoyaltyCardMember> LoyaltyCardMembers { get; set; }
@@ -434,6 +436,23 @@ namespace ClinicReservation.Data
             });
 
             builder.Entity<ServiceWindow>(e => e.Property(x => x.Name).HasMaxLength(50));
+            builder.Entity<OtpCode>(e =>
+            {
+                e.HasIndex(x => x.Key).IsUnique();
+                e.HasIndex(x => new { x.Phone, x.CreatedAt });
+                e.Property(x => x.Phone).HasMaxLength(20);
+                e.Property(x => x.CodeHash).HasMaxLength(64);
+                e.Property(x => x.Ip).HasMaxLength(45);
+                e.Property(x => x.Payload).HasMaxLength(2000);
+            });
+            builder.Entity<VisitRating>(e =>
+            {
+                e.HasIndex(x => x.ReserveId).IsUnique();
+                e.HasIndex(x => new { x.DoctorId, x.CreatedAt });
+                e.Property(x => x.Comment).HasMaxLength(1000);
+                e.HasOne(x => x.Reserve).WithMany().HasForeignKey(x => x.ReserveId).OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(x => x.Doctor).WithMany().HasForeignKey(x => x.DoctorId).OnDelete(DeleteBehavior.SetNull);
+            });
             builder.Entity<DeskTicket>(e =>
             {
                 e.HasIndex(x => new { x.Kind, x.IssuedAt });
@@ -536,7 +555,7 @@ namespace ClinicReservation.Data
                     builder.Entity(t).ToTable(builder.Model.FindEntityType(t)!.GetTableName(), schema);
             }
             Schema("core", typeof(Patient), typeof(Department), typeof(Room), typeof(Equipment), typeof(Doctor), typeof(DoctorWorkHours), typeof(DoctorLeave), typeof(ExaminationType));
-            Schema("scheduling", typeof(Reserve), typeof(ReserveStatus), typeof(ReserveExaminationType), typeof(CancellationReason), typeof(ReserveSeries), typeof(WaitlistEntry), typeof(Referral), typeof(FollowUp), typeof(ServiceWindow), typeof(DeskTicket));
+            Schema("scheduling", typeof(Reserve), typeof(ReserveStatus), typeof(ReserveExaminationType), typeof(CancellationReason), typeof(ReserveSeries), typeof(WaitlistEntry), typeof(Referral), typeof(FollowUp), typeof(ServiceWindow), typeof(DeskTicket), typeof(OtpCode), typeof(VisitRating));
             Schema("loyalty", typeof(LoyaltyTier), typeof(LoyaltyCard), typeof(LoyaltyCardMember), typeof(LoyaltyTransaction), typeof(Campaign),
                 typeof(CampaignExam), typeof(BenefitCategory), typeof(PatientBenefit), typeof(Company), typeof(PatientCompany));
             Schema("billing", typeof(Payment));

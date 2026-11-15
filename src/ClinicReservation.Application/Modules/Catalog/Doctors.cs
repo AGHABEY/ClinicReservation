@@ -74,6 +74,7 @@ namespace ClinicReservation.Modules.Catalog
             RoomId = d.RoomId,
             SlotMinutes = d.SlotMinutes,
             MaxOverbookPerDay = d.MaxOverbookPerDay,
+            OnlineBooking = d.OnlineBooking,
             IsActive = d.IsActive,
             UserId = d.UserId,
             Days = Week.Select(day =>
@@ -145,6 +146,7 @@ namespace ClinicReservation.Modules.Catalog
             doctor.RoomId = model.RoomId;
             doctor.SlotMinutes = model.SlotMinutes;
             doctor.MaxOverbookPerDay = model.MaxOverbookPerDay;
+            doctor.OnlineBooking = model.OnlineBooking;
             doctor.IsActive = model.IsActive;
             doctor.UserId = string.IsNullOrEmpty(model.UserId) ? null : model.UserId;
             _db.DoctorWorkHours.RemoveRange(doctor.WorkHours);

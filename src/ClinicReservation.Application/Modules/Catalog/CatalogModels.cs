@@ -27,6 +27,8 @@ namespace ClinicReservation.Modules.Catalog
         [Range(0, 20, ErrorMessage = "Əlavə qəbul limiti 0–20 olmalıdır")]
         public int MaxOverbookPerDay { get; set; } = 2;
 
+        public bool OnlineBooking { get; set; } = true;
+
         public bool IsActive { get; set; } = true;
         public string? UserId { get; set; }
 

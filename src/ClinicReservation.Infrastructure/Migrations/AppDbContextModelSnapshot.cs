@@ -501,6 +501,9 @@ namespace ClinicReservation.Migrations
                     b.Property<int>("MaxOverbookPerDay")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("OnlineBooking")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Phone")
                         .HasColumnType("text");
 
@@ -642,6 +645,9 @@ namespace ClinicReservation.Migrations
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
+
+                    b.Property<bool>("OnlineBookable")
+                        .HasColumnType("boolean");
 
                     b.Property<decimal>("Price")
                         .HasColumnType("numeric");
@@ -1305,6 +1311,58 @@ namespace ClinicReservation.Migrations
                     b.ToTable("Observations", "inpatient");
                 });
 
+            modelBuilder.Entity("ClinicReservation.Models.OtpCode", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<int>("Attempts")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("CodeHash")
+                        .IsRequired()
+                        .HasMaxLength(64)
+                        .HasColumnType("character varying(64)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("ExpiresAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("Ip")
+                        .HasMaxLength(45)
+                        .HasColumnType("character varying(45)");
+
+                    b.Property<Guid>("Key")
+                        .HasColumnType("uuid");
+
+                    b.Property<string>("Payload")
+                        .IsRequired()
+                        .HasMaxLength(2000)
+                        .HasColumnType("character varying(2000)");
+
+                    b.Property<string>("Phone")
+                        .IsRequired()
+                        .HasMaxLength(20)
+                        .HasColumnType("character varying(20)");
+
+                    b.Property<DateTime?>("UsedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("Key")
+                        .IsUnique();
+
+                    b.HasIndex("Phone", "CreatedAt");
+
+                    b.ToTable("OtpCodes", "scheduling");
+                });
+
             modelBuilder.Entity("ClinicReservation.Models.OutboxMessage", b =>
                 {
                     b.Property<long>("Id")
@@ -1667,6 +1725,9 @@ namespace ClinicReservation.Migrations
 
                     b.Property<DateTime?>("ReminderSentAt")
                         .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("RescheduleCount")
+                        .HasColumnType("integer");
 
                     b.Property<int?>("RoomId")
                         .HasColumnType("integer");
@@ -2172,6 +2233,46 @@ namespace ClinicReservation.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Suppliers", "stock");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.VisitRating", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("Comment")
+                        .HasMaxLength(1000)
+                        .HasColumnType("character varying(1000)");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int?>("DoctorId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PatientId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("ReserveId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Score")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("UpdatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ReserveId")
+                        .IsUnique();
+
+                    b.HasIndex("DoctorId", "CreatedAt");
+
+                    b.ToTable("VisitRatings", "scheduling");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.WaitlistEntry", b =>
@@ -3254,6 +3355,24 @@ namespace ClinicReservation.Migrations
                     b.Navigation("StockItem");
 
                     b.Navigation("Warehouse");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.VisitRating", b =>
+                {
+                    b.HasOne("ClinicReservation.Models.Doctor", "Doctor")
+                        .WithMany()
+                        .HasForeignKey("DoctorId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ClinicReservation.Models.Reserve", "Reserve")
+                        .WithMany()
+                        .HasForeignKey("ReserveId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.Navigation("Doctor");
+
+                    b.Navigation("Reserve");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.WaitlistEntry", b =>

@@ -53,6 +53,8 @@ namespace ClinicReservation.Data
         DbSet<FollowUp> FollowUps { get; }
         DbSet<ServiceWindow> ServiceWindows { get; }
         DbSet<DeskTicket> DeskTickets { get; }
+        DbSet<OtpCode> OtpCodes { get; }
+        DbSet<VisitRating> VisitRatings { get; }
         DbSet<LoyaltyTier> LoyaltyTiers { get; }
         DbSet<LoyaltyCard> LoyaltyCards { get; }
         DbSet<LoyaltyCardMember> LoyaltyCardMembers { get; }

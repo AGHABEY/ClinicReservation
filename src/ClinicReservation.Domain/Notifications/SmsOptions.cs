@@ -42,6 +42,12 @@ namespace ClinicReservation.Models
         public string FollowUpTemplate { get; set; } =
             "Hormetli {ad}, {hekim} {tarix} tarixinde kontrol qebulu teyin edib ({klinika}). Yazilmaq ucun klinikaya zeng edin.";
 
+        /// <summary>Online booking code. Placeholders: {kod} {klinika}.</summary>
+        public string OtpTemplate { get; set; } = "{klinika}: qeydiyyat kodunuz {kod}. Kodu hec kime demeyin.";
+
+        /// <summary>Sent after a completed visit. Placeholders: {ad} {klinika} {link}. Empty = don't ask for a rating.</summary>
+        public string RatingTemplate { get; set; } = "Hormetli {ad}, qebulumuzu qiymetlendirin ({klinika}): {link}";
+
         /// <summary>Replace Azerbaijani letters (ə, ş, ç …) with Latin ones: 160 chars per SMS instead of 70.</summary>
         public bool AsciiOnly { get; set; } = true;
 

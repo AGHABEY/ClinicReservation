@@ -37,13 +37,26 @@
         .pub-result.bad { background: var(--bad-bg); color: var(--bad); }
         .pub-note { margin: 18px 0 0; color: var(--muted); font-size: 14px; }
         .pub-foot { text-align: center; margin-top: 20px; font-size: 12px; color: var(--subtle); }
+        .pub.wide { max-width: 720px; }
+        .pub-steps { display: flex; gap: 6px; margin-bottom: 14px; font-size: 12px; color: var(--subtle); }
+        .pub-steps span.on { color: var(--brand-dark); font-weight: 700; }
+        .pub-list { display: grid; gap: 10px; }
+        .pub-pick { display: flex; justify-content: space-between; align-items: center; gap: 10px; padding: 14px 16px; border: 1px solid var(--line); border-radius: var(--radius-sm); background: var(--surface); color: var(--ink); text-decoration: none; }
+        .pub-pick:hover { border-color: var(--brand); }
+        .pub-pick small { display: block; color: var(--muted); font-weight: 400; }
+        .pub-group { font-size: 12px; font-weight: 700; text-transform: uppercase; letter-spacing: .05em; color: var(--muted); margin: 14px 0 6px; }
+        .stars { display: flex; flex-direction: row-reverse; justify-content: flex-end; gap: 4px; }
+        .stars input { position: absolute; opacity: 0; pointer-events: none; }
+        .stars label { font-size: 34px; color: var(--line); cursor: pointer; line-height: 1; }
+        .stars input:checked ~ label, .stars label:hover, .stars label:hover ~ label { color: #F5B700; }
+        .stars input:focus-visible + label { outline: 3px solid var(--brand-ring); border-radius: 4px; }
     </style>
 </head>
 <body>
-    <div class="pub">
+    <div class="pub @(ViewData["Wide"] is true ? "wide" : "")">
         <div class="pub-brand"><span class="logo"><i class="bi bi-heart-pulse-fill"></i></span> MedClinic</div>
         @RenderBody()
-        <div class="pub-foot">Bu səhifə yalnız sizin üçündür — linki başqası ilə paylaşmayın.</div>
+        <div class="pub-foot">@(ViewData["Foot"] as string ?? "Bu səhifə yalnız sizin üçündür — linki başqası ilə paylaşmayın.")</div>
     </div>
 </body>
 </html>

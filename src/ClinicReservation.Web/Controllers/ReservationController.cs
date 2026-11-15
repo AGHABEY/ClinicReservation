@@ -229,11 +229,13 @@ namespace ClinicReservation.Controllers
         }
 
         public async Task<IActionResult> Details(int id, [FromServices] LabQueries lab, [FromServices] StockQueries stock,
-            [FromServices] ReferralQueries referrals, CancellationToken ct)
+            [FromServices] ReferralQueries referrals, [FromServices] PatientLinks links, CancellationToken ct)
         {
             var res = await _queries.ReserveAsync(id, ct);
             if (res == null) return NotFound();
             ViewBag.FromReferral = await referrals.ForVisitAsync(id, ct);
+            if (User.Can(Permissions.ReportsView) || User.Can(Permissions.ReservationsManage))
+                ViewBag.Rating = await links.RatingAsync(id, ct);
             ViewBag.IssuedReferrals = await referrals.FromVisitAsync(id, ct);
             ViewBag.CancelReasons = await _queries.CancellationReasonsAsync(ct);
             ViewBag.NoShowCount = await _noShows.CountAsync(res.PatientId, ct);

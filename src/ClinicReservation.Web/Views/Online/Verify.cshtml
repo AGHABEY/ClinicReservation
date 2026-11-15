@@ -1,0 +1,17 @@
+@{
+    Layout = "~/Views/Public/_PublicLayout.cshtml";
+    ViewData["Title"] = "SMS kodu";
+    ViewData["Foot"] = "Kodu heç kimə deməyin. Klinika əməkdaşları kodu soruşmur.";
+    var error = ViewBag.Error as string;
+}
+<div class="pub-card">
+    <div class="pub-steps"><span>1. Həkim</span>›<span>2. Vaxt və məlumat</span>›<span class="on">3. SMS kodu</span></div>
+    <p class="pub-hello">@ViewBag.Phone nömrəsinə göndərilən 6 rəqəmli kodu yazın</p>
+    @if (error != null) { <div class="pub-result bad"><i class="bi bi-exclamation-circle-fill"></i> @error</div> }
+    <form method="post">
+        <input name="code" class="form-control" inputmode="numeric" autocomplete="one-time-code" maxlength="6" pattern="[0-9]{6}" required autofocus
+               style="font-size:28px; letter-spacing:.4em; text-align:center; height:60px;" aria-label="SMS kodu" />
+        <button type="submit" class="btn btn-primary" style="width:100%; height:48px; margin-top:12px;"><i class="bi bi-check2"></i> Təsdiqlə</button>
+    </form>
+    <p class="pub-note">Kod gəlmədi? Bir dəqiqə sonra <a href="javascript:history.back()">geri qayıdıb</a> yenidən göndərin.</p>
+</div>

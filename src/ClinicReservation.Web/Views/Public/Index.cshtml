@@ -6,11 +6,30 @@
     var status = Model.Status?.Name;
     var open = PatientLinks.CanAnswer(Model);
     var room = Model.Room?.Name;
+    var message = TempData["PublicMessage"] as string;
+    var rating = ViewBag.Rating as VisitRating;
+    var isNew = Context.Request.Query.ContainsKey("new");
 }
 
 <div class="pub-card">
     <p class="pub-hello">Hörmətli @Model.Patient.Name,</p>
 
+    @if (isNew)
+    {
+        <div class="pub-result ok"><i class="bi bi-check-circle-fill"></i> Qəbulunuz yazıldı! Bu səhifəni yadda saxlayın — buradan təsdiqləyə, vaxtı dəyişə və ya ləğv edə bilərsiniz.</div>
+    }
+    @if (done == "moved")
+    {
+        <div class="pub-result ok"><i class="bi bi-calendar-check"></i> @message</div>
+    }
+    else if (done == "rated")
+    {
+        <div class="pub-result ok"><i class="bi bi-heart-fill"></i> @message</div>
+    }
+    else if (done == "rate-error")
+    {
+        <div class="pub-result bad"><i class="bi bi-exclamation-circle-fill"></i> @message</div>
+    }
     @if (done == "confirmed" && status == StatusNames.Confirmed)
     {
         <div class="pub-result ok"><i class="bi bi-check-circle-fill"></i> Təşəkkür edirik! Gələcəyinizi təsdiqlədiniz.</div>
@@ -45,6 +64,10 @@
                     <button type="submit" class="btn btn-primary"><i class="bi bi-check2"></i> Gələcəyəm</button>
                 </form>
             }
+            @if (ViewBag.CanMove is true)
+            {
+                <a class="btn btn-light" href="/r/@Model.PatientToken/move"><i class="bi bi-calendar2-week"></i> Vaxtı dəyiş</a>
+            }
             <button type="button" class="btn btn-light" onclick="document.getElementById('cancelBox').hidden = false; this.hidden = true;">
                 <i class="bi bi-x-lg"></i> Gələ bilməyəcəyəm
             </button>
@@ -58,5 +81,21 @@
     else if (!StatusNames.IsClosedWithoutVisit(status) && done == null)
     {
         <p class="pub-note">Bu qəbul üçün cavab vermək artıq mümkün deyil. Sualınız varsa klinikaya zəng edin.</p>
+    }
+
+    @if (ViewBag.CanRate is true)
+    {
+        <form id="rate" method="post" action="/r/@Model.PatientToken/rate" style="margin-top:20px; padding-top:18px; border-top:1px solid var(--line);">
+            @Html.AntiForgeryToken()
+            <div class="pub-label">Qəbulu qiymətləndirin</div>
+            <div class="stars" style="margin:10px 0;" role="radiogroup" aria-label="Qiymət">
+                @for (var i = 5; i >= 1; i--)
+                {
+                    <input type="radio" name="score" value="@i" id="s@(i)" checked="@(rating?.Score == i)" required /><label for="s@(i)" title="@i">★</label>
+                }
+            </div>
+            <textarea name="comment" class="form-control" rows="3" maxlength="1000" placeholder="Rəyiniz (istəyə görə)">@rating?.Comment</textarea>
+            <button type="submit" class="btn btn-primary" style="width:100%; height:48px; margin-top:10px;">@(rating == null ? "Göndər" : "Rəyi yenilə")</button>
+        </form>
     }
 </div>

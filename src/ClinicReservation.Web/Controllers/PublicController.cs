@@ -2,6 +2,7 @@ using ClinicReservation.Models;
 using ClinicReservation.Modules.Scheduling;
 using Microsoft.AspNetCore.Authorization;
 using Microsoft.AspNetCore.Mvc;
+using Microsoft.AspNetCore.RateLimiting;
 using Microsoft.Extensions.Options;
 
 namespace ClinicReservation.Controllers
@@ -11,6 +12,7 @@ namespace ClinicReservation.Controllers
     /// logging in. The random token in the URL is the only key.
     /// </summary>
     [AllowAnonymous]
+    [EnableRateLimiting(RateLimits.Public)]
     [Route("r/{token}")]
     public class PublicController : Controller
     {
@@ -29,8 +31,58 @@ namespace ClinicReservation.Controllers
             var res = await _links.ByTokenAsync(token, ct);
             if (res == null) return View("NotFound");
             ViewBag.Clinic = _sms.ClinicName;
+            ViewBag.CanMove = _links.CannotMove(res) == null;
+            ViewBag.CanRate = _links.CanRate(res);
+            ViewBag.Rating = await _links.RatingAsync(res.Id, ct);
             return View(res);
         }
+
+        [HttpGet("move")]
+        public async Task<IActionResult> Move(string token, DateTime? date, CancellationToken ct)
+        {
+            var res = await _links.ByTokenAsync(token, ct);
+            if (res == null) return View("NotFound");
+            ViewBag.Why = _links.CannotMove(res);
+            var day = (date ?? (res.AppointmentAt.Date > ClinicTime.Today ? res.AppointmentAt.Date : ClinicTime.Today)).Date;
+            ViewBag.Date = day;
+            ViewBag.Slots = ViewBag.Why == null ? await _links.MoveSlotsAsync(res, day, ct) : new SlotResult();
+            return View("Move", res);
+        }
+
+        [HttpPost("move")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Move(string token, DateTime? date, string? time, CancellationToken ct)
+        {
+            var res = await _links.ByTokenAsync(token, ct);
+            if (res == null) return View("NotFound");
+            var r = await _links.MoveAsync(res, date, time, ct);
+            if (r.Ok)
+            {
+                TempData["PublicDone"] = "moved";
+                TempData["PublicMessage"] = r.Message;
+                return Redirect($"/r/{token}");
+            }
+            ViewBag.Why = _links.CannotMove(res);
+            ViewBag.Error = r.ErrorText;
+            ViewBag.Date = (date ?? ClinicTime.Today).Date;
+            ViewBag.Slots = ViewBag.Why == null ? await _links.MoveSlotsAsync(res, (date ?? ClinicTime.Today).Date, ct) : new SlotResult();
+            return View("Move", res);
+        }
+
+        [HttpPost("rate")]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> Rate(string token, int score, string? comment, CancellationToken ct)
+        {
+            var res = await _links.ByTokenAsync(token, ct);
+            if (res == null) return View("NotFound");
+            var r = await _links.RateAsync(res, score, comment, ct);
+            TempData["PublicDone"] = r.Ok ? "rated" : "rate-error";
+            TempData["PublicMessage"] = r.Ok ? r.Message : r.ErrorText;
+            return Redirect($"/r/{token}#rate");
+        }
+
+        [HttpGet("rate")]
+        public IActionResult RateLink(string token) => Redirect($"/r/{token}#rate");
 
         [HttpPost("confirm")]
         [ValidateAntiForgeryToken]

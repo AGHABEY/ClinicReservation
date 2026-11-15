@@ -19,6 +19,9 @@ namespace ClinicReservation.Models
         /// <summary>Extra visits squeezed into busy times per day (needs the «araya salmaq» permission); 0 = none.</summary>
         public int MaxOverbookPerDay { get; set; } = 2;
 
+        /// <summary>Patients may book this doctor on the online portal.</summary>
+        public bool OnlineBooking { get; set; } = true;
+
         public bool IsActive { get; set; } = true;
 
         /// <summary>Optional login linked to this doctor (sees "my appointments").</summary>

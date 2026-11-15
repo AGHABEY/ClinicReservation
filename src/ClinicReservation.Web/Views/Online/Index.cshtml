@@ -1,0 +1,30 @@
+@model List<OnlineDoctor>
+@{
+    Layout = "~/Views/Public/_PublicLayout.cshtml";
+    ViewData["Title"] = "Onlayn yazılış";
+    ViewData["Foot"] = "Yazılış SMS kodu ilə təsdiqlənir. Sualınız varsa klinikaya zəng edin.";
+    string? group = null;
+}
+<div class="pub-card">
+    <div class="pub-steps"><span class="on">1. Həkim</span>›<span>2. Vaxt və məlumat</span>›<span>3. SMS kodu</span></div>
+    <p class="pub-hello">Həkim seçin</p>
+    @if (!Model.Any())
+    {
+        <p class="pub-note">Hazırda onlayn yazılış üçün həkim yoxdur. Klinikaya zəng edin.</p>
+    }
+    <div class="pub-list">
+        @foreach (var d in Model)
+        {
+            var g = d.Doctor.Department?.Name ?? "Digər";
+            if (g != group)
+            {
+                group = g;
+                <div class="pub-group">@g</div>
+            }
+            <a class="pub-pick" href="@Url.Action("Doctor", new { id = d.Doctor.Id })">
+                <span><b>@Fmt.Doctor(d.Doctor.FullName)</b><small>@(d.Doctor.Specialty ?? "")</small></span>
+                <i class="bi bi-chevron-right"></i>
+            </a>
+        }
+    </div>
+</div>

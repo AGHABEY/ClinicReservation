@@ -1,0 +1,49 @@
+@model Reserve
+@{
+    Layout = "_PublicLayout";
+    ViewData["Title"] = "Vaxtı dəyiş";
+    var why = ViewBag.Why as string;
+    var error = ViewBag.Error as string;
+    var date = (DateTime)ViewBag.Date;
+    var slots = (SlotResult)ViewBag.Slots;
+    var today = ClinicTime.Today;
+}
+<div class="pub-card">
+    <p class="pub-hello">Vaxtı dəyişin</p>
+    <div class="pub-appt">
+        <div class="pub-label">İndiki vaxt</div>
+        <div class="pub-time">@Fmt.Long(Model.AppointmentAt), saat @Fmt.Time(Model.AppointmentAt)</div>
+        @if (Model.Doctor != null) { <div class="pub-doc"><i class="bi bi-person-badge"></i> @Fmt.Doctor(Model.Doctor.FullName)</div> }
+    </div>
+    @if (why != null)
+    {
+        <p class="pub-note">@why</p>
+    }
+    else
+    {
+        @if (error != null) { <div class="pub-result bad" style="margin-top:16px;"><i class="bi bi-exclamation-circle-fill"></i> @error</div> }
+        <form method="get" action="/r/@Model.PatientToken/move" style="margin-top:16px;">
+            <label class="pub-label" for="d">Gün</label>
+            <input id="d" type="date" name="date" value="@date.ToString("yyyy-MM-dd")" min="@today.ToString("yyyy-MM-dd")" class="form-control" onchange="this.form.submit()" />
+        </form>
+        <form method="post" action="/r/@Model.PatientToken/move" style="margin-top:14px;">
+            @Html.AntiForgeryToken()
+            <input type="hidden" name="date" value="@date.ToString("yyyy-MM-dd")" />
+            @if (slots.Slots.Any())
+            {
+                <div class="slot-grid">
+                    @foreach (var s in slots.Slots)
+                    {
+                        <label class="slot"><input type="radio" name="time" value="@s.Time" required /><span>@s.Time</span></label>
+                    }
+                </div>
+                <button type="submit" class="btn btn-primary" style="width:100%; height:48px; margin-top:14px;"><i class="bi bi-check2"></i> Bu vaxta keçir</button>
+            }
+            else
+            {
+                <p class="pub-note">@(slots.Message ?? "Bu gün üçün boş vaxt yoxdur — başqa gün seçin")</p>
+            }
+        </form>
+    }
+    <p class="pub-note"><a href="/r/@Model.PatientToken">← Geri</a></p>
+</div>
