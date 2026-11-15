@@ -12,11 +12,11 @@ namespace ClinicReservation.Services
     /// </summary>
     public class StockService
     {
-        private readonly AppDbContext _context;
+        private readonly IAppDbContext _context;
         private readonly ILogger<StockService> _logger;
         private readonly AuditService _audit;
 
-        public StockService(AppDbContext context, ILogger<StockService> logger, AuditService audit)
+        public StockService(IAppDbContext context, ILogger<StockService> logger, AuditService audit)
         {
             _context = context;
             _logger = logger;

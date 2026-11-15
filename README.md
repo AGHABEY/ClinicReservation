@@ -62,13 +62,13 @@ docker compose down -v       # bazanı da silir
 
 Tələblər: .NET 8 SDK + işləyən PostgreSQL.
 
-1. PostgreSQL-də baza yaradın və `appsettings.json`-da connection string-i uyğunlaşdırın:
+1. PostgreSQL-də baza yaradın və `src/ClinicReservation.Web/appsettings.json`-da connection string-i uyğunlaşdırın:
    ```
    Host=localhost;Port=5432;Database=ClinicReservation;Username=postgres;Password=postgres
    ```
 2. Tətbiqi işə salın (migration-lar avtomatik tətbiq olunur):
    ```bash
-   dotnet run
+   dotnet run --project src/ClinicReservation.Web
    ```
 
 > Bağlantı sətrini environment dəyişəni ilə də verə bilərsiniz:
@@ -217,18 +217,26 @@ arxasında işləyə bilər:
 
 ## 📁 Struktur
 
+Modullu monolit — 4 layihə, asılılıq yalnız aşağıdan yuxarıya:
+
 ```
-Controllers/   Home, Account, Reservation, Patient, Doctor, Department, Role, Audit,
-               ExaminationType, Kassa, Report
-Authorization/ İcazə əsaslı avtorizasiya ([HasPermission])
-Models/        Reserve, ExaminationType, ReserveStatus, Payment, AppUser, ClinicOptions, ...
-Services/      SlotService (həkim qrafikinə görə saatlar), ReserveFlow (status axını),
-               AuditService
-Helpers/       Fmt (Azərbaycan formatında tarix/məbləğ)
-Data/          AppDbContext, SeedData (migration + seed)
-ViewModels/    Form, Kassa, Report, Dashboard, Account, ...
-Views/         Modern dizaynlı Razor səhifələri
-wwwroot/css/   site.css (custom tema)
-Migrations/    PostgreSQL migration-ları
+src/
+  ClinicReservation.Domain/          Modellər, enum-lar, saf qaydalar (ASP.NET / EF yoxdur)
+    Models/                          Reserve, Patient, Lab, Stock, Inpatient, AppRoles + Permissions …
+    Helpers/Fmt.cs                   Azərbaycan formatında tarix / məbləğ / sıra sayı
+    Authorization/                   User.Can(...) icazə yoxlaması
+  ClinicReservation.Application/     Modul servisləri (bazaya yalnız IAppDbContext ilə)
+    Abstractions/                    IAppDbContext, ICurrentUser, IDistributedLock
+    Services/                        Slot, Queue, Lab, Stock, Inpatient, Sms, Audit, ReserveFlow …
+  ClinicReservation.Infrastructure/  PostgreSQL (EF Core), miqrasiyalar, Identity, kilidlər, seed
+  ClinicReservation.Web/             Controller-lər, Razor view-lar, wwwroot, Program.cs
+tests/
+  ClinicReservation.Tests/           xUnit + Testcontainers (dotnet test)
 Dockerfile, docker-compose.yml
+```
+
+Yeni miqrasiya:
+
+```bash
+dotnet ef migrations add <Ad> --project src/ClinicReservation.Infrastructure --startup-project src/ClinicReservation.Web
 ```

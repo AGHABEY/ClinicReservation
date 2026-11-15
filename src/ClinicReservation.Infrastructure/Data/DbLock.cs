@@ -10,8 +10,8 @@ namespace ClinicReservation.Data
     /// </summary>
     public static class DbLock
     {
-        public const long Migrations = 7_301_001;
-        public const long SmsReminders = 7_301_002;
+        public const long Migrations = Services.LockKeys.Migrations;
+        public const long SmsReminders = Services.LockKeys.SmsReminders;
 
         /// <summary>Runs <paramref name="action"/> only if no other instance holds the lock; false = skipped.</summary>
         public static async Task<bool> TryRunAsync(string connectionString, long key, Func<Task> action, CancellationToken ct = default)

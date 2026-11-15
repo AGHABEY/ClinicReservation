@@ -47,14 +47,4 @@ namespace ClinicReservation.Authorization
                 .Build();
         }
     }
-
-    public static class PermissionExtensions
-    {
-        public static bool Can(this ClaimsPrincipal user, string permission) =>
-            user.Identity?.IsAuthenticated == true &&
-            (user.IsInRole(AppRoles.Admin) || user.HasClaim(Permissions.ClaimType, permission));
-
-        public static bool CanAny(this ClaimsPrincipal user, params string[] permissions) =>
-            permissions.Any(user.Can);
-    }
 }

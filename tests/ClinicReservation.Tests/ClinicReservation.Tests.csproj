@@ -20,7 +20,7 @@
   </ItemGroup>
 
   <ItemGroup>
-    <ProjectReference Include="../../ClinicReservation.csproj" />
+    <ProjectReference Include="../../src/ClinicReservation.Web/ClinicReservation.Web.csproj" />
   </ItemGroup>
 
   <ItemGroup>

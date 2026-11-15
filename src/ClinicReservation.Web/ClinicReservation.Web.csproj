@@ -1,0 +1,27 @@
+<Project Sdk="Microsoft.NET.Sdk.Web">
+
+  <!-- MVC controllers, Razor views, static files and the composition root (Program.cs). -->
+  <PropertyGroup>
+    <TargetFramework>net8.0</TargetFramework>
+    <Nullable>enable</Nullable>
+    <ImplicitUsings>enable</ImplicitUsings>
+    <!-- Keep the published name, so `dotnet ClinicReservation.dll` (Docker, the migrate flag) stays the same. -->
+    <AssemblyName>ClinicReservation</AssemblyName>
+    <RootNamespace>ClinicReservation</RootNamespace>
+  </PropertyGroup>
+
+  <ItemGroup>
+    <PackageReference Include="Microsoft.EntityFrameworkCore.Tools" Version="8.0.10">
+      <PrivateAssets>all</PrivateAssets>
+      <IncludeAssets>runtime; build; native; contentfiles; analyzers; buildtransitive</IncludeAssets>
+    </PackageReference>
+    <PackageReference Include="Microsoft.Extensions.Diagnostics.HealthChecks.EntityFrameworkCore" Version="8.0.10" />
+    <PackageReference Include="Microsoft.VisualStudio.Web.CodeGeneration.Design" Version="8.0.2" />
+  </ItemGroup>
+
+  <ItemGroup>
+    <ProjectReference Include="../ClinicReservation.Application/ClinicReservation.Application.csproj" />
+    <ProjectReference Include="../ClinicReservation.Infrastructure/ClinicReservation.Infrastructure.csproj" />
+  </ItemGroup>
+
+</Project>

@@ -50,15 +50,6 @@ namespace ClinicReservation.ViewModels
         public Patient? ExistingPatient { get; set; }
     }
 
-    public class SlotViewModel
-    {
-        public string Time { get; set; } = "";
-        public int Booked { get; set; }
-        public int Capacity { get; set; }
-        public bool Past { get; set; }
-        public bool Available => !Past && Booked < Capacity;
-    }
-
     public class CancelReserveViewModel
     {
         public int Id { get; set; }

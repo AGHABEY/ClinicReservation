@@ -75,11 +75,11 @@ namespace ClinicReservation.Services
         public const string KindManual = "Əl ilə";
         public const string KindLabResult = "Analiz nəticəsi";
 
-        private readonly AppDbContext _context;
+        private readonly IAppDbContext _context;
         private readonly ISmsSender _sender;
         private readonly SmsOptions _options;
 
-        public SmsService(AppDbContext context, ISmsSender sender, IOptions<SmsOptions> options)
+        public SmsService(IAppDbContext context, ISmsSender sender, IOptions<SmsOptions> options)
         {
             _context = context;
             _sender = sender;
@@ -243,17 +243,17 @@ namespace ClinicReservation.Services
                 return 0;
 
             using var scope = _services.CreateScope();
-            var context = scope.ServiceProvider.GetRequiredService<AppDbContext>();
+            var context = scope.ServiceProvider.GetRequiredService<IAppDbContext>();
             var sent = 0;
             // With several app instances only one sends a round; the others skip it (no double SMS).
-            var ran = await DbLock.TryRunAsync(context.Database.GetConnectionString()!, DbLock.SmsReminders,
+            var ran = await scope.ServiceProvider.GetRequiredService<IDistributedLock>().TryRunAsync(LockKeys.SmsReminders,
                 async () => sent = await SendDueAsync(scope.ServiceProvider, context, now, ct), ct);
             if (!ran)
                 _logger.LogDebug("SMS xatırlatma: başqa nüsxə artıq işləyir, bu dövrə buraxıldı");
             return sent;
         }
 
-        private async Task<int> SendDueAsync(IServiceProvider sp, AppDbContext context, DateTime now, CancellationToken ct)
+        private async Task<int> SendDueAsync(IServiceProvider sp, IAppDbContext context, DateTime now, CancellationToken ct)
         {
             var sms = sp.GetRequiredService<SmsService>();
 

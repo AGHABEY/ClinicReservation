@@ -8,9 +8,9 @@ namespace ClinicReservation.Services
     public class QueueService
     {
         public const string DefaultPrefix = "A";
-        private readonly AppDbContext _context;
+        private readonly IAppDbContext _context;
 
-        public QueueService(AppDbContext context) => _context = context;
+        public QueueService(IAppDbContext context) => _context = context;
 
         /// <summary>Gives the reservation today's next ticket for its department prefix (once).</summary>
         public void AssignTicket(Reserve reserve, DateTime now)

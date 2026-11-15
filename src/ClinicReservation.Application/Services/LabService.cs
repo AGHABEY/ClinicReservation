@@ -8,9 +8,9 @@ namespace ClinicReservation.Services
 {
     public class LabService
     {
-        private readonly AppDbContext _context;
+        private readonly IAppDbContext _context;
 
-        public LabService(AppDbContext context) => _context = context;
+        public LabService(IAppDbContext context) => _context = context;
 
         /// <summary>Lab tests the reservation's examinations require that have no sample yet.</summary>
         public List<LabTest> PendingTests(int reserveId)

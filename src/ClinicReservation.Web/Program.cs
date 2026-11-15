@@ -82,6 +82,11 @@ builder.Services.AddIdentity<IdentityUser, IdentityRole>(
 builder.Services.Configure<SecurityStampValidatorOptions>(o => o.ValidationInterval = TimeSpan.FromMinutes(1));
 
 builder.Services.Configure<ClinicReservation.Models.ClinicOptions>(builder.Configuration.GetSection("Clinic"));
+// Ports of the application layer.
+builder.Services.AddScoped<ClinicReservation.Data.IAppDbContext>(sp => sp.GetRequiredService<AppDbContext>());
+builder.Services.AddScoped<ClinicReservation.Services.ICurrentUser, ClinicReservation.Authorization.HttpCurrentUser>();
+builder.Services.AddScoped<ClinicReservation.Services.IDistributedLock, PgDistributedLock>();
+
 builder.Services.AddScoped<ClinicReservation.Services.SlotService>();
 builder.Services.AddScoped<ClinicReservation.Services.AuditService>();
 builder.Services.AddScoped<ClinicReservation.Services.QueueService>();

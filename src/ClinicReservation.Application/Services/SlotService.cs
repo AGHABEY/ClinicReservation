@@ -12,9 +12,9 @@ namespace ClinicReservation.Services
     /// </summary>
     public class SlotService
     {
-        private readonly AppDbContext _context;
+        private readonly IAppDbContext _context;
 
-        public SlotService(AppDbContext context)
+        public SlotService(IAppDbContext context)
         {
             _context = context;
         }

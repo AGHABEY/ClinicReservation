@@ -5,7 +5,7 @@ using Microsoft.EntityFrameworkCore;
 
 namespace ClinicReservation.Data
 {
-    public class AppDbContext : IdentityDbContext, IDataProtectionKeyContext
+    public class AppDbContext : IdentityDbContext, IDataProtectionKeyContext, IAppDbContext
     {
         public AppDbContext(DbContextOptions options) : base(options)
         {

@@ -7,10 +7,10 @@ namespace ClinicReservation.Services
     /// <summary>Hospital stays: admission, bed moves, discharge, bed-days and the medication round.</summary>
     public class InpatientService
     {
-        private readonly AppDbContext _context;
+        private readonly IAppDbContext _context;
         private readonly StockService _stock;
 
-        public InpatientService(AppDbContext context, StockService stock)
+        public InpatientService(IAppDbContext context, StockService stock)
         {
             _context = context;
             _stock = stock;

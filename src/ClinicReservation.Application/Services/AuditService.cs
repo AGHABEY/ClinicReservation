@@ -1,4 +1,3 @@
-using System.Security.Claims;
 using ClinicReservation.Data;
 using ClinicReservation.Models;
 
@@ -7,29 +6,27 @@ namespace ClinicReservation.Services
     /// <summary>Writes audit entries. Call it after the change itself is saved.</summary>
     public class AuditService
     {
-        private readonly AppDbContext _context;
-        private readonly IHttpContextAccessor _http;
+        private readonly IAppDbContext _context;
+        private readonly ICurrentUser _user;
 
-        public AuditService(AppDbContext context, IHttpContextAccessor http)
+        public AuditService(IAppDbContext context, ICurrentUser user)
         {
             _context = context;
-            _http = http;
+            _user = user;
         }
 
         public void Log(string action, string? entityType = null, object? entityId = null, string? details = null, string? userName = null)
         {
-            var http = _http.HttpContext;
-            var user = http?.User;
             _context.AuditLogs.Add(new AuditLog
             {
                 At = DateTime.Now,
-                UserId = user?.FindFirstValue(ClaimTypes.NameIdentifier),
-                UserName = userName ?? user?.Identity?.Name,
+                UserId = _user.UserId,
+                UserName = userName ?? _user.UserName,
                 Action = action,
                 EntityType = entityType,
                 EntityId = entityId?.ToString(),
                 Details = details is { Length: > 1000 } ? details[..1000] : details,
-                IpAddress = http?.Connection.RemoteIpAddress?.ToString()
+                IpAddress = _user.IpAddress
             });
             _context.SaveChanges();
         }
