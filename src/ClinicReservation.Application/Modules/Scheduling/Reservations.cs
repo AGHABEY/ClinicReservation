@@ -270,6 +270,22 @@ namespace ClinicReservation.Modules.Scheduling
             return Result.Success("Rezervasiya yeniləndi", reserve.Id);
         }
 
+        /// <summary>Marks who goes ahead in the doctor's queue (pregnant, 65+, disability, urgent). Null = not found.</summary>
+        public async Task<Result?> SetPriorityAsync(int id, QueuePriority priority, CancellationToken ct = default)
+        {
+            var res = await _db.Reserves.Include(r => r.Status).Include(r => r.Patient).FirstOrDefaultAsync(r => r.Id == id, ct);
+            if (res == null) return null;
+            if (!Enum.IsDefined(priority)) return Result.Failure("Prioritet düzgün deyil");
+            if (res.Status?.Name is not (StatusNames.Waiting or StatusNames.Confirmed or StatusNames.Arrived))
+                return Result.Failure("Prioritet yalnız qəbuldan əvvəl dəyişir");
+            if (res.Priority == priority) return Result.Success("Dəyişiklik yoxdur", id);
+            var from = res.Priority;
+            res.Priority = priority;
+            await _db.SaveChangesAsync(ct);
+            _audit.Log("Növbə prioriteti", AuditEntities.Reservation, res.Id, $"{res.Patient.FullName}: {QueueLabels.Priority(from)} → {QueueLabels.Priority(priority)}");
+            return Result.Success(priority == QueuePriority.None ? "Prioritet götürüldü" : $"Prioritet: {QueueLabels.Priority(priority)} — növbədə öndə", id);
+        }
+
         /// <summary>
         /// Əl ilə endirim: % or ₼ on the whole visit (₼ spread over the services by price), reason required, up to the
         /// user's role limit. Like every discount it doesn't add up: a service keeps its current discount if that is bigger.

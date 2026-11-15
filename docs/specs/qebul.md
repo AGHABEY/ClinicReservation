@@ -28,10 +28,10 @@ onlayn yazılış = D mərhələsində. Sıra: A → B → E → C → D → F.
 - [x] E7. Hesablama: toplanmır, ən sərfəlisi; sətirdə ilkin qiymət / endirim / son qiymət / mənbə — formada canlı önbaxış
 
 ## C. Növbə
-- [ ] C1. Prioritet (hamilə, 65+, əlillik, təcili)
-- [ ] C2. Registratura və kassa növbəsi, pəncərələr
-- [ ] C3. Səsli elan (Azərbaycan dilində)
-- [ ] C4. Kiosk: FİN / QR ilə gəldim, talon çapı
+- [x] C1. Prioritet (hamilə, 65+, əlillik, təcili) — 65+ yaşa görə avtomatik; təcili hamıdan öndə
+- [x] C2. Registratura və kassa növbəsi, pəncərələr (R-001 / KS-001; növbəti, təkrar çağır, xidmət edildi, gəlmədi)
+- [x] C3. Səsli elan (Azərbaycan dilində; rəqəmlər sözlə: «Talon a on yeddi. Kabinet yüz bir.»)
+- [x] C4. Kiosk: FİN / loyallıq kartı / SMS QR ilə gəldim, talon çapı (vaxt pəncərəsi, ad gizli, «Kiosk» rolu)
 
 ## D. Xəstə tərəfi
 - [ ] D1. Onlayn yazılış portalı (SMS kodu, limitlər, qoruma)

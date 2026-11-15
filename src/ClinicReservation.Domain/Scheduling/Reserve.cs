@@ -57,6 +57,8 @@ namespace ClinicReservation.Models
         public int? QueueNumber { get; set; }
         /// <summary>What the patient sees on the ticket and the hall screen, e.g. "A-017".</summary>
         public string? QueueTicket { get; set; }
+        /// <summary>Goes ahead in the doctor's queue (65+ set at check-in by age; others by reception).</summary>
+        public QueuePriority Priority { get; set; }
         /// <summary>Last time the doctor called this patient in (shown on the hall screen).</summary>
         public DateTime? CalledAt { get; set; }
 

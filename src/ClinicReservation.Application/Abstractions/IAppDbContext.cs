@@ -51,6 +51,8 @@ namespace ClinicReservation.Data
         DbSet<WaitlistEntry> WaitlistEntries { get; }
         DbSet<Referral> Referrals { get; }
         DbSet<FollowUp> FollowUps { get; }
+        DbSet<ServiceWindow> ServiceWindows { get; }
+        DbSet<DeskTicket> DeskTickets { get; }
         DbSet<LoyaltyTier> LoyaltyTiers { get; }
         DbSet<LoyaltyCard> LoyaltyCards { get; }
         DbSet<LoyaltyCardMember> LoyaltyCardMembers { get; }

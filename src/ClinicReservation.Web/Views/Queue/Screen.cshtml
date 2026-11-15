@@ -85,7 +85,7 @@
         </main>
 
         <footer class="qs-foot">
-            <span>Talon nömrənizi ekranda görəndə göstərilən kabinetə keçin. <span class="qs-offline" id="offline"><i class="bi bi-wifi-off"></i> Bağlantı yoxdur</span></span>
+            <span>Talon nömrənizi ekranda görəndə göstərilən kabinetə və ya pəncərəyə keçin. <span class="qs-offline" id="offline"><i class="bi bi-wifi-off"></i> Bağlantı yoxdur</span></span>
             <span class="qs-tools">
                 <select aria-label="Şöbə" onchange="location.search = this.value ? '?departmentId=' + this.value : ''">
                     <option value="">Bütün şöbələr</option>
@@ -131,6 +131,41 @@
                 });
             }
 
+            // ---- Voice (Azerbaijani): "Talon A on yeddi. Kabinet yüz bir."
+            const ones = ['sıfır', 'bir', 'iki', 'üç', 'dörd', 'beş', 'altı', 'yeddi', 'səkkiz', 'doqquz'];
+            const tens = ['', 'on', 'iyirmi', 'otuz', 'qırx', 'əlli', 'altmış', 'yetmiş', 'səksən', 'doxsan'];
+            function azNumber(n) {
+                if (n === 0) return ones[0];
+                const parts = [];
+                if (n >= 1000) { const k = Math.floor(n / 1000); parts.push(k === 1 ? 'min' : azNumber(k) + ' min'); n %= 1000; }
+                if (n >= 100) { const h = Math.floor(n / 100); parts.push(h === 1 ? 'yüz' : ones[h] + ' yüz'); n %= 100; }
+                if (n >= 10) { parts.push(tens[Math.floor(n / 10)]); n %= 10; }
+                if (n > 0) parts.push(ones[n]);
+                return parts.join(' ');
+            }
+            const letters = { A: 'a', B: 'be', C: 'ce', Ç: 'çe', D: 'de', E: 'e', Ə: 'ə', F: 'fe', G: 'ge', Ğ: 'ğe', H: 'he', X: 'xe', I: 'ı', İ: 'i', J: 'je',
+                K: 'ka', Q: 'qe', L: 'el', M: 'em', N: 'en', O: 'o', Ö: 'ö', P: 'pe', R: 'er', S: 'es', Ş: 'şe', T: 'te', U: 'u', Ü: 'ü', V: 've', Y: 'ye', Z: 'ze', W: 'dabl ve' };
+            // "KS-004" → "ka es dörd"; numbers inside room names become words too.
+            const sayTicket = t => { const [p, n] = (t || '').split('-'); return [...(p || '')].map(c => letters[c] || c).join(' ') + (n ? ' ' + azNumber(parseInt(n, 10)) : ''); };
+            const sayText = s => (s || '').replace(/\d+/g, d => ' ' + azNumber(parseInt(d, 10)) + ' ');
+            let voice = null;
+            function pickVoice() {
+                const vs = window.speechSynthesis ? speechSynthesis.getVoices() : [];
+                voice = vs.find(v => v.lang?.toLowerCase().startsWith('az')) || vs.find(v => v.lang?.toLowerCase().startsWith('tr')) || null;
+            }
+            if (window.speechSynthesis) { pickVoice(); speechSynthesis.onvoiceschanged = pickVoice; }
+            function announce(calls) {
+                if (!soundOn || !window.speechSynthesis) return;
+                calls.forEach((c, i) => {
+                    const u = new SpeechSynthesisUtterance(`Talon ${sayTicket(c.ticket)}. ${sayText(c.room || 'qəbul')}.`);
+                    u.lang = voice?.lang || 'az-AZ';
+                    if (voice) u.voice = voice;
+                    u.rate = 0.9;
+                    // After the chime; each call twice, like a hall announcer.
+                    setTimeout(() => { speechSynthesis.speak(u); speechSynthesis.speak(new SpeechSynthesisUtterance(u.text)); }, 1200 + i * 4500);
+                });
+            }
+
             const esc = (s) => (s ?? '').toString().replace(/[&<>"']/g, c => ({ '&': '&amp;', '<': '&lt;', '>': '&gt;', '"': '&quot;', "'": '&#39;' }[c]));
 
             function render(data) {
@@ -149,10 +184,13 @@
                     : '<div class="qs-empty">Hələ çağırış yoxdur</div>';
 
                 waitingEl.innerHTML = data.waiting.length
-                    ? data.waiting.map(w => `<div><strong>${esc(w.ticket)}</strong><span>${esc(w.doctor || '')}</span></div>`).join('')
+                    ? data.waiting.map(w => `<div><strong>${esc(w.ticket)}</strong><span>${w.priority ? '<b style="color:#F97066;">' + esc(w.priority) + '</b> ' : ''}${esc(w.doctor || '')}</span></div>`).join('')
                     : '<div class="qs-empty" style="background:none;">Növbə boşdur</div>';
 
-                if (fresh.length) chime();
+                if (fresh.length) {
+                    chime();
+                    announce(data.called.filter(c => fresh.includes(c.key)));
+                }
             }
 
             async function poll() {

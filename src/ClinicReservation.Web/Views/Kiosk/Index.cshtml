@@ -1,0 +1,110 @@
+@model List<KioskVisit>?
+@{
+    Layout = null;
+    var code = ViewBag.Code as string;
+    var error = ViewBag.Error as string;
+    var keys = "1234567890QWERTYUIOPASDFGHJKLZXCVBNM";
+}
+<!DOCTYPE html>
+<html lang="az">
+<head>
+    <meta charset="utf-8">
+    <meta name="viewport" content="width=device-width, initial-scale=1">
+    <title>Özünüqeydiyyat</title>
+    <link href="https://fonts.googleapis.com/css2?family=Inter:wght@400;600;800&display=swap" rel="stylesheet">
+    <style>
+        :root { --brand: #0E7C74; --ink: #101828; --muted: #475467; --line: #E4E7EC; --bg: #F4F5F7; --bad: #B42318; }
+        * { box-sizing: border-box; font-family: 'Inter', -apple-system, sans-serif; }
+        body { margin: 0; min-height: 100vh; background: var(--bg); color: var(--ink); display: flex; flex-direction: column; user-select: none; }
+        header { background: var(--brand); color: #fff; padding: 20px 32px; display: flex; justify-content: space-between; align-items: center; }
+        header b { font-size: 26px; }
+        header span { font-size: 20px; opacity: .9; font-variant-numeric: tabular-nums; }
+        main { flex: 1; display: grid; grid-template-columns: 1.2fr 1fr; gap: 28px; padding: 28px 32px; }
+        .panel { background: #fff; border-radius: 20px; padding: 28px; box-shadow: 0 4px 16px rgba(16,24,40,.06); }
+        h1 { margin: 0 0 6px; font-size: 30px; }
+        p.lead { margin: 0 0 18px; color: var(--muted); font-size: 18px; }
+        .code { width: 100%; font-size: 40px; font-weight: 800; letter-spacing: .12em; text-align: center; padding: 14px; border: 3px solid var(--line); border-radius: 14px; text-transform: uppercase; }
+        .code:focus { outline: none; border-color: var(--brand); }
+        .keys { display: grid; grid-template-columns: repeat(10, 1fr); gap: 8px; margin-top: 16px; }
+        .keys button, .big { font-size: 24px; font-weight: 700; height: 64px; border-radius: 12px; border: 1px solid var(--line); background: #F9FAFB; color: var(--ink); cursor: pointer; }
+        .keys button:active { background: #E6F4F2; }
+        .row { display: flex; gap: 10px; margin-top: 12px; }
+        .big { flex: 1; background: var(--brand); color: #fff; border: 0; height: 72px; font-size: 26px; }
+        .big.light { background: #fff; color: var(--ink); border: 1px solid var(--line); }
+        .err { margin-top: 16px; padding: 14px 18px; border-radius: 12px; background: #FEE4E2; color: var(--bad); font-size: 19px; font-weight: 600; }
+        .visit { display: flex; justify-content: space-between; align-items: center; gap: 16px; padding: 18px 0; border-top: 1px solid var(--line); }
+        .visit b { font-size: 24px; }
+        .visit div span { display: block; color: var(--muted); font-size: 17px; margin-top: 4px; }
+        .visit form button { font-size: 22px; font-weight: 800; height: 64px; padding: 0 28px; border-radius: 14px; border: 0; background: var(--brand); color: #fff; cursor: pointer; }
+        .visit .why { color: var(--muted); font-size: 17px; max-width: 260px; text-align: right; }
+        .desk { display: grid; gap: 16px; margin-top: 8px; }
+        .desk button { width: 100%; text-align: left; padding: 22px 24px; border-radius: 16px; border: 2px solid var(--line); background: #fff; cursor: pointer; }
+        .desk button b { display: block; font-size: 26px; }
+        .desk button span { color: var(--muted); font-size: 17px; }
+        .desk button:active { border-color: var(--brand); background: #F0F9F8; }
+    </style>
+</head>
+<body>
+    <header><b>MedClinic · Özünüqeydiyyat</b><span id="clock"></span></header>
+    <main>
+        <section class="panel">
+            @if (Model is { Count: > 0 })
+            {
+                <h1>Bu günkü qəbullarınız</h1>
+                <p class="lead">«Gəldim» düyməsinə basın — növbə talonunuz çap olunacaq.</p>
+                @foreach (var v in Model)
+                {
+                    <div class="visit">
+                        <div><b>@Fmt.Time(v.At) · @v.Doctor</b><span>@v.PatientShort@(v.Room != null ? $" · {v.Room}" : "")@(v.Ticket != null ? $" · talon {v.Ticket}" : "")</span></div>
+                        @if (v.CanCheckIn)
+                        {
+                            <form asp-action="CheckIn" method="post"><input type="hidden" name="id" value="@v.ReserveId" /><input type="hidden" name="code" value="@code" /><button type="submit">Gəldim</button></form>
+                        }
+                        else { <span class="why">@v.Why</span> }
+                    </div>
+                }
+                @if (error != null) { <div class="err">@error</div> }
+                <div class="row"><a class="big light" href="@Url.Action("Index")" style="display:flex; align-items:center; justify-content:center; text-decoration:none;">Başa qayıt</a></div>
+            }
+            else
+            {
+                <h1>Qəbula yazılmısınız?</h1>
+                <p class="lead">FİN kodunuzu daxil edin və ya loyallıq kartını / SMS-dəki QR-i skanerə tutun.</p>
+                <form asp-action="Find" method="post" id="findForm" autocomplete="off">
+                    <input name="code" id="code" class="code" lang="en" maxlength="300" value="@code" autofocus inputmode="none" aria-label="FİN, kart və ya QR" />
+                    <div class="keys">
+                        @foreach (var k in keys) { <button type="button" data-k="@k">@k</button> }
+                    </div>
+                    <div class="row">
+                        <button type="button" class="big light" data-k="DEL">⌫ Sil</button>
+                        <button type="submit" class="big">Davam et</button>
+                    </div>
+                </form>
+                @if (error != null) { <div class="err">@error</div> }
+            }
+        </section>
+        <section class="panel">
+            <h1>Talon götürün</h1>
+            <p class="lead">Qəbula yazılmamısınızsa və ya ödəniş üçün.</p>
+            <div class="desk">
+                <form asp-action="Desk" method="post"><input type="hidden" name="kind" value="Reception" /><button type="submit"><b>Registratura</b><span>Qəbula yazılmaq, məlumat</span></button></form>
+                <form asp-action="Desk" method="post"><input type="hidden" name="kind" value="Cashier" /><button type="submit"><b>Kassa</b><span>Ödəniş, qaytarma</span></button></form>
+            </div>
+        </section>
+    </main>
+    <script>
+        const clock = document.getElementById('clock');
+        const tick = () => clock.textContent = new Date().toLocaleTimeString('az-AZ', { hour: '2-digit', minute: '2-digit' });
+        tick(); setInterval(tick, 10000);
+        const code = document.getElementById('code');
+        document.querySelectorAll('[data-k]').forEach(b => b.addEventListener('click', () => {
+            if (!code) return;
+            code.value = b.dataset.k === 'DEL' ? code.value.slice(0, -1) : code.value + b.dataset.k;
+            code.focus();
+        }));
+        // Idle kiosk returns to the start screen.
+        let idle = setTimeout(() => location.href = '@Url.Action("Index")', 60000);
+        document.addEventListener('pointerdown', () => { clearTimeout(idle); idle = setTimeout(() => location.href = '@Url.Action("Index")', 60000); });
+    </script>
+</body>
+</html>

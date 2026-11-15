@@ -50,6 +50,8 @@ namespace ClinicReservation.Data
         public DbSet<WaitlistEntry> WaitlistEntries { get; set; }
         public DbSet<Referral> Referrals { get; set; }
         public DbSet<FollowUp> FollowUps { get; set; }
+        public DbSet<ServiceWindow> ServiceWindows { get; set; }
+        public DbSet<DeskTicket> DeskTickets { get; set; }
         public DbSet<LoyaltyTier> LoyaltyTiers { get; set; }
         public DbSet<LoyaltyCard> LoyaltyCards { get; set; }
         public DbSet<LoyaltyCardMember> LoyaltyCardMembers { get; set; }
@@ -431,6 +433,14 @@ namespace ClinicReservation.Data
                 e.HasOne(x => x.Company).WithMany().HasForeignKey(x => x.CompanyId).OnDelete(DeleteBehavior.Restrict);
             });
 
+            builder.Entity<ServiceWindow>(e => e.Property(x => x.Name).HasMaxLength(50));
+            builder.Entity<DeskTicket>(e =>
+            {
+                e.HasIndex(x => new { x.Kind, x.IssuedAt });
+                e.Property(x => x.Ticket).HasMaxLength(12);
+                e.HasOne(x => x.Window).WithMany().HasForeignKey(x => x.WindowId).OnDelete(DeleteBehavior.SetNull);
+            });
+
             builder.Entity<FollowUp>(e =>
             {
                 e.HasIndex(x => x.FromReserveId).IsUnique();
@@ -526,7 +536,7 @@ namespace ClinicReservation.Data
                     builder.Entity(t).ToTable(builder.Model.FindEntityType(t)!.GetTableName(), schema);
             }
             Schema("core", typeof(Patient), typeof(Department), typeof(Room), typeof(Equipment), typeof(Doctor), typeof(DoctorWorkHours), typeof(DoctorLeave), typeof(ExaminationType));
-            Schema("scheduling", typeof(Reserve), typeof(ReserveStatus), typeof(ReserveExaminationType), typeof(CancellationReason), typeof(ReserveSeries), typeof(WaitlistEntry), typeof(Referral), typeof(FollowUp));
+            Schema("scheduling", typeof(Reserve), typeof(ReserveStatus), typeof(ReserveExaminationType), typeof(CancellationReason), typeof(ReserveSeries), typeof(WaitlistEntry), typeof(Referral), typeof(FollowUp), typeof(ServiceWindow), typeof(DeskTicket));
             Schema("loyalty", typeof(LoyaltyTier), typeof(LoyaltyCard), typeof(LoyaltyCardMember), typeof(LoyaltyTransaction), typeof(Campaign),
                 typeof(CampaignExam), typeof(BenefitCategory), typeof(PatientBenefit), typeof(Company), typeof(PatientCompany));
             Schema("billing", typeof(Payment));

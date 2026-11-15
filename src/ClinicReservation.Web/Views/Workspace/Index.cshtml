@@ -144,6 +144,7 @@ else
                             <div class="queue-item @(r.CalledAt != null ? "called" : "")">
                                 <span class="ticket">@(r.QueueTicket ?? "—")</span>
                                 <div class="who">
+                                    @if (r.Priority != QueuePriority.None) { <span class="badge-soft badge-failed" style="margin-right:4px;">@QueueLabels.Priority(r.Priority)</span> }
                                     <a asp-controller="Reservation" asp-action="Details" asp-route-id="@r.Id">@r.Patient.FullName</a>
                                     @if (r.Patient.HasMedicalAlerts)
                                     {

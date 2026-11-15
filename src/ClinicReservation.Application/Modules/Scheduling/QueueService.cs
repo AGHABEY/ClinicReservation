@@ -29,6 +29,9 @@ namespace ClinicReservation.Modules.Scheduling
             reserve.QueueNumber = last + 1;
             reserve.QueueTicket = $"{prefix}-{reserve.QueueNumber:000}";
             reserve.CalledAt = null;
+            // 65+ goes ahead by itself; pregnancy, disability and urgency are marked by staff.
+            if (reserve.Priority == QueuePriority.None && reserve.Patient != null && Age(reserve.Patient.Birthday, now) >= QueueLabels.ElderlyAge)
+                reserve.Priority = QueuePriority.Elderly;
         }
 
         private string PrefixFor(int? doctorId)
@@ -40,9 +43,18 @@ namespace ClinicReservation.Modules.Scheduling
             return string.IsNullOrWhiteSpace(prefix) ? DefaultPrefix : prefix.Trim().ToUpperInvariant();
         }
 
-        /// <summary>Patients waiting for a doctor today: not yet called first, then by ticket.</summary>
+        public static int Age(DateTime birthday, DateTime on)
+        {
+            var age = on.Year - birthday.Year;
+            if (birthday.Date > on.Date.AddYears(-age)) age--;
+            return age;
+        }
+
+        /// <summary>Patients waiting for a doctor today: not yet called first, then urgent, other priorities, the rest; then by ticket.</summary>
         public static IQueryable<Reserve> WaitingFor(IQueryable<Reserve> reserves, DateTime today) =>
             reserves.Where(r => r.Status!.Name == StatusNames.Arrived && r.AppointmentAt >= today && r.AppointmentAt < today.AddDays(1))
-                .OrderBy(r => r.CalledAt != null).ThenBy(r => r.QueueNumber ?? int.MaxValue).ThenBy(r => r.ArrivedAt);
+                .OrderBy(r => r.CalledAt != null)
+                .ThenBy(r => r.Priority == QueuePriority.Urgent ? 0 : r.Priority == QueuePriority.None ? 2 : 1)
+                .ThenBy(r => r.QueueNumber ?? int.MaxValue).ThenBy(r => r.ArrivedAt);
     }
 }

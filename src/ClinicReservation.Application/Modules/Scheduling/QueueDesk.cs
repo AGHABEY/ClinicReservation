@@ -106,16 +106,26 @@ namespace ClinicReservation.Modules.Scheduling
 
             var waiting = await query
                 .Where(r => r.Status!.Name == StatusNames.Arrived && r.CalledAt == null)
-                .OrderBy(r => r.ArrivedAt)
+                .OrderBy(r => r.Priority == QueuePriority.Urgent ? 0 : r.Priority == QueuePriority.None ? 2 : 1).ThenBy(r => r.ArrivedAt)
                 .Take(30)
-                .Select(r => new { ticket = r.QueueTicket, doctor = r.Doctor != null ? r.Doctor.FullName : null, since = r.ArrivedAt })
+                .Select(r => new { ticket = r.QueueTicket, doctor = r.Doctor != null ? r.Doctor.FullName : null, since = r.ArrivedAt, r.Priority })
+                .ToListAsync(ct);
+
+            // Reception / cashier windows (whole clinic; shown on every screen).
+            var deskCalls = await _db.DeskTickets
+                .Where(t => t.Status == DeskTicketStatus.Called && t.CalledAt >= since && t.IssuedAt >= today)
+                .OrderByDescending(t => t.CalledAt).Take(4)
+                .Select(t => new { t.Id, t.Ticket, window = t.Window != null ? t.Window.Name : "", t.CalledAt })
                 .ToListAsync(ct);
 
             return new
             {
                 now = now.ToString("HH:mm"),
-                called = called.Select(c => new { c.id, c.ticket, c.room, doctor = c.doctor == null ? null : Fmt.Doctor(c.doctor), key = $"{c.id}:{c.calledAt:HHmmss}" }),
-                waiting = waiting.Select(w => new { w.ticket, w.doctor, minutes = w.since == null ? 0 : (int)(now - w.since.Value).TotalMinutes })
+                called = called.Select(c => new { c.id, c.ticket, c.room, doctor = c.doctor == null ? null : Fmt.Doctor(c.doctor), key = $"{c.id}:{c.calledAt:HHmmss}" })
+                    .Concat(deskCalls.Select(d => new { id = -d.Id, ticket = (string?)d.Ticket, room = (string?)d.window, doctor = (string?)null, key = $"d{d.Id}:{d.CalledAt:HHmmss}" }))
+                    .ToList(),
+                waiting = waiting.Select(w => new { w.ticket, w.doctor, minutes = w.since == null ? 0 : (int)(now - w.since.Value).TotalMinutes,
+                    priority = w.Priority == QueuePriority.None ? null : QueueLabels.Priority(w.Priority) })
             };
         }
 
@@ -146,7 +156,7 @@ namespace ClinicReservation.Modules.Scheduling
         public Reserve? Current => Today.Where(r => r.Status?.Name == StatusNames.InProgress).OrderBy(r => r.StartedAt).FirstOrDefault();
 
         public List<Reserve> Queue => Today.Where(r => r.Status?.Name == StatusNames.Arrived)
-            .OrderBy(r => r.CalledAt != null).ThenBy(r => r.QueueNumber ?? int.MaxValue).ThenBy(r => r.ArrivedAt).ToList();
+            .OrderBy(r => r.CalledAt != null).ThenBy(r => QueueLabels.Rank(r.Priority)).ThenBy(r => r.QueueNumber ?? int.MaxValue).ThenBy(r => r.ArrivedAt).ToList();
 
         public List<Reserve> Upcoming => Today.Where(r => r.Status?.Name is StatusNames.Waiting or StatusNames.Confirmed).ToList();
 

@@ -1,0 +1,87 @@
+@model DeskView
+@{
+    ViewData["Title"] = "Pəncərə";
+    var w = Model.Window;
+}
+
+<div class="page-head">
+    <div>
+        <h2>@(w == null ? "Pəncərə seçin" : w.Name)</h2>
+        <p>@(w == null ? "Registratura və ya kassa pəncərənizi seçin — seçim bu brauzerdə yadda qalır." : $"{QueueLabels.Desk(w.Kind)} növbəsi · bu gün {Model.ServedToday} xidmət" + (Model.AverageWaitMinutes != null ? $" · orta gözləmə {Model.AverageWaitMinutes} dəq" : ""))</p>
+    </div>
+    <div class="page-actions">
+        <select class="form-select" aria-label="Pəncərə" id="windowPick" style="width:auto;">
+            <option value="">— pəncərə —</option>
+            @foreach (var x in Model.Windows) { <option value="@x.Id" selected="@(w?.Id == x.Id)">@x.Name (@QueueLabels.Desk(x.Kind))</option> }
+        </select>
+    </div>
+</div>
+
+@if (!Model.Windows.Any())
+{
+    <div class="card"><div class="empty-state"><i class="bi bi-window-stack"></i><p>Pəncərə yoxdur. «Şöbə və kabinetlər» səhifəsində əlavə edin.</p></div></div>
+}
+else if (w != null)
+{
+    <div class="detail-grid">
+        <div class="card card-pad" style="text-align:center;">
+            @if (Model.Current != null)
+            {
+                <div class="hint-text">İndi xidmət olunur</div>
+                <div style="font-size:4rem; font-weight:800; letter-spacing:-.02em; margin:8px 0;" id="currentTicket">@Model.Current.Ticket</div>
+                @if (Model.Current.Priority != QueuePriority.None) { <span class="badge-soft badge-failed">@QueueLabels.Priority(Model.Current.Priority)</span> }
+                <div class="hint-text" style="margin:8px 0 16px;">çağırılıb @Fmt.Time(Model.Current.CalledAt!.Value)</div>
+                <div class="inline-form" style="justify-content:center;">
+                    <form asp-action="Recall" method="post"><input type="hidden" name="id" value="@Model.Current.Id" /><input type="hidden" name="windowId" value="@w.Id" /><button class="btn btn-light"><i class="bi bi-megaphone"></i> Təkrar çağır</button></form>
+                    <form asp-action="Finish" method="post"><input type="hidden" name="id" value="@Model.Current.Id" /><input type="hidden" name="windowId" value="@w.Id" /><input type="hidden" name="missed" value="false" /><button class="btn btn-light"><i class="bi bi-check2"></i> Xidmət edildi</button></form>
+                    <form asp-action="Finish" method="post"><input type="hidden" name="id" value="@Model.Current.Id" /><input type="hidden" name="windowId" value="@w.Id" /><input type="hidden" name="missed" value="true" /><button class="btn btn-light"><i class="bi bi-person-x"></i> Gəlmədi</button></form>
+                </div>
+            }
+            else
+            {
+                <div class="hint-text" style="margin:24px 0;">Hazırda heç kim çağırılmayıb</div>
+            }
+            <form asp-action="Next" method="post" style="margin-top:20px;">
+                <input type="hidden" name="windowId" value="@w.Id" />
+                <button type="submit" class="btn btn-primary" style="font-size:1.15rem; padding:14px 28px;" id="nextBtn"><i class="bi bi-arrow-right-circle"></i> Növbəti (@Model.Waiting.Count gözləyir)</button>
+            </form>
+        </div>
+        <div class="card card-pad">
+            <h3 class="card-title"><i class="bi bi-people"></i> Növbədə</h3>
+            @if (Model.Waiting.Any())
+            {
+                <div class="line-list">
+                    @foreach (var t in Model.Waiting)
+                    {
+                        <div class="line-item"><span><b>@t.Ticket</b> @if (t.Priority != QueuePriority.None) { <span class="badge-soft badge-failed">@QueueLabels.Priority(t.Priority)</span> }</span>
+                            <span class="hint-text">@Fmt.Time(t.IssuedAt) · @((int)(ClinicTime.Now - t.IssuedAt).TotalMinutes) dəq</span></div>
+                    }
+                </div>
+            }
+            else { <p class="hint-text">Növbə boşdur.</p> }
+            <h3 class="card-title mt-3"><i class="bi bi-printer"></i> Talon ver</h3>
+            <form asp-action="Issue" method="post" class="inline-form">
+                <input type="hidden" name="kind" value="@w.Kind" />
+                <input type="hidden" name="windowId" value="@w.Id" />
+                <select name="priority" class="form-select" style="width:auto;">@foreach (var pr in Enum.GetValues<QueuePriority>()) { <option value="@pr">@QueueLabels.Priority(pr)</option> }</select>
+                <button type="submit" class="btn btn-light btn-sm">Çap et</button>
+            </form>
+        </div>
+    </div>
+}
+
+<script>
+    (function () {
+        const pick = document.getElementById('windowPick');
+        let saved = null;
+        try { saved = localStorage.getItem('deskWindow'); } catch (e) { }
+        const current = '@(w?.Id.ToString() ?? "")';
+        if (!current && saved && [...pick.options].some(o => o.value === saved)) { location.href = '?windowId=' + saved; return; }
+        pick.addEventListener('change', () => {
+            try { localStorage.setItem('deskWindow', pick.value); } catch (e) { }
+            location.href = pick.value ? '?windowId=' + pick.value : '?';
+        });
+        // The waiting count refreshes by itself.
+        if (current) setTimeout(() => location.reload(), 30000);
+    })();
+</script>

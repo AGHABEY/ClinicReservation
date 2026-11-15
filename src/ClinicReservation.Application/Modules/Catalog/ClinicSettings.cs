@@ -95,6 +95,26 @@ namespace ClinicReservation.Modules.Catalog
             return Result.Success(isNew ? $"«{name}» əlavə edildi" : "Avadanlıq yeniləndi", eq.Id);
         }
 
+        public Task<List<ServiceWindow>> WindowsAsync(CancellationToken ct = default) =>
+            _db.ServiceWindows.OrderByDescending(w => w.IsActive).ThenBy(w => w.Kind).ThenBy(w => w.Name).ToListAsync(ct);
+
+        /// <summary>A reception / cashier window for the desk queue.</summary>
+        public async Task<Result> SaveWindowAsync(int id, string? name, DeskKind kind, bool isActive, CancellationToken ct = default)
+        {
+            name = name?.Trim();
+            if (string.IsNullOrEmpty(name) || name.Length > 50) return Result.Failure("Pəncərənin adını yazın (ən çox 50 simvol)");
+            if (!Enum.IsDefined(kind)) return Result.Failure("Növünü seçin");
+            if (await _db.ServiceWindows.AnyAsync(w => w.Id != id && w.Name.ToLower() == name.ToLower(), ct)) return Result.Failure($"«{name}» artıq var");
+            var w = id > 0 ? await _db.ServiceWindows.FindAsync(new object[] { id }, ct) : new ServiceWindow();
+            if (w == null) return Result.Failure("Pəncərə tapılmadı");
+            var isNew = id == 0;
+            (w.Name, w.Kind, w.IsActive) = (name, kind, isNew || isActive);
+            if (isNew) _db.ServiceWindows.Add(w);
+            await _db.SaveChangesAsync(ct);
+            _audit.Log(isNew ? "Pəncərə əlavə edildi" : "Pəncərə dəyişdirildi", AuditEntities.Catalog, w.Id, $"{w.Name} ({QueueLabels.Desk(w.Kind)})");
+            return Result.Success(isNew ? $"«{name}» əlavə edildi" : "Pəncərə yeniləndi", w.Id);
+        }
+
         public async Task<Result> SaveCancellationReasonAsync(int id, string? name, CancelledBy party, int sortOrder, bool isActive, CancellationToken ct = default)
         {
             name = name?.Trim();

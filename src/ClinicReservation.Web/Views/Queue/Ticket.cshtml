@@ -3,6 +3,7 @@
     Layout = null;
     var room = Model.Room?.Name ?? Model.Doctor?.Room?.Name;
     var ahead = (int)ViewBag.Ahead;
+    var kiosk = ViewBag.Kiosk as bool? ?? false;
 }
 <!DOCTYPE html>
 <html lang="az">
@@ -39,6 +40,7 @@
         <div class="brand">MedClinic</div>
         <div class="sub">Növbə talonu</div>
         <div class="num">@Model.QueueTicket</div>
+        @if (Model.Priority != QueuePriority.None) { <div class="sub" style="font-weight:700; color:#B42318;">Prioritet: @QueueLabels.Priority(Model.Priority)</div> }
         <div class="row"><span>Həkim</span><span>@(Model.Doctor?.FullName ?? "—")</span></div>
         @if (room != null)
         {
@@ -51,8 +53,20 @@
     </div>
     <div class="tools">
         <button type="button" onclick="window.print()">Çap et</button>
-        <a href="@Url.Action("Details", "Reservation", new { id = Model.Id })">Geri</a>
+        @if (kiosk)
+        {
+            <a href="@Url.Action("Index", "Kiosk")">Başa qayıt</a>
+        }
+        else
+        {
+            <a href="@Url.Action("Details", "Reservation", new { id = Model.Id })">Geri</a>
+        }
     </div>
-    <script>if (new URLSearchParams(location.search).has('print')) window.addEventListener('load', () => window.print());</script>
+    <script>
+        const kiosk = @(kiosk ? "true" : "false");
+        if (kiosk || new URLSearchParams(location.search).has('print')) window.addEventListener('load', () => window.print());
+        // The kiosk goes back to its start screen by itself.
+        if (kiosk) setTimeout(() => location.href = '@Url.Action("Index", "Kiosk")', 10000);
+    </script>
 </body>
 </html>

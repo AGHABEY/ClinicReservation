@@ -27,12 +27,16 @@ namespace ClinicReservation.Controllers
         public async Task<IActionResult> Data(int? departmentId, CancellationToken ct) => Json(await _desk.ScreenDataAsync(departmentId, ct));
 
         /// <summary>Small printable ticket handed to the patient at check-in.</summary>
-        [HasPermission(Permissions.ReservationsView)]
-        public async Task<IActionResult> Ticket(int id, CancellationToken ct)
+        [HasPermission(Permissions.ReservationsView, Permissions.QueueKiosk)]
+        public async Task<IActionResult> Ticket(int id, bool kiosk, CancellationToken ct)
         {
             var found = await _desk.TicketAsync(id, ct);
             if (found == null) return NotFound();
             var (res, ahead) = found.Value;
+            // The kiosk prints today's tickets only and never links into the reservation.
+            kiosk |= !User.Can(Permissions.ReservationsView);
+            if (kiosk && res.ArrivedAt?.Date != ClinicTime.Today) return NotFound();
+            ViewBag.Kiosk = kiosk;
             if (res.QueueTicket == null)
             {
                 TempData["Error"] = "Bu rezervasiyaya hələ növbə talonu verilməyib (xəstə «Gəldi» kimi qeyd edilməyib)";

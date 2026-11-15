@@ -23,5 +23,14 @@ namespace ClinicReservation.Models
 
         /// <summary>The «kontrol vaxtı çatanlar» list shows plans due within this many days.</summary>
         public int FollowUpListAheadDays { get; set; } = 7;
+
+        /// <summary>Ticket letters of the reception and cashier queues (kept apart from department letters).</summary>
+        public string ReceptionPrefix { get; set; } = "R";
+        public string CashierPrefix { get; set; } = "KS";
+
+        /// <summary>The kiosk checks a patient in from this many minutes before the visit…</summary>
+        public int KioskEarlyMinutes { get; set; } = 120;
+        /// <summary>…until this many minutes after its start (later: go to reception).</summary>
+        public int KioskLateMinutes { get; set; } = 30;
     }
 }

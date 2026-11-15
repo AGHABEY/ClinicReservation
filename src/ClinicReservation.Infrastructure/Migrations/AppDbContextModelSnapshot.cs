@@ -428,6 +428,58 @@ namespace ClinicReservation.Migrations
                     b.ToTable("Departments", "core");
                 });
 
+            modelBuilder.Entity("ClinicReservation.Models.DeskTicket", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("CalledAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("IssuedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("IssuedBy")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Number")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("ServedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("ServedBy")
+                        .HasColumnType("text");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Ticket")
+                        .IsRequired()
+                        .HasMaxLength(12)
+                        .HasColumnType("character varying(12)");
+
+                    b.Property<int?>("WindowId")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("WindowId");
+
+                    b.HasIndex("Kind", "IssuedAt");
+
+                    b.ToTable("DeskTickets", "scheduling");
+                });
+
             modelBuilder.Entity("ClinicReservation.Models.Doctor", b =>
                 {
                     b.Property<int>("Id")
@@ -1603,6 +1655,9 @@ namespace ClinicReservation.Migrations
                         .HasMaxLength(64)
                         .HasColumnType("character varying(64)");
 
+                    b.Property<int>("Priority")
+                        .HasColumnType("integer");
+
                     b.Property<int?>("QueueNumber")
                         .HasColumnType("integer");
 
@@ -1770,6 +1825,30 @@ namespace ClinicReservation.Migrations
                     b.HasKey("Id");
 
                     b.ToTable("Rooms", "core");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.ServiceWindow", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<bool>("IsActive")
+                        .HasColumnType("boolean");
+
+                    b.Property<int>("Kind")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Name")
+                        .IsRequired()
+                        .HasMaxLength(50)
+                        .HasColumnType("character varying(50)");
+
+                    b.HasKey("Id");
+
+                    b.ToTable("ServiceWindows", "scheduling");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.SmsMessage", b =>
@@ -2576,6 +2655,16 @@ namespace ClinicReservation.Migrations
                     b.Navigation("Campaign");
 
                     b.Navigation("ExaminationType");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.DeskTicket", b =>
+                {
+                    b.HasOne("ClinicReservation.Models.ServiceWindow", "Window")
+                        .WithMany()
+                        .HasForeignKey("WindowId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Window");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.Doctor", b =>

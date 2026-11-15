@@ -253,6 +253,17 @@ namespace ClinicReservation.Controllers
             return View(res);
         }
 
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [HasPermission(Permissions.ReservationsManage, Permissions.QueueCall)]
+        public async Task<IActionResult> Priority(int id, QueuePriority priority, string? returnUrl, CancellationToken ct)
+        {
+            var r = await _reservations.SetPriorityAsync(id, priority, ct);
+            if (r == null) return NotFound();
+            TempData[r.Ok ? "Success" : "Error"] = r.Ok ? r.Message : r.ErrorText;
+            return Url.IsLocalUrl(returnUrl) ? Redirect(returnUrl) : RedirectToAction(nameof(Details), new { id });
+        }
+
         /// <summary>Əl ilə endirim on the whole visit (role limit, reason required).</summary>
         [HttpPost]
         [ValidateAntiForgeryToken]

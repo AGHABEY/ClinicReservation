@@ -28,12 +28,21 @@
     <div>
         <h2>@Model.Patient.FullName</h2>
         <p>Rezervasiya #@Model.Id · <partial name="_StatusBadge" model="Model.Status?.Name" />
+            @if (Model.Priority != QueuePriority.None) { <span class="badge-soft badge-failed" title="Növbədə öndə">@QueueLabels.Priority(Model.Priority)</span> }
             @if (noShowCount > 0)
             {
                 <span class="badge-soft @(noShowWarn > 0 && noShowCount >= noShowWarn ? "badge-failed" : "badge-default")" id="noShowBadge"
                       title="Son aylarda gəlmədiyi qəbullar">@noShowCount dəfə gəlməyib</span>
             }
         </p>
+        @if (status is StatusNames.Waiting or StatusNames.Confirmed or StatusNames.Arrived && User.CanAny(Permissions.ReservationsManage, Permissions.QueueCall))
+        {
+            <form asp-action="Priority" asp-route-id="@Model.Id" method="post" style="margin-top:6px;">
+                <select name="priority" class="form-select" style="width:auto; padding-top:3px; padding-bottom:3px; font-size:.82rem;" aria-label="Növbə prioriteti" onchange="this.form.submit()">
+                    @foreach (var pr in Enum.GetValues<QueuePriority>()) { <option value="@pr" selected="@(Model.Priority == pr)">Növbə: @QueueLabels.Priority(pr)</option> }
+                </select>
+            </form>
+        }
     </div>
     <div class="page-actions">
         <a class="btn btn-light" asp-action="Index"><i class="bi bi-arrow-left"></i> Siyahı</a>

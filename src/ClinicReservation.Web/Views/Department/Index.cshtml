@@ -4,6 +4,7 @@
     var rooms = (List<(Room Item, int Doctors)>)ViewBag.Rooms;
     var equipment = (List<Equipment>)ViewBag.Equipment;
     var reasons = (List<CancellationReason>)ViewBag.Reasons;
+    var windows = (List<ServiceWindow>)ViewBag.Windows;
 }
 
 <div class="page-head">
@@ -92,6 +93,32 @@
                     </form>
                 }
                 @if (!equipment.Any()) { <p class="hint-text">Hələ avadanlıq yoxdur.</p> }
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head"><h3 class="card-title"><i class="bi bi-window-stack"></i> Registratura və kassa pəncərələri</h3></div>
+        <div class="card-pad">
+            <p class="hint-text" style="margin-top:0;">Kioskdan və ya qapıdan alınan talonlar (R-001, KS-001) bu pəncərələrə çağırılır; ekranda «R-004 → Pəncərə 2» görünür və səslə elan olunur.</p>
+            <form asp-action="SaveWindow" method="post" class="inline-form">
+                <input type="hidden" name="id" value="0" />
+                <input name="name" class="form-control" placeholder="məs: Pəncərə 1" maxlength="50" aria-label="Pəncərənin adı" required />
+                <select name="kind" class="form-select" aria-label="Növ" style="max-width:170px;"><option value="Reception">Registratura</option><option value="Cashier">Kassa</option></select>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Əlavə et</button>
+            </form>
+            <div class="line-list mt-3">
+                @foreach (var w in windows)
+                {
+                    <form asp-action="SaveWindow" method="post" class="line-item inline-form @(w.IsActive ? "" : "row-muted")">
+                        <input type="hidden" name="id" value="@w.Id" />
+                        <input name="name" value="@w.Name" class="form-control" maxlength="50" aria-label="Pəncərənin adı" />
+                        <select name="kind" class="form-select" aria-label="Növ" style="max-width:170px;"><option value="Reception" selected="@(w.Kind == DeskKind.Reception)">Registratura</option><option value="Cashier" selected="@(w.Kind == DeskKind.Cashier)">Kassa</option></select>
+                        <label class="hint-text" style="display:flex; gap:6px; align-items:center; white-space:nowrap;"><input type="checkbox" name="isActive" value="true" checked="@w.IsActive" /><input type="hidden" name="isActive" value="false" /> Aktiv</label>
+                        <button type="submit" class="btn btn-light btn-sm">Saxla</button>
+                    </form>
+                }
+                @if (!windows.Any()) { <p class="hint-text">Hələ pəncərə yoxdur.</p> }
             </div>
         </div>
     </div>

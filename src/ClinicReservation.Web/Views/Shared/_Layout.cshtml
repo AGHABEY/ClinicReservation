@@ -73,6 +73,14 @@
                                 </a>
                             </li>
                         }
+                        @if (User.Can(Permissions.DeskServe))
+                        {
+                            <li>
+                                <a class="@Active("Desk")" aria-current="@Current("Desk")" asp-controller="Desk" asp-action="Index">
+                                    <i class="bi bi-window-stack"></i> Pəncərə (növbə)
+                                </a>
+                            </li>
+                        }
                         @if (User.Can(Permissions.QueueCall))
                         {
                             <li>

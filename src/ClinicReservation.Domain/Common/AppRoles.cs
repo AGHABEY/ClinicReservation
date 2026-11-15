@@ -16,8 +16,9 @@ namespace ClinicReservation.Models
         public const string Lab = "Laborant";
         public const string Storekeeper = "Anbardar";
         public const string Nurse = "TibbBacisi";
+        public const string Kiosk = "Kiosk";
 
-        public static readonly string[] BuiltIn = { Admin, Staff, Reception, Cashier, Doctor, Manager, Lab, Storekeeper, Nurse };
+        public static readonly string[] BuiltIn = { Admin, Staff, Reception, Cashier, Doctor, Manager, Lab, Storekeeper, Nurse, Kiosk };
 
         public static string Label(string? role) => role switch
         {
@@ -30,6 +31,7 @@ namespace ClinicReservation.Models
             Lab => "Laborant",
             Storekeeper => "Anbardar / aptek",
             Nurse => "Tibb bacısı",
+            Kiosk => "Kiosk (özünüqeydiyyat)",
             _ => role ?? "—"
         };
 
@@ -52,12 +54,12 @@ namespace ClinicReservation.Models
                 Permissions.PatientsView, Permissions.PatientsEdit, Permissions.ReservationsView,
                 Permissions.ReservationsManage, Permissions.ReservationsStatus, Permissions.PaymentsTake,
                 Permissions.QueueView, Permissions.QueueCall, Permissions.SmsManage, Permissions.LabView,
-                Permissions.InpatientView, Permissions.InpatientManage, Permissions.ReservationsOverbook
+                Permissions.InpatientView, Permissions.InpatientManage, Permissions.ReservationsOverbook, Permissions.DeskServe
             },
             Cashier => new[]
             {
                 Permissions.PatientsView, Permissions.ReservationsView, Permissions.PaymentsTake,
-                Permissions.PaymentsRefund, Permissions.KassaTotals
+                Permissions.PaymentsRefund, Permissions.KassaTotals, Permissions.DeskServe
             },
             Doctor => new[]
             {
@@ -80,6 +82,7 @@ namespace ClinicReservation.Models
             {
                 Permissions.PatientsView, Permissions.StockView, Permissions.StockIssue, Permissions.StockManage
             },
+            Kiosk => new[] { Permissions.QueueKiosk },
             Manager => new[]
             {
                 Permissions.PatientsView, Permissions.ReservationsView, Permissions.KassaTotals,
@@ -134,6 +137,8 @@ namespace ClinicReservation.Models
         public const string InpatientDoctor = "inpatient.doctor";
         public const string InpatientNurse = "inpatient.nurse";
         public const string LoyaltyManage = "loyalty.manage";
+        public const string QueueKiosk = "queue.kiosk";
+        public const string DeskServe = "queue.desk";
 
         public record Info(string Code, string Group, string Label);
 
@@ -147,6 +152,8 @@ namespace ClinicReservation.Models
             new(ReservationsOverbook, "Rezervasiyalar", "Dolu saata əlavə qəbul yazmaq (araya salmaq, həkimin gündəlik limiti daxilində)"),
             new(QueueView, "Növbə", "Növbə ekranı (gözləmə zalı)"),
             new(QueueCall, "Növbə", "Həkim iş masası, xəstəni çağırmaq"),
+            new(DeskServe, "Növbə", "Registratura / kassa pəncərəsində növbəni çağırmaq"),
+            new(QueueKiosk, "Növbə", "Kiosk: xəstənin özü «gəldim» deyir, talon çap edir"),
             new(RecordsView, "Tibbi kart", "Tibbi qeydlərə və diaqnozlara baxmaq"),
             new(RecordsEdit, "Tibbi kart", "Tibbi qeyd yazmaq, allergiyaları dəyişmək"),
             new(LabView, "Laboratoriya", "Analiz nəticələrinə baxmaq və çap etmək"),
