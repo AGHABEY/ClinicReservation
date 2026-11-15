@@ -91,6 +91,9 @@ builder.Services.AddSingleton<ClinicReservation.Services.IClock, ClinicReservati
 builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.SlotService>();
 builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.ReservationQueries>();
 builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.Reservations>();
+builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.QueueDesk>();
+builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.PatientLinks>();
+builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.DashboardQueries>();
 builder.Services.AddScoped<ClinicReservation.Services.AuditService>();
 builder.Services.AddScoped<ClinicReservation.Modules.Scheduling.QueueService>();
 builder.Services.AddScoped<ClinicReservation.Modules.Lab.LabService>();
