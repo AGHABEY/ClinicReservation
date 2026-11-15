@@ -1,7 +1,7 @@
 using ClinicReservation.Data;
 using ClinicReservation.Helpers;
 using ClinicReservation.Models;
-using ClinicReservation.Modules.Pharmacy;
+using ClinicReservation.Events;
 using ClinicReservation.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -20,14 +20,14 @@ namespace ClinicReservation.Modules.Emr
     public class MedicalRecords
     {
         private readonly IAppDbContext _db;
-        private readonly StockService _stock;
+        private readonly Outbox _outbox;
         private readonly AuditService _audit;
         private readonly ICurrentUser _user;
 
-        public MedicalRecords(IAppDbContext db, StockService stock, AuditService audit, ICurrentUser user)
+        public MedicalRecords(IAppDbContext db, Outbox outbox, AuditService audit, ICurrentUser user)
         {
             _db = db;
-            _stock = stock;
+            _outbox = outbox;
             _audit = audit;
             _user = user;
         }
@@ -176,6 +176,7 @@ namespace ClinicReservation.Modules.Emr
                 reserve.Status = await _db.ReserveStatuses.FirstAsync(s => s.Name == StatusNames.Completed, ct);
                 reserve.CompletedAt = now;
                 completed = true;
+                _outbox.Add(new VisitCompleted(reserve.Id, userName));
             }
             await _db.SaveChangesAsync(ct);
 
@@ -187,7 +188,8 @@ namespace ClinicReservation.Modules.Emr
                 _audit.Log("Status dəyişdi", AuditEntities.Reservation, reserve.Id, $"{patient.FullName}: Qəbulda → Tamamlandı");
 
             var result = Result.Success(finish ? $"{patient.FullName} — qəbul tamamlandı, tibbi qeyd saxlanıldı" : "Tibbi qeyd saxlanıldı", rec.Id);
-            if (completed) result.Warning = StockService.Warning(_stock.ConsumeForReserve(reserve.Id, false, userName));
+            var warnings = await _outbox.DispatchAddedAsync(ct);
+            if (warnings.Count > 0) result.Warning = string.Join(" ", warnings);
             return result;
         }
 

@@ -44,6 +44,8 @@ namespace ClinicReservation.Data
         DbSet<MedicationOrder> MedicationOrders { get; }
         DbSet<MedicationDose> MedicationDoses { get; }
 
+        DbSet<OutboxMessage> OutboxMessages { get; }
+
         ChangeTracker ChangeTracker { get; }
         int SaveChanges();
         Task<int> SaveChangesAsync(CancellationToken cancellationToken = default);

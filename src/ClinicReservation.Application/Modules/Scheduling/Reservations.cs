@@ -2,7 +2,7 @@ using System.Security.Claims;
 using ClinicReservation.Data;
 using ClinicReservation.Helpers;
 using ClinicReservation.Models;
-using ClinicReservation.Modules.Pharmacy;
+using ClinicReservation.Events;
 using ClinicReservation.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -14,16 +14,16 @@ namespace ClinicReservation.Modules.Scheduling
         private readonly IAppDbContext _db;
         private readonly SlotService _slots;
         private readonly QueueService _queue;
-        private readonly StockService _stock;
+        private readonly Outbox _outbox;
         private readonly AuditService _audit;
         private readonly ICurrentUser _user;
 
-        public Reservations(IAppDbContext db, SlotService slots, QueueService queue, StockService stock, AuditService audit, ICurrentUser user)
+        public Reservations(IAppDbContext db, SlotService slots, QueueService queue, Outbox outbox, AuditService audit, ICurrentUser user)
         {
             _db = db;
             _slots = slots;
             _queue = queue;
-            _stock = stock;
+            _outbox = outbox;
             _audit = audit;
             _user = user;
         }
@@ -143,7 +143,10 @@ namespace ClinicReservation.Modules.Scheduling
                     _queue.AssignTicket(res, now);
                     break;
                 case StatusNames.InProgress: res.StartedAt = now; res.ArrivedAt ??= now; break;
-                case StatusNames.Completed: res.CompletedAt = now; res.StartedAt ??= now; res.ArrivedAt ??= now; break;
+                case StatusNames.Completed:
+                    res.CompletedAt = now; res.StartedAt ??= now; res.ArrivedAt ??= now;
+                    _outbox.Add(new VisitCompleted(res.Id, _user.UserName));
+                    break;
             }
             await _db.SaveChangesAsync(ct);
             _audit.Log("Status dəyişdi", AuditEntities.Reservation, res.Id,
@@ -152,8 +155,7 @@ namespace ClinicReservation.Modules.Scheduling
             var result = Result.Success(to == StatusNames.Arrived
                 ? $"{res.Patient.FullName} — gəldi. Növbə talonu: {res.QueueTicket}"
                 : $"{res.Patient.FullName} — {StatusNames.Label(to)}", res.Id);
-            if (to == StatusNames.Completed)
-                result.Warning = StockService.Warning(_stock.ConsumeForReserve(res.Id, false, _user.UserName));
+            result.Warning = Join(await _outbox.DispatchAddedAsync(ct));
             return (result, res.DoctorId);
         }
 
@@ -207,6 +209,8 @@ namespace ClinicReservation.Modules.Scheduling
             }
             return (examTypes, start, slot);
         }
+
+        private static string? Join(List<string> warnings) => warnings.Count == 0 ? null : string.Join(" ", warnings);
 
         private static DateTime TruncateToMinute(DateTime d) => new(d.Year, d.Month, d.Day, d.Hour, d.Minute, 0, d.Kind);
     }

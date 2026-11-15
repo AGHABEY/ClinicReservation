@@ -235,6 +235,13 @@ tests/
 Dockerfile, docker-compose.yml
 ```
 
+Modullar bir-birini birbaşa çağırmır. Bir modulda baş verən və başqasını maraqlandıran şey
+**hadisə** kimi göndərilir (`Application/Events`): məsələn «qəbul tamamlandı», «nümunə götürüldü»,
+«doza verildi» — Aptek modulu bunlara qulaq asıb materialı/dərmanı anbardan silir. Hadisə əsas
+dəyişikliklə eyni tranzaksiyada `OutboxMessages` cədvəlinə yazılır (itmir), dərhal emal olunur;
+alınmasa, fon prosesi (bir server) onu sonra yenidən işlədir. Sonradan modul ayrıca servisə
+çıxarılsa, yalnız ötürücü (məs. RabbitMQ) dəyişir.
+
 Yeni miqrasiya:
 
 ```bash

@@ -76,7 +76,7 @@ namespace ClinicReservation.Tests.Services
         }
 
         [Fact]
-        public void Dose_is_recorded_once_and_a_given_stock_dose_leaves_the_ward_store()
+        public async Task Dose_is_recorded_once_and_a_given_stock_dose_leaves_the_ward_store()
         {
             var (scope, db, svc) = Open();
             using var scopeLifetime = scope;
@@ -99,12 +99,14 @@ namespace ClinicReservation.Tests.Services
             db.SaveChanges();
             order = db.MedicationOrders.Include(o => o.Admission).Include(o => o.StockItem).First(o => o.Id == order.Id);
 
-            Assert.False(svc.RecordDose(order, slot, DoseStatus.Skipped, null, "nurse", out _).Ok);          // reason required
-            Assert.False(svc.RecordDose(order, slot.AddMinutes(7), DoseStatus.Given, null, "nurse", out _).Ok); // not a scheduled time
-            var given = svc.RecordDose(order, slot, DoseStatus.Given, null, "nurse", out var warning);
+            var outbox = scope.ServiceProvider.GetRequiredService<ClinicReservation.Events.Outbox>();
+            Assert.False(svc.RecordDose(order, slot, DoseStatus.Skipped, null, "nurse").Ok);          // reason required
+            Assert.False(svc.RecordDose(order, slot.AddMinutes(7), DoseStatus.Given, null, "nurse").Ok); // not a scheduled time
+            var given = svc.RecordDose(order, slot, DoseStatus.Given, null, "nurse");
             Assert.True(given.Ok, given.Error);
-            Assert.Null(warning);
-            Assert.False(svc.RecordDose(order, slot, DoseStatus.Given, null, "nurse", out _).Ok);           // twice
+            // The dose and its "dose given" event were saved together; the pharmacy handles the event.
+            Assert.Empty(await outbox.DispatchAddedAsync());
+            Assert.False(svc.RecordDose(order, slot, DoseStatus.Given, null, "nurse").Ok);           // twice
 
             Assert.Equal(3, db.StockBatches.AsNoTracking().Where(b => b.WarehouseId == store.Id).Sum(b => b.Quantity));
             var dose = db.MedicationDoses.AsNoTracking().Single(d => d.MedicationOrderId == order.Id);

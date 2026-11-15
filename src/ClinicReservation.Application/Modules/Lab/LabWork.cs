@@ -2,7 +2,7 @@ using ClinicReservation.Data;
 using ClinicReservation.Helpers;
 using ClinicReservation.Models;
 using ClinicReservation.Modules.Notifications;
-using ClinicReservation.Modules.Pharmacy;
+using ClinicReservation.Events;
 using ClinicReservation.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -15,17 +15,17 @@ namespace ClinicReservation.Modules.Lab
         private readonly LabService _lab;
         private readonly LabQueries _queries;
         private readonly SmsService _sms;
-        private readonly StockService _stock;
+        private readonly Outbox _outbox;
         private readonly AuditService _audit;
         private readonly ICurrentUser _user;
 
-        public LabWork(IAppDbContext db, LabService lab, LabQueries queries, SmsService sms, StockService stock, AuditService audit, ICurrentUser user)
+        public LabWork(IAppDbContext db, LabService lab, LabQueries queries, SmsService sms, Outbox outbox, AuditService audit, ICurrentUser user)
         {
             _db = db;
             _lab = lab;
             _queries = queries;
             _sms = sms;
-            _stock = stock;
+            _outbox = outbox;
             _audit = audit;
             _user = user;
         }
@@ -44,6 +44,9 @@ namespace ClinicReservation.Modules.Lab
             var tests = _lab.PendingTests(reserveId);
             if (tests.Count == 0) return new(Result.Failure("Bu rezervasiya üçün götürüləcək analiz yoxdur"), null);
 
+            // Tubes, needles, reagents of the lab services leave stock when the sample is taken
+            // (stored with the first order's save, handled right after).
+            _outbox.Add(new LabSampleCollected(reserveId, _user.UserName));
             // One tube per sample type (blood and urine get separate barcodes).
             var orders = tests.GroupBy(t => t.SampleType)
                 .Select(g => _lab.CreateOrder(reserve, g, reserve.Patient.Gender, _user.UserName, ClinicTime.Now))
@@ -52,8 +55,8 @@ namespace ClinicReservation.Modules.Lab
                 _audit.Log("Nümunə götürüldü", AuditEntities.Lab, o.Id, $"{reserve.Patient.FullName}, barkod {o.Barcode}, {o.Results.Count} analiz");
 
             var result = Result.Success($"Nümunə götürüldü: {string.Join(", ", orders.Select(o => o.Barcode))}");
-            // Tubes, needles, reagents of the lab services leave stock when the sample is taken.
-            result.Warning = StockService.Warning(_stock.ConsumeForReserve(reserveId, true, _user.UserName));
+            var warnings = await _outbox.DispatchAddedAsync(ct);
+            if (warnings.Count > 0) result.Warning = string.Join(" ", warnings);
             return new(result, string.Join(",", orders.Select(o => o.Id)));
         }
 

@@ -2,6 +2,7 @@ using System.Globalization;
 using ClinicReservation.Data;
 using ClinicReservation.Helpers;
 using ClinicReservation.Models;
+using ClinicReservation.Events;
 using ClinicReservation.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -18,14 +19,16 @@ namespace ClinicReservation.Modules.Inpatient
         private readonly InpatientQueries _queries;
         private readonly AuditService _audit;
         private readonly ICurrentUser _user;
+        private readonly Outbox _outbox;
 
-        public InpatientCare(IAppDbContext db, InpatientService stays, InpatientQueries queries, AuditService audit, ICurrentUser user)
+        public InpatientCare(IAppDbContext db, InpatientService stays, InpatientQueries queries, AuditService audit, ICurrentUser user, Outbox outbox)
         {
             _db = db;
             _stays = stays;
             _queries = queries;
             _audit = audit;
             _user = user;
+            _outbox = outbox;
         }
 
         /// <summary>Admits a patient (by id or FİN). Field errors use AdmitViewModel property names.</summary>
@@ -165,13 +168,14 @@ namespace ClinicReservation.Modules.Inpatient
             if (!o.IsPrn && !DateTime.TryParseExact(slot, "yyyy-MM-ddTHH:mm", CultureInfo.InvariantCulture, DateTimeStyles.None, out at))
                 return Result.Failure("Vaxt düzgün deyil");
 
-            var r = _stays.RecordDose(o, at, status, note, _user.UserName, out var stockWarning);
+            var r = _stays.RecordDose(o, at, status, note, _user.UserName);
             if (!r.Ok) return Result.Failure(r.Error!);
             _audit.Log(status == DoseStatus.Given ? "Dərman verildi" : "Dərman verilmədi", AuditEntities.Inpatient, admissionId,
                 $"{o.Admission.Number} {o.Admission.Patient.FullName}: {o.Name} {o.Dose}, {(o.IsPrn ? "lazım olduqda" : Fmt.DateTime(at))}"
                 + (status == DoseStatus.Skipped ? $" — {note}" : ""));
             var result = Result.Success(status == DoseStatus.Given ? $"{o.Name} — verildi" : $"{o.Name} — verilmədi");
-            result.Warning = stockWarning;
+            var warnings = await _outbox.DispatchAddedAsync(ct);
+            if (warnings.Count > 0) result.Warning = string.Join(" ", warnings);
             return result;
         }
 

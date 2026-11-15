@@ -43,6 +43,7 @@ namespace ClinicReservation.Data
         public DbSet<Observation> Observations { get; set; }
         public DbSet<MedicationOrder> MedicationOrders { get; set; }
         public DbSet<MedicationDose> MedicationDoses { get; set; }
+        public DbSet<OutboxMessage> OutboxMessages { get; set; }
         public DbSet<AppUser> AppUsers { get; set; }
 
         /// <summary>Keys that sign login cookies and form tokens — shared by every app instance.</summary>
@@ -320,6 +321,14 @@ namespace ClinicReservation.Data
                     .HasForeignKey(x => x.ExaminationTypeId).OnDelete(DeleteBehavior.Cascade);
                 e.HasOne(x => x.StockItem).WithMany()
                     .HasForeignKey(x => x.StockItemId).OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<OutboxMessage>(e =>
+            {
+                e.Property(m => m.Type).HasMaxLength(100);
+                e.Property(m => m.LastError).HasMaxLength(1000);
+                // The worker looks for unprocessed messages only.
+                e.HasIndex(m => m.OccurredAt).HasFilter("\"ProcessedAt\" IS NULL");
             });
 
             builder.Entity<SmsMessage>(e =>

@@ -1,6 +1,6 @@
 using ClinicReservation.Data;
 using ClinicReservation.Models;
-using ClinicReservation.Modules.Pharmacy;
+using ClinicReservation.Events;
 using ClinicReservation.Services;
 using Microsoft.EntityFrameworkCore;
 
@@ -10,12 +10,12 @@ namespace ClinicReservation.Modules.Inpatient
     public class InpatientService
     {
         private readonly IAppDbContext _context;
-        private readonly StockService _stock;
+        private readonly Outbox _outbox;
 
-        public InpatientService(IAppDbContext context, StockService stock)
+        public InpatientService(IAppDbContext context, Outbox outbox)
         {
             _context = context;
-            _stock = stock;
+            _outbox = outbox;
         }
 
         public record StayResult(bool Ok, string? Error, Admission? Admission = null)
@@ -122,9 +122,8 @@ namespace ClinicReservation.Modules.Inpatient
         }
 
         /// <summary>Records a dose as given or skipped; a given dose of a stock item leaves the store.</summary>
-        public StayResult RecordDose(MedicationOrder order, DateTime slot, DoseStatus status, string? note, string? user, out string? stockWarning)
+        public StayResult RecordDose(MedicationOrder order, DateTime slot, DoseStatus status, string? note, string? user)
         {
-            stockWarning = null;
             var a = order.Admission;
             if (!a.IsActive) return StayResult.Fail("Xəstə artıq çıxarılıb");
             var now = ClinicTime.Now;
@@ -153,19 +152,11 @@ namespace ClinicReservation.Modules.Inpatient
                 Note = string.IsNullOrWhiteSpace(note) ? null : note.Trim()
             };
             _context.MedicationDoses.Add(dose);
-            if (!TrySave(out var err)) return StayResult.Fail("Bu doza artıq qeyd olunub");
-
+            // A given dose of a stock medicine leaves the ward's store: stored with the dose, handled right after.
             if (status == DoseStatus.Given && order.StockItemId != null)
-            {
-                var o = _stock.IssueToPatient(a.PatientId, a.Id, a.DepartmentId, order.StockItemId.Value, order.QuantityPerDose,
-                    $"{a.Number}: {order.Name} {order.Dose}".Trim(), user);
-                if (o.Document != null)
-                {
-                    var saved = _context.MedicationDoses.Find(dose.Id);
-                    if (saved != null) { saved.StockDocumentId = o.Document.Id; _context.SaveChanges(); }
-                }
-                stockWarning = StockService.Warning(o)?.Replace("Materiallar anbardan silinmədi — rezervasiya səhifəsindən yenidən silin.", "Dərman anbardan silinmədi — anbarda silinmə sənədi ilə silin.");
-            }
+                _outbox.Add(new DoseGiven(order.Id, slot, a.Id, a.PatientId, a.DepartmentId, order.StockItemId.Value, order.QuantityPerDose,
+                    $"{a.Number}: {order.Name} {order.Dose}".Trim(), user));
+            if (!TrySave(out _)) return StayResult.Fail("Bu doza artıq qeyd olunub");
             return new StayResult(true, null, a);
         }
 

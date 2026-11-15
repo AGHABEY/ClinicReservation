@@ -109,6 +109,13 @@ builder.Services.AddScoped<ClinicReservation.Modules.Lab.LabService>();
 builder.Services.AddScoped<ClinicReservation.Modules.Lab.LabQueries>();
 builder.Services.AddScoped<ClinicReservation.Modules.Lab.LabWork>();
 builder.Services.AddScoped<ClinicReservation.Modules.Lab.LabCatalogSettings>();
+// Events between modules (outbox): stored with the change, handled right away, retried by the worker.
+builder.Services.AddScoped<ClinicReservation.Events.Outbox>();
+builder.Services.AddHostedService<ClinicReservation.Events.OutboxWorker>();
+builder.Services.AddScoped<ClinicReservation.Events.IEventHandler, ClinicReservation.Modules.Pharmacy.TakeMaterialsOnVisitCompleted>();
+builder.Services.AddScoped<ClinicReservation.Events.IEventHandler, ClinicReservation.Modules.Pharmacy.TakeMaterialsOnLabSample>();
+builder.Services.AddScoped<ClinicReservation.Events.IEventHandler, ClinicReservation.Modules.Pharmacy.IssueMedicineOnDoseGiven>();
+
 // Modules
 builder.Services.AddScoped<ClinicReservation.Modules.Pharmacy.StockService>();
 builder.Services.AddScoped<ClinicReservation.Modules.Pharmacy.StockQueries>();
