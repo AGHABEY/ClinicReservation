@@ -1,0 +1,74 @@
+@model List<Ward>
+@{
+    ViewData["Title"] = "Palatalar";
+    var departments = ViewBag.Departments as List<Department> ?? new();
+    var occupied = ViewBag.Occupied as HashSet<int> ?? new();
+    var inv = System.Globalization.CultureInfo.InvariantCulture;
+}
+
+<div class="page-head">
+    <div>
+        <h2>Stasionar</h2>
+        <p>Palatalar, çarpayılar və yataq-gün qiymətləri</p>
+    </div>
+</div>
+
+<partial name="_InpatientNav" />
+
+<div class="card card-pad" style="margin-bottom:20px; max-width:1100px;">
+    <h3 class="card-title"><i class="bi bi-plus-circle"></i> Yeni palata</h3>
+    <form asp-action="Save" method="post" class="ward-form">
+        <input type="hidden" name="id" value="0" />
+        <div class="field"><label for="nw-name">Ad</label><input id="nw-name" name="name" class="form-control" maxlength="100" placeholder="Palata 1" required /></div>
+        <div class="field"><label for="nw-dep">Şöbə</label>
+            <select id="nw-dep" name="departmentId" class="form-select"><option value="">— yoxdur —</option>@foreach (var d in departments) { <option value="@d.Id">@d.Name</option> }</select></div>
+        <div class="field"><label for="nw-g">Növ</label>
+            <select id="nw-g" name="gender" class="form-select">@foreach (var g in Enum.GetValues<WardGender>()) { <option value="@g">@InpatientLabels.Gender(g)</option> }</select></div>
+        <div class="field"><label for="nw-beds">Çarpayı sayı</label><input id="nw-beds" name="bedCount" type="number" min="1" max="30" value="4" class="form-control" /></div>
+        <div class="field"><label for="nw-price">Yataq-gün, ₼</label><input id="nw-price" name="dailyPrice" type="number" min="0" step="0.01" value="0" class="form-control" /></div>
+        <div class="field"><label for="nw-sort">Sıra</label><input id="nw-sort" name="sortOrder" type="number" value="@((Model.Max(w => (int?)w.SortOrder) ?? 0) + 10)" class="form-control" /></div>
+        <div class="field" style="justify-content:flex-end;"><button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Əlavə et</button></div>
+    </form>
+</div>
+
+@if (!Model.Any())
+{
+    <div class="card"><div class="empty-state"><i class="bi bi-hospital"></i><p>Hələ palata yoxdur</p></div></div>
+}
+@foreach (var w in Model)
+{
+    var formId = $"w{w.Id}";
+    <div class="card card-pad @(w.IsActive ? "" : "row-muted")" style="margin-bottom:16px; max-width:1100px;">
+        <form id="@formId" asp-action="Save" method="post" class="ward-form">
+            <input type="hidden" name="id" value="@w.Id" />
+            <div class="field"><label>Ad</label><input name="name" value="@w.Name" class="form-control" maxlength="100" /></div>
+            <div class="field"><label>Şöbə</label>
+                <select name="departmentId" class="form-select"><option value="">— yoxdur —</option>@foreach (var d in departments) { <option value="@d.Id" selected="@(w.DepartmentId == d.Id)">@d.Name</option> }</select></div>
+            <div class="field"><label>Növ</label>
+                <select name="gender" class="form-select">@foreach (var g in Enum.GetValues<WardGender>()) { <option value="@g" selected="@(w.Gender == g)">@InpatientLabels.Gender(g)</option> }</select></div>
+            <div class="field"><label>Yataq-gün, ₼</label><input name="dailyPrice" type="number" min="0" step="0.01" value="@w.DailyPrice.ToString("0.##", inv)" class="form-control" /></div>
+            <div class="field"><label>Sıra</label><input name="sortOrder" type="number" value="@w.SortOrder" class="form-control" /></div>
+            <div class="field" style="justify-content:flex-end;">
+                <label style="display:flex; align-items:center; gap:8px; font-weight:500;"><input type="checkbox" name="isActive" value="true" checked="@w.IsActive" /><input type="hidden" name="isActive" value="false" /> Aktiv</label>
+            </div>
+            <div class="field" style="justify-content:flex-end;"><button type="submit" class="btn btn-light">Yadda saxla</button></div>
+        </form>
+        <div class="bed-chips">
+            @foreach (var b in w.Beds.OrderBy(b => b.Name.Length).ThenBy(b => b.Name))
+            {
+                var busy = occupied.Contains(b.Id);
+                <form asp-action="ToggleBed" method="post" style="display:inline;">
+                    <input type="hidden" name="id" value="@b.Id" />
+                    <button type="submit" class="bed-chip @(busy ? "busy" : b.IsActive ? "" : "off")" title="@(busy ? "Dolu" : b.IsActive ? "İstifadədən çıxarmaq üçün klikləyin" : "İstifadəyə qaytarmaq üçün klikləyin")" disabled="@busy">
+                        <i class="bi @(busy ? "bi-person-fill" : b.IsActive ? "bi-square" : "bi-slash-circle")"></i> @b.Name
+                    </button>
+                </form>
+            }
+            <form asp-action="AddBed" method="post" style="display:inline;">
+                <input type="hidden" name="wardId" value="@w.Id" />
+                <button type="submit" class="bed-chip add"><i class="bi bi-plus-lg"></i> Çarpayı</button>
+            </form>
+        </div>
+    </div>
+}
+<p class="hint-text" style="max-width:1100px;"><i class="bi bi-info-circle"></i> Çarpayıya klikləmək onu təmir və s. üçün istifadədən çıxarır (və ya qaytarır). Dolu çarpayı dəyişdirilmir. Qiymət dəyişikliyi yalnız yeni yerləşdirmə və köçürmələrə tətbiq olunur.</p>

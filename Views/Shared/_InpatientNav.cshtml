@@ -1,0 +1,14 @@
+@{
+    var c = ViewContext.RouteData.Values["controller"]?.ToString();
+    var a = ViewContext.RouteData.Values["action"]?.ToString();
+    var status = Context.Request.Query["status"].ToString();
+}
+<div class="seg seg-scroll" style="margin-bottom:20px;">
+    <a class="@(c == "Inpatient" && a == "Index" ? "on" : "")" asp-controller="Inpatient" asp-action="Index">Çarpayı xəritəsi</a>
+    <a class="@(c == "Inpatient" && a == "List" && status != "discharged" ? "on" : "")" asp-controller="Inpatient" asp-action="List">Stasionardakılar</a>
+    <a class="@(c == "Inpatient" && a == "List" && status == "discharged" ? "on" : "")" asp-controller="Inpatient" asp-action="List" asp-route-status="discharged">Çıxarılanlar</a>
+    @if (User.Can(Permissions.InpatientManage))
+    {
+        <a class="@(c == "Ward" ? "on" : "")" asp-controller="Ward" asp-action="Index">Palatalar</a>
+    }
+</div>

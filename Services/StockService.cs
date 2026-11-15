@@ -443,6 +443,45 @@ namespace ClinicReservation.Services
             return o;
         }
 
+        /// <summary>
+        /// A dose given on the ward: takes the medicine from the department's store (or the main one).
+        /// Like service materials, a shortage is recorded but never blocks giving the dose.
+        /// </summary>
+        public Outcome IssueToPatient(int patientId, int admissionId, int? departmentId, int itemId, decimal quantity, string note, string? user)
+        {
+            var o = new Outcome();
+            try
+            {
+                var warehouses = _context.Warehouses.Where(w => w.IsActive).ToList();
+                var wh = warehouses.FirstOrDefault(w => w.DepartmentId != null && w.DepartmentId == departmentId)
+                    ?? warehouses.OrderByDescending(w => w.IsMain).ThenBy(w => w.Id).FirstOrDefault();
+                var item = _context.StockItems.Find(itemId);
+                if (wh == null || item == null || quantity <= 0) return o;
+
+                var now = DateTime.Now;
+                var doc = NewDoc(StockDocType.WriteOff, now, user);
+                doc.FromWarehouseId = wh.Id;
+                doc.Reason = "Xəstəyə verildi";
+                doc.PatientId = patientId;
+                doc.AdmissionId = admissionId;
+                var picks = new List<(StockBatch Lot, decimal Qty)>();
+                var missing = Allocate(itemId, wh.Id, quantity, false, picks);
+                foreach (var (lot, qty) in picks) Move(doc, lot, -qty, now);
+                doc.Note = note + (missing > 0 ? $". Anbarda çatışmadı (silinmədi): {Qty(missing)} {item.Unit}" : "");
+                if (missing > 0) o.Shortages.Add(new Shortage(item.Name, item.Unit, missing, wh.Name));
+                o.Documents.Add(doc);
+                Commit(o);
+            }
+            catch (Exception ex)
+            {
+                _logger.LogError(ex, "Dərman anbardan silinmədi (yerləşdirmə {AdmissionId})", admissionId);
+                _context.ChangeTracker.Clear();
+                o.Documents.Clear();
+                o.Errors.Add("Dərman anbardan silinmədi");
+            }
+            return o;
+        }
+
         /// <summary>A short message for the flash after a visit completes, or null when all went fine.</summary>
         public static string? Warning(Outcome o)
         {

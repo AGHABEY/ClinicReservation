@@ -81,6 +81,16 @@ namespace ClinicReservation.Helpers
             _ => "—"
         };
 
+        /// <summary>Azerbaijani ordinal: 1-ci, 3-cü, 6-cı, 9-cu, 10-cu, 40-cı, 100-cü.</summary>
+        public static string Ordinal(int n)
+        {
+            static string Last(int d) => d switch { 3 or 4 => "cü", 6 => "cı", 9 => "cu", _ => "ci" };
+            static string Tens(int d) => d switch { 1 or 3 => "cu", 4 or 6 or 9 => "cı", _ => "ci" };
+            var a = Math.Abs(n);
+            var suffix = a % 10 != 0 ? Last(a % 10) : a % 100 != 0 ? Tens(a % 100 / 10) : a % 1000 != 0 ? "cü" : a == 0 ? "cı" : "ci";
+            return $"{n}-{suffix}";
+        }
+
         public static string Initials(string? name)
         {
             var parts = (name ?? "").Split(' ', StringSplitOptions.RemoveEmptyEntries);

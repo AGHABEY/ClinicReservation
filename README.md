@@ -90,6 +90,14 @@ Tələblər: .NET 8 SDK + işləyən PostgreSQL.
   əvvəlki nəticə yanında görünür. Təsdiqdən sonra A4 blank, xəstəyə SMS və doğum tarixi ilə
   qorunan onlayn nəticə səhifəsi. Həkim qəbul zamanı analiz təyin edir və nəticəni tibbi
   qeyd ekranında görür. Təsdiqi geri almaq yalnız səbəb yazmaqla mümkündür (audit)
+- **Stasionar** — palata və çarpayı xəritəsi (şöbələr üzrə, doluluq faizi), yerləşdirmə (planlı /
+  təcili, BXT-10 daxilolma diaqnozu; ambulator qəbuldan «Stasionara göndər»), çarpayı dəyişmə,
+  kişi/qadın palatası xəbərdarlığı. Xəstəlik tarixi: həkim gündəliyi, tibb bacısının vital
+  göstəriciləri və temperatur qrafiki, dərman təyinatı (aptek kataloqundan və ya sərbəst ad, doza,
+  yeridilmə yolu, gündəlik vaxtlar və ya «lazım olduqda», müddət), dərman icrası vərəqi — tibb
+  bacısı hər dozanı «verildi» / «verilmədi (səbəb)» kimi qeyd edir, verilən dərman şöbə anbarından
+  avtomatik silinir. Yataq-gün hesabı (palatanın qiyməti ilə), çıxarış və A4 epikriz. Tibb bacısı
+  rolu əlavə olunub; bütün addımlar audit jurnalına yazılır
 - **Aptek və anbar** — dərman, sərf materialı və reagent kataloqu (43 standart məhsul bir kliklə),
   mərkəzi və şöbə anbarları, təchizatçılar. Mədaxil (seriya, son istifadə tarixi, alış qiyməti),
   köçürmə, silinmə (xəstəyə verildi, vaxtı keçib, zədələnib …) və inventarizasiya sənədləri; hər
@@ -114,7 +122,9 @@ Tələblər: .NET 8 SDK + işləyən PostgreSQL.
 6. «Aptek və anbar → Məhsullar»da standart siyahını yükləyin, lazım olsa «Anbarlar»da şöbə
    anbarları yaradın, ilk qalığı mədaxil sənədi ilə qəbul edin və müayinələrə sərf
    materiallarını bağlayın.
-7. Şöbələrə talon hərfi verin (məs. Kardiologiya → `K`) və gözləmə zalındakı TV-də
+7. «Stasionar → Palatalar»da palataları çarpayı sayı və yataq-gün qiyməti ilə yaradın, tibb
+   bacılarına «Tibb bacısı» rolunu verin.
+8. Şöbələrə talon hərfi verin (məs. Kardiologiya → `K`) və gözləmə zalındakı TV-də
    «Növbə ekranı»nı açın (növbə ekranı icazəsi olan ayrıca istifadəçi ilə).
 
 ## 📱 SMS sazlamaları

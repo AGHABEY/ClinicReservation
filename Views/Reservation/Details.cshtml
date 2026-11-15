@@ -172,6 +172,12 @@ else if (Model.Status?.Name == StatusNames.NoShow)
                 {
                     <p class="hint-text" style="margin:0 0 12px;">Bu vizit üçün hələ tibbi qeyd yazılmayıb.</p>
                 }
+                @if (User.CanAny(Permissions.InpatientManage, Permissions.InpatientDoctor) && visited)
+                {
+                    <a class="btn btn-light btn-sm" style="margin-top:12px;" asp-controller="Inpatient" asp-action="Admit" asp-route-reserveId="@Model.Id">
+                        <i class="bi bi-hospital"></i> Stasionara göndər
+                    </a>
+                }
                 @if (User.Can(Permissions.RecordsEdit) && visited)
                 {
                     <a class="btn btn-primary btn-sm" style="margin-top:12px;" asp-controller="Record" asp-action="Edit" asp-route-reserveId="@Model.Id">

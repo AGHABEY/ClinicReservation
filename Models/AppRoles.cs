@@ -15,8 +15,9 @@ namespace ClinicReservation.Models
         public const string Manager = "Rehber";
         public const string Lab = "Laborant";
         public const string Storekeeper = "Anbardar";
+        public const string Nurse = "TibbBacisi";
 
-        public static readonly string[] BuiltIn = { Admin, Staff, Reception, Cashier, Doctor, Manager, Lab, Storekeeper };
+        public static readonly string[] BuiltIn = { Admin, Staff, Reception, Cashier, Doctor, Manager, Lab, Storekeeper, Nurse };
 
         public static string Label(string? role) => role switch
         {
@@ -28,6 +29,7 @@ namespace ClinicReservation.Models
             Manager => "Rəhbərlik",
             Lab => "Laborant",
             Storekeeper => "Anbardar / aptek",
+            Nurse => "Tibb bacısı",
             _ => role ?? "—"
         };
 
@@ -43,13 +45,14 @@ namespace ClinicReservation.Models
                 Permissions.PatientsView, Permissions.PatientsEdit, Permissions.ReservationsView,
                 Permissions.ReservationsManage, Permissions.ReservationsStatus, Permissions.PaymentsTake,
                 Permissions.CatalogManage, Permissions.QueueView, Permissions.LabView,
-                Permissions.StockView, Permissions.StockIssue
+                Permissions.StockView, Permissions.StockIssue, Permissions.InpatientView, Permissions.InpatientManage
             },
             Reception => new[]
             {
                 Permissions.PatientsView, Permissions.PatientsEdit, Permissions.ReservationsView,
                 Permissions.ReservationsManage, Permissions.ReservationsStatus, Permissions.PaymentsTake,
-                Permissions.QueueView, Permissions.QueueCall, Permissions.SmsManage, Permissions.LabView
+                Permissions.QueueView, Permissions.QueueCall, Permissions.SmsManage, Permissions.LabView,
+                Permissions.InpatientView, Permissions.InpatientManage
             },
             Cashier => new[]
             {
@@ -60,7 +63,12 @@ namespace ClinicReservation.Models
             {
                 Permissions.PatientsView, Permissions.ReservationsView, Permissions.ReservationsStatus,
                 Permissions.QueueView, Permissions.QueueCall, Permissions.RecordsView, Permissions.RecordsEdit,
-                Permissions.LabView
+                Permissions.LabView, Permissions.InpatientView, Permissions.InpatientDoctor
+            },
+            Nurse => new[]
+            {
+                Permissions.PatientsView, Permissions.RecordsView, Permissions.LabView,
+                Permissions.InpatientView, Permissions.InpatientNurse, Permissions.StockView, Permissions.StockIssue
             },
             Lab => new[]
             {
@@ -75,7 +83,8 @@ namespace ClinicReservation.Models
             Manager => new[]
             {
                 Permissions.PatientsView, Permissions.ReservationsView, Permissions.KassaTotals,
-                Permissions.ReportsView, Permissions.AuditView, Permissions.QueueView, Permissions.StockView
+                Permissions.ReportsView, Permissions.AuditView, Permissions.QueueView, Permissions.StockView,
+                Permissions.InpatientView
             },
             _ => Array.Empty<string>()
         };
@@ -108,6 +117,10 @@ namespace ClinicReservation.Models
         public const string StockView = "stock.view";
         public const string StockIssue = "stock.issue";
         public const string StockManage = "stock.manage";
+        public const string InpatientView = "inpatient.view";
+        public const string InpatientManage = "inpatient.manage";
+        public const string InpatientDoctor = "inpatient.doctor";
+        public const string InpatientNurse = "inpatient.nurse";
 
         public record Info(string Code, string Group, string Label);
 
@@ -125,6 +138,10 @@ namespace ClinicReservation.Models
             new(LabView, "Laboratoriya", "Analiz nəticələrinə baxmaq və çap etmək"),
             new(LabWork, "Laboratoriya", "Nümunə götürmək, nəticə yazmaq"),
             new(LabValidate, "Laboratoriya", "Nəticəni təsdiqləmək və xəstəyə göndərmək"),
+            new(InpatientView, "Stasionar", "Çarpayı xəritəsinə və xəstəlik tarixinə baxmaq"),
+            new(InpatientManage, "Stasionar", "Yerləşdirmək, çarpayını dəyişmək, palataları sazlamaq"),
+            new(InpatientDoctor, "Stasionar", "Həkim gündəliyi, dərman təyinatı, çıxarış və epikriz"),
+            new(InpatientNurse, "Stasionar", "Vital göstəricilər, tibb bacısı qeydi, dərmanın icrası"),
             new(StockView, "Aptek və anbar", "Qalıqlara, son istifadə tarixlərinə baxmaq"),
             new(StockIssue, "Aptek və anbar", "Material silmək, xəstəyə dərman vermək"),
             new(StockManage, "Aptek və anbar", "Mədaxil, köçürmə, inventarizasiya, məhsul kataloqu, alış qiymətləri"),

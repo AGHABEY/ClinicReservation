@@ -68,6 +68,14 @@
                                 </a>
                             </li>
                         }
+                        @if (User.CanAny(Permissions.InpatientView, Permissions.InpatientManage, Permissions.InpatientDoctor, Permissions.InpatientNurse))
+                        {
+                            <li>
+                                <a class="@Active("Inpatient") @Active("Ward")" aria-current="@(Current("Inpatient") ?? Current("Ward"))" asp-controller="Inpatient" asp-action="Index">
+                                    <i class="bi bi-hospital"></i> Stasionar
+                                </a>
+                            </li>
+                        }
                         @if (User.CanAny(Permissions.StockView, Permissions.StockIssue, Permissions.StockManage))
                         {
                             <li>

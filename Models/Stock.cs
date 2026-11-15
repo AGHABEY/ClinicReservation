@@ -124,6 +124,9 @@ namespace ClinicReservation.Models
         public Patient? Patient { get; set; }
         public int? ReserveId { get; set; }
         public Reserve? Reserve { get; set; }
+        /// <summary>Hospital stay the medicine was given in.</summary>
+        public int? AdmissionId { get; set; }
+        public Admission? Admission { get; set; }
 
         public DateTime? CancelledAt { get; set; }
         public string? CancelledBy { get; set; }

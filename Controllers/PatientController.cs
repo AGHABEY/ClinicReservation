@@ -88,6 +88,13 @@ namespace ClinicReservation.Controllers
                     .ToList();
             }
 
+            if (User.CanAny(Permissions.InpatientView, Permissions.InpatientManage, Permissions.InpatientDoctor, Permissions.InpatientNurse))
+            {
+                ViewBag.Admissions = _context.Admissions.Include(a => a.Department).Include(a => a.Bed).ThenInclude(b => b!.Ward)
+                    .Where(a => a.PatientId == id && a.Status != AdmissionStatus.Cancelled)
+                    .OrderByDescending(a => a.AdmittedAt).Take(20).ToList();
+            }
+
             _audit.Log("Xəstə kartına baxıldı", AuditEntities.Patient, patient.Id, patient.FullName);
             return View(patient);
         }

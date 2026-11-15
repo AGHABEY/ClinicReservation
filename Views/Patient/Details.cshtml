@@ -102,6 +102,33 @@
                 </dl>
             </div>
         </div>
+        @if (ViewBag.Admissions is List<Admission> stays && (stays.Any() || User.CanAny(Permissions.InpatientManage, Permissions.InpatientDoctor)))
+        {
+            var current = stays.FirstOrDefault(x => x.IsActive);
+            <div class="card">
+                <div class="card-pad">
+                    <h3 class="card-title"><i class="bi bi-hospital"></i> Stasionar</h3>
+                    @if (current != null)
+                    {
+                        <a class="history-item" asp-controller="Inpatient" asp-action="Details" asp-route-id="@current.Id" style="border-color:var(--brand-ring); background:var(--brand-tint);">
+                            <div class="d">İndi stasionardadır · @current.Number · @Fmt.Ordinal(current.Day(DateTime.Now)) gün</div>
+                            <div class="t">@current.Bed?.Label · @current.AdmitDiagnosis</div>
+                        </a>
+                    }
+                    @foreach (var s in stays.Where(x => !x.IsActive))
+                    {
+                        <a class="history-item" asp-controller="Inpatient" asp-action="Details" asp-route-id="@s.Id">
+                            <div class="d">@Fmt.Date(s.AdmittedAt) – @Fmt.Date(s.DischargedAt) · @(s.Department?.Name ?? s.Number)</div>
+                            <div class="t">@(s.FinalDiagnosis ?? s.AdmitDiagnosis)</div>
+                        </a>
+                    }
+                    @if (current == null && User.CanAny(Permissions.InpatientManage, Permissions.InpatientDoctor))
+                    {
+                        <a class="btn btn-light btn-sm" style="margin-top:8px;" asp-controller="Inpatient" asp-action="Admit" asp-route-patientId="@Model.Id"><i class="bi bi-hospital"></i> Stasionara yerləşdir</a>
+                    }
+                </div>
+            </div>
+        }
         @if (labOrders != null && labOrders.Any())
         {
             <div class="card">

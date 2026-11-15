@@ -35,6 +35,13 @@ namespace ClinicReservation.Data
         public DbSet<StockDocument> StockDocuments { get; set; }
         public DbSet<StockMovement> StockMovements { get; set; }
         public DbSet<ExaminationTypeStockItem> ExaminationTypeStockItems { get; set; }
+        public DbSet<Ward> Wards { get; set; }
+        public DbSet<Bed> Beds { get; set; }
+        public DbSet<Admission> Admissions { get; set; }
+        public DbSet<BedStay> BedStays { get; set; }
+        public DbSet<Observation> Observations { get; set; }
+        public DbSet<MedicationOrder> MedicationOrders { get; set; }
+        public DbSet<MedicationDose> MedicationDoses { get; set; }
         public DbSet<AppUser> AppUsers { get; set; }
 
         protected override void OnModelCreating(ModelBuilder builder)
@@ -192,6 +199,96 @@ namespace ClinicReservation.Data
                     .HasForeignKey(d => d.PatientId).OnDelete(DeleteBehavior.Restrict);
                 e.HasOne(d => d.Reserve).WithMany()
                     .HasForeignKey(d => d.ReserveId).OnDelete(DeleteBehavior.Restrict);
+                e.HasIndex(d => d.AdmissionId);
+                e.HasOne(d => d.Admission).WithMany()
+                    .HasForeignKey(d => d.AdmissionId).OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<Ward>(e =>
+            {
+                e.Property(w => w.Name).HasMaxLength(100);
+                e.Property(w => w.DailyPrice).HasPrecision(18, 2);
+                e.HasOne(w => w.Department).WithMany()
+                    .HasForeignKey(w => w.DepartmentId).OnDelete(DeleteBehavior.SetNull);
+            });
+
+            builder.Entity<Bed>(e =>
+            {
+                e.Property(b => b.Name).HasMaxLength(20);
+                e.HasIndex(b => new { b.WardId, b.Name }).IsUnique();
+                e.HasOne(b => b.Ward).WithMany(w => w.Beds)
+                    .HasForeignKey(b => b.WardId).OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<Admission>(e =>
+            {
+                e.HasIndex(a => a.Status);
+                e.HasIndex(a => a.AdmittedAt);
+                e.HasIndex(a => a.PatientId, "IX_Admissions_PatientId");
+                // One active stay per bed and per patient, enforced by the database.
+                e.HasIndex(a => a.BedId, "IX_Admissions_BedId_Active").IsUnique().HasFilter("\"Status\" = 1");
+                e.HasIndex(a => a.PatientId, "IX_Admissions_PatientId_Active").IsUnique().HasFilter("\"Status\" = 1");
+                e.Property(a => a.Number).HasMaxLength(20);
+                e.Property(a => a.AdmitIcdCode).HasMaxLength(10);
+                e.Property(a => a.FinalIcdCode).HasMaxLength(10);
+                e.Property(a => a.AdmitDiagnosis).HasMaxLength(300);
+                e.Property(a => a.FinalDiagnosis).HasMaxLength(300);
+                e.Property(a => a.AdmitNote).HasMaxLength(2000);
+                e.Property(a => a.Course).HasMaxLength(4000);
+                e.Property(a => a.TreatmentSummary).HasMaxLength(4000);
+                e.Property(a => a.Recommendations).HasMaxLength(4000);
+                e.Property(a => a.CancelReason).HasMaxLength(300);
+                e.HasOne(a => a.Patient).WithMany()
+                    .HasForeignKey(a => a.PatientId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(a => a.Bed).WithMany()
+                    .HasForeignKey(a => a.BedId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(a => a.Department).WithMany()
+                    .HasForeignKey(a => a.DepartmentId).OnDelete(DeleteBehavior.SetNull);
+                e.HasOne(a => a.Doctor).WithMany()
+                    .HasForeignKey(a => a.DoctorId).OnDelete(DeleteBehavior.SetNull);
+                e.HasOne(a => a.Reserve).WithMany()
+                    .HasForeignKey(a => a.ReserveId).OnDelete(DeleteBehavior.SetNull);
+            });
+
+            builder.Entity<BedStay>(e =>
+            {
+                e.Property(s => s.DailyPrice).HasPrecision(18, 2);
+                e.HasOne(s => s.Admission).WithMany(a => a.Stays)
+                    .HasForeignKey(s => s.AdmissionId).OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(s => s.Bed).WithMany()
+                    .HasForeignKey(s => s.BedId).OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<Observation>(e =>
+            {
+                e.HasIndex(o => new { o.AdmissionId, o.At });
+                e.Property(o => o.Text).HasMaxLength(4000);
+                e.Property(o => o.Temperature).HasPrecision(4, 1);
+                e.HasOne(o => o.Admission).WithMany(a => a.Observations)
+                    .HasForeignKey(o => o.AdmissionId).OnDelete(DeleteBehavior.Cascade);
+            });
+
+            builder.Entity<MedicationOrder>(e =>
+            {
+                e.Property(o => o.DrugName).HasMaxLength(200);
+                e.Property(o => o.Dose).HasMaxLength(50);
+                e.Property(o => o.Route).HasMaxLength(50);
+                e.Property(o => o.Times).HasMaxLength(100);
+                e.Property(o => o.Note).HasMaxLength(500);
+                e.Property(o => o.QuantityPerDose).HasPrecision(18, 3);
+                e.HasOne(o => o.Admission).WithMany(a => a.Orders)
+                    .HasForeignKey(o => o.AdmissionId).OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(o => o.StockItem).WithMany()
+                    .HasForeignKey(o => o.StockItemId).OnDelete(DeleteBehavior.Restrict);
+            });
+
+            builder.Entity<MedicationDose>(e =>
+            {
+                // A scheduled dose is recorded once.
+                e.HasIndex(d => new { d.MedicationOrderId, d.ScheduledAt }).IsUnique();
+                e.Property(d => d.Note).HasMaxLength(300);
+                e.HasOne(d => d.MedicationOrder).WithMany(o => o.Doses)
+                    .HasForeignKey(d => d.MedicationOrderId).OnDelete(DeleteBehavior.Cascade);
             });
 
             builder.Entity<StockMovement>(e =>
