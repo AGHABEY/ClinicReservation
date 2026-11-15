@@ -14,5 +14,14 @@ namespace ClinicReservation.Models
 
         /// <summary>…within this many months.</summary>
         public int NoShowWindowMonths { get; set; } = 12;
+
+        /// <summary>A visit with the same doctor within this many days after a completed one is a follow-up…</summary>
+        public int FollowUpWindowDays { get; set; } = 14;
+
+        /// <summary>…and its services marked «kontrol endirimi» get this discount (100 = free; 0 = none).</summary>
+        public int FollowUpDiscountPercent { get; set; } = 100;
+
+        /// <summary>The «kontrol vaxtı çatanlar» list shows plans due within this many days.</summary>
+        public int FollowUpListAheadDays { get; set; } = 7;
     }
 }

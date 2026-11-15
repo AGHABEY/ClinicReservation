@@ -76,6 +76,7 @@ namespace ClinicReservation.Modules.Notifications
         public const string KindManual = "Əl ilə";
         public const string KindLabResult = "Analiz nəticəsi";
         public const string KindWaitlist = "Gözləmə siyahısı";
+        public const string KindFollowUp = "Kontrol qəbulu";
 
         private readonly IAppDbContext _context;
         private readonly ISmsSender _sender;
@@ -112,6 +113,17 @@ namespace ClinicReservation.Modules.Notifications
                 .Replace("{tarix}", slot.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture))
                 .Replace("{saat}", slot.ToString("HH:mm", CultureInfo.InvariantCulture))
                 .Replace("{hekim}", Fmt.Doctor(doctorName))
+                .Replace("{klinika}", _options.ClinicName);
+            text = string.Join(' ', text.Split(' ', StringSplitOptions.RemoveEmptyEntries));
+            return _options.AsciiOnly ? SmsText.ToAscii(text) : text;
+        }
+
+        public string FollowUpText(string patientName, DateTime due, string doctorName)
+        {
+            var text = _options.FollowUpTemplate
+                .Replace("{ad}", patientName)
+                .Replace("{tarix}", due.ToString("dd.MM.yyyy", CultureInfo.InvariantCulture))
+                .Replace("{hekim}", string.IsNullOrEmpty(doctorName) ? "Hekiminiz" : Fmt.Doctor(doctorName))
                 .Replace("{klinika}", _options.ClinicName);
             text = string.Join(' ', text.Split(' ', StringSplitOptions.RemoveEmptyEntries));
             return _options.AsciiOnly ? SmsText.ToAscii(text) : text;

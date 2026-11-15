@@ -190,6 +190,7 @@ namespace ClinicReservation.Modules.Catalog
             var oldPrice = existing.Price;
             existing.DurationMinutes = model.DurationMinutes;
             existing.EquipmentId = model.EquipmentId;
+            existing.FollowUpDiscount = model.FollowUpDiscount;
             existing.Name = model.Name.Trim();
             existing.Description = model.Description;
             existing.Price = model.Price;

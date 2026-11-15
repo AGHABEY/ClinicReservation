@@ -4,6 +4,9 @@ namespace ClinicReservation.Models
 {
     public class ExaminationType : BaseModel
     {
+        /// <summary>Discounted in a follow-up visit (consultations yes, lab tests usually no).</summary>
+        public bool FollowUpDiscount { get; set; }
+
         [Required(ErrorMessage = "Ad daxil edilməlidir")]
         public string Name { get; set; } = "";
 

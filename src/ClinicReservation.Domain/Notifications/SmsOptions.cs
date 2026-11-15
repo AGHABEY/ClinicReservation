@@ -38,6 +38,10 @@ namespace ClinicReservation.Models
         public string WaitlistTemplate { get; set; } =
             "Hormetli {ad}, {tarix} saat {saat} {hekim} qebulunda bos vaxt yarandi ({klinika}). Rezerv ucun klinikaya zeng edin.";
 
+        /// <summary>Follow-up reminder. Placeholders: {ad} {tarix} {hekim} {klinika}.</summary>
+        public string FollowUpTemplate { get; set; } =
+            "Hormetli {ad}, {hekim} {tarix} tarixinde kontrol qebulu teyin edib ({klinika}). Yazilmaq ucun klinikaya zeng edin.";
+
         /// <summary>Replace Azerbaijani letters (ə, ş, ç …) with Latin ones: 160 chars per SMS instead of 70.</summary>
         public bool AsciiOnly { get; set; } = true;
 

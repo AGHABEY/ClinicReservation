@@ -46,6 +46,12 @@ namespace ClinicReservation.Modules.Scheduling
         /// <summary>«Araya sal»: book even if the time is taken (permission + the doctor's daily limit).</summary>
         public bool Overbook { get; set; }
 
+        /// <summary>Booked from this follow-up plan (it becomes «Yazılıb»).</summary>
+        public int? FollowUpId { get; set; }
+
+        /// <summary>Booked from this referral (it becomes «Rezerv edilib»; source = Göndəriş).</summary>
+        public int? ReferralId { get; set; }
+
         /// <summary>Booked from this waitlist entry (it becomes «Rezerv edildi»).</summary>
         public int? WaitlistId { get; set; }
 

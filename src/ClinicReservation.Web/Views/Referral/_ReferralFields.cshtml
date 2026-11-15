@@ -1,0 +1,53 @@
+@model ReferralFormViewModel
+@{
+    var departments = (List<Department>)ViewData["Departments"]!;
+    var doctors = (List<Doctor>)ViewData["Doctors"]!;
+    var exams = (List<ExaminationType>)ViewData["Exams"]!;
+    var form = ViewData["Form"] as string; // inputs outside their <form> (inside the record form) point to it
+}
+<div class="form-grid">
+    <div class="field">
+        <label for="ToDepartmentId">Şöbə</label>
+        <select name="ToDepartmentId" id="ToDepartmentId" class="form-select" form="@form">
+            <option value="">—</option>
+            @foreach (var d in departments) { <option value="@d.Id" selected="@(Model.ToDepartmentId == d.Id)">@d.Name</option> }
+        </select>
+        <span asp-validation-for="ToDepartmentId" class="text-danger"></span>
+    </div>
+    <div class="field">
+        <label for="ToDoctorId">Həkim (istəyə görə)</label>
+        <select name="ToDoctorId" id="ToDoctorId" class="form-select" form="@form">
+            <option value="">İstənilən həkim</option>
+            @foreach (var d in doctors) { <option value="@d.Id" data-dept="@d.DepartmentId" selected="@(Model.ToDoctorId == d.Id)">@d.FullName@(d.Specialty != null ? $" — {d.Specialty}" : "")</option> }
+        </select>
+        <span asp-validation-for="ToDoctorId" class="text-danger"></span>
+    </div>
+    <div class="field">
+        <label for="ExaminationTypeId">Xidmət (istəyə görə)</label>
+        <select name="ExaminationTypeId" id="ExaminationTypeId" class="form-select" form="@form">
+            <option value="">—</option>
+            @foreach (var e in exams) { <option value="@e.Id" selected="@(Model.ExaminationTypeId == e.Id)">@e.Name</option> }
+        </select>
+    </div>
+    <div class="field">
+        <label for="Priority">Təciliyyət</label>
+        <select name="Priority" id="Priority" class="form-select" form="@form">
+            <option value="Routine" selected="@(Model.Priority == ReferralPriority.Routine)">Planlı</option>
+            <option value="Urgent" selected="@(Model.Priority == ReferralPriority.Urgent)">Təcili</option>
+        </select>
+    </div>
+    <div class="field">
+        <label for="IcdCode">BXT-10 (istəyə görə)</label>
+        <input name="IcdCode" id="IcdCode" value="@Model.IcdCode" class="form-control" maxlength="10" placeholder="I10" style="text-transform:uppercase;" form="@form" />
+        <span asp-validation-for="IcdCode" class="text-danger"></span>
+    </div>
+    <div class="field">
+        <label for="ValidDays">Etibarlıdır (gün)</label>
+        <input name="ValidDays" id="ValidDays" value="@Model.ValidDays" type="number" min="1" max="365" class="form-control" form="@form" />
+    </div>
+</div>
+<div class="field mt-3">
+    <label for="Reason">Səbəb / sual</label>
+    <textarea name="Reason" id="Reason" rows="2" class="form-control" maxlength="500" placeholder="məs: Arterial hipertenziya, EXO-KQ məsləhətdir" form="@form">@Model.Reason</textarea>
+    <span asp-validation-for="Reason" class="text-danger"></span>
+</div>

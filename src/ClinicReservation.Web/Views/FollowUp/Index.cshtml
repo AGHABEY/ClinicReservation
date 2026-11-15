@@ -1,0 +1,94 @@
+@model List<FollowUp>
+@{
+    ViewData["Title"] = "Kontrol qəbulları";
+    var tab = (FollowUpTab)ViewBag.Tab;
+    var doctorId = ViewBag.DoctorId as int?;
+    var doctors = (List<Doctor>)ViewBag.Doctors;
+    var ahead = (int)ViewBag.AheadDays;
+    var canManage = User.Can(Permissions.ReservationsManage);
+    var today = ClinicTime.Today;
+    var tabs = new (FollowUpTab Key, string Label)[] { (FollowUpTab.Due, "Vaxtı çatanlar"), (FollowUpTab.Upcoming, "Gələcək"), (FollowUpTab.Booked, "Yazılıb"), (FollowUpTab.Closed, "Bağlı") };
+    var unsent = tab == FollowUpTab.Due ? Model.Count(f => f.SmsSentAt == null) : 0;
+}
+
+<div class="page-head">
+    <div>
+        <h2>Kontrol qəbulları</h2>
+        <p>Həkimin tibbi qeyddə yazdığı «N gün sonra kontrol». «Vaxtı çatanlar» — bu gün və növbəti @ahead gün, gecikmişlər daxil.</p>
+    </div>
+    @if (canManage && unsent > 0)
+    {
+        <form asp-action="Remind" method="post">
+            <button type="submit" class="btn btn-primary"><i class="bi bi-chat-dots"></i> Hamısına SMS (@unsent)</button>
+        </form>
+    }
+</div>
+
+<form method="get" class="toolbar">
+    <div class="seg seg-scroll">
+        @foreach (var t in tabs)
+        {
+            <a class="@(tab == t.Key ? "on" : "")" asp-action="Index" asp-route-tab="@t.Key" asp-route-doctorId="@doctorId">@t.Label</a>
+        }
+    </div>
+    <input type="hidden" name="tab" value="@tab" />
+    <div class="toolbar-right">
+        <select name="doctorId" class="form-select" aria-label="Həkim" onchange="this.form.submit()" style="width:auto; max-width:240px;">
+            <option value="">Bütün həkimlər</option>
+            @foreach (var d in doctors) { <option value="@d.Id" selected="@(doctorId == d.Id)">@d.FullName</option> }
+        </select>
+    </div>
+</form>
+
+@if (Model.Any())
+{
+    <div class="table-wrap">
+        <table class="data">
+            <thead><tr><th>Xəstə</th><th>Həkim</th><th>Əvvəlki vizit</th><th>Kontrol tarixi</th><th>SMS</th><th class="actions">Əməliyyatlar</th></tr></thead>
+            <tbody>
+                @foreach (var f in Model)
+                {
+                    var late = f.Status == FollowUpStatus.Due && f.DueDate < today;
+                    <tr data-followup="@f.Id">
+                        <td>
+                            <a asp-controller="Patient" asp-action="Details" asp-route-id="@f.PatientId" class="link-strong">@f.Patient.FullName</a>
+                            <div class="hint-text">@f.Patient.Phone</div>
+                        </td>
+                        <td>@(f.Doctor?.FullName ?? "—")</td>
+                        <td><a asp-controller="Reservation" asp-action="Details" asp-route-id="@f.FromReserveId">@Fmt.Date(f.FromReserve.AppointmentAt)</a></td>
+                        <td>
+                            <b style="@(late ? "color:var(--bad);" : "")">@Fmt.Date(f.DueDate)</b>
+                            <div class="hint-text">@(late ? $"{(today - f.DueDate).Days} gün gecikir" : f.DueDate == today ? "bu gün" : $"{(f.DueDate - today).Days} gün sonra")</div>
+                            @if (f.Status == FollowUpStatus.Booked && f.Reserve != null)
+                            {
+                                <div class="hint-text"><a asp-controller="Reservation" asp-action="Details" asp-route-id="@f.ReserveId">yazılıb: @Fmt.Appointment(f.Reserve.AppointmentAt)</a></div>
+                            }
+                            @if (f.CloseNote != null) { <div class="hint-text">@f.CloseNote</div> }
+                        </td>
+                        <td>@(f.SmsSentAt == null ? "—" : Fmt.DateTime(f.SmsSentAt))</td>
+                        <td class="actions">
+                            @if (canManage && f.Status == FollowUpStatus.Due)
+                            {
+                                <div class="actions-inner" style="flex-wrap:wrap; justify-content:flex-end;">
+                                    <a class="btn btn-success btn-sm" asp-controller="Reservation" asp-action="Add" asp-route-followUpId="@f.Id"><i class="bi bi-calendar-plus"></i> Rezerv et</a>
+                                    <form asp-action="Remind" asp-route-id="@f.Id" method="post" style="display:inline;">
+                                        <button type="submit" class="btn btn-light btn-sm" title="Xəstəyə SMS göndər"><i class="bi bi-chat-dots"></i> SMS</button>
+                                    </form>
+                                    <form asp-action="Close" asp-route-id="@f.Id" method="post" style="display:inline;"
+                                          onsubmit="const n = prompt('Niyə bağlanır? (məs: başqa klinikaya gedir)'); if (n === null) return false; this.note.value = n;">
+                                        <input type="hidden" name="note" />
+                                        <button type="submit" class="btn btn-light btn-sm" title="Siyahıdan çıxar" aria-label="Siyahıdan çıxar"><i class="bi bi-x-lg"></i></button>
+                                    </form>
+                                </div>
+                            }
+                        </td>
+                    </tr>
+                }
+            </tbody>
+        </table>
+    </div>
+}
+else
+{
+    <div class="card"><div class="empty-state"><i class="bi bi-arrow-repeat"></i><p>Bu siyahıda kontrol qəbulu yoxdur</p></div></div>
+}

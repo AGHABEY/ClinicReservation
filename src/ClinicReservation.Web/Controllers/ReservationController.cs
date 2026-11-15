@@ -45,8 +45,8 @@ namespace ClinicReservation.Controllers
         // ---------- Create ----------
 
         [HasPermission(Permissions.ReservationsManage)]
-        public async Task<IActionResult> Add(DateTime? date, int? doctorId, int? patientId, int? waitlistId, string? time,
-            [FromServices] WaitlistQueries waitlist, CancellationToken ct)
+        public async Task<IActionResult> Add(DateTime? date, int? doctorId, int? patientId, int? waitlistId, string? time, int? referralId, int? followUpId,
+            [FromServices] WaitlistQueries waitlist, [FromServices] ReferralQueries referrals, [FromServices] FollowUpQueries followUps, CancellationToken ct)
         {
             var model = new ReserveFormViewModel { AppointmentDate = (date ?? ClinicTime.Today).Date, DoctorId = doctorId, AppointmentTime = time };
             // Booking a waiting patient: their wish (or the offered time) fills the form.
@@ -58,6 +58,25 @@ namespace ClinicReservation.Controllers
                 model.AppointmentDate = (w.OfferedSlot ?? (w.FromDate < ClinicTime.Today ? ClinicTime.Today : w.FromDate)).Date;
                 model.AppointmentTime = w.OfferedSlot?.ToString("HH:mm");
                 if (w.ExaminationTypeId != null) model.ExaminationTypeIds = new() { w.ExaminationTypeId.Value };
+            }
+            // Booking a follow-up: the patient, their doctor, the day the doctor asked for (or today if past).
+            if (followUpId != null && await followUps.FollowUpAsync(followUpId.Value, ct) is { Status: FollowUpStatus.Due } fu)
+            {
+                model.FollowUpId = fu.Id;
+                patientId = fu.PatientId;
+                model.DoctorId = fu.DoctorId ?? doctorId;
+                model.AppointmentDate = fu.DueDate < ClinicTime.Today ? ClinicTime.Today : fu.DueDate;
+            }
+            // Booking a referral: patient, the doctor / service it names, source «Göndəriş».
+            if (referralId != null && await referrals.ReferralAsync(referralId.Value, ct) is { } rf
+                && ReferralFlow.State(rf, ClinicTime.Today) == ReferralState.Waiting)
+            {
+                model.ReferralId = rf.Id;
+                model.Source = ReserveSource.Referral;
+                patientId = rf.PatientId;
+                model.DoctorId = rf.ToDoctorId ?? doctorId;
+                if (rf.ExaminationTypeId != null) model.ExaminationTypeIds = new() { rf.ExaminationTypeId.Value };
+                ViewBag.Referral = rf;
             }
             if (patientId != null && await _queries.PatientAsync(patientId.Value, ct) is { } p)
             {
@@ -209,10 +228,13 @@ namespace ClinicReservation.Controllers
             return RedirectToAction(nameof(Details), new { id = model.Id });
         }
 
-        public async Task<IActionResult> Details(int id, [FromServices] LabQueries lab, [FromServices] StockQueries stock, CancellationToken ct)
+        public async Task<IActionResult> Details(int id, [FromServices] LabQueries lab, [FromServices] StockQueries stock,
+            [FromServices] ReferralQueries referrals, CancellationToken ct)
         {
             var res = await _queries.ReserveAsync(id, ct);
             if (res == null) return NotFound();
+            ViewBag.FromReferral = await referrals.ForVisitAsync(id, ct);
+            ViewBag.IssuedReferrals = await referrals.FromVisitAsync(id, ct);
             ViewBag.CancelReasons = await _queries.CancellationReasonsAsync(ct);
             ViewBag.NoShowCount = await _noShows.CountAsync(res.PatientId, ct);
             ViewBag.NoShowWarn = _noShows.Options.NoShowWarnAfter;

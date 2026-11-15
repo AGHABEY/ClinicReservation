@@ -48,6 +48,8 @@ namespace ClinicReservation.Data
         public DbSet<CancellationReason> CancellationReasons { get; set; }
         public DbSet<ReserveSeries> ReserveSeries { get; set; }
         public DbSet<WaitlistEntry> WaitlistEntries { get; set; }
+        public DbSet<Referral> Referrals { get; set; }
+        public DbSet<FollowUp> FollowUps { get; set; }
         public DbSet<AppUser> AppUsers { get; set; }
 
         /// <summary>Keys that sign login cookies and form tokens — shared by every app instance.</summary>
@@ -344,6 +346,36 @@ namespace ClinicReservation.Data
                 e.HasIndex(r => new { r.EquipmentId, r.AppointmentAt });
                 e.HasOne(r => r.Series).WithMany(s => s.Reserves).HasForeignKey(r => r.SeriesId).OnDelete(DeleteBehavior.SetNull);
             });
+            builder.Entity<ReserveExaminationType>(e => e.Property(x => x.DiscountSource).HasMaxLength(100));
+
+            builder.Entity<FollowUp>(e =>
+            {
+                e.HasIndex(x => x.FromReserveId).IsUnique();
+                e.HasIndex(x => new { x.Status, x.DueDate });
+                e.Property(x => x.CloseNote).HasMaxLength(300);
+                e.HasOne(x => x.FromReserve).WithMany().HasForeignKey(x => x.FromReserveId).OnDelete(DeleteBehavior.Cascade);
+                e.HasOne(x => x.Reserve).WithMany().HasForeignKey(x => x.ReserveId).OnDelete(DeleteBehavior.SetNull);
+                e.HasOne(x => x.Patient).WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(x => x.Doctor).WithMany().HasForeignKey(x => x.DoctorId).OnDelete(DeleteBehavior.SetNull);
+            });
+
+            builder.Entity<Referral>(e =>
+            {
+                e.HasIndex(x => new { x.Status, x.ValidUntil });
+                e.HasIndex(x => x.PatientId);
+                e.Property(x => x.Reason).HasMaxLength(500);
+                e.Property(x => x.IcdCode).HasMaxLength(10);
+                e.Property(x => x.ExternalFrom).HasMaxLength(200);
+                e.Property(x => x.CancelReason).HasMaxLength(300);
+                e.HasOne(x => x.Patient).WithMany().HasForeignKey(x => x.PatientId).OnDelete(DeleteBehavior.Restrict);
+                e.HasOne(x => x.FromReserve).WithMany().HasForeignKey(x => x.FromReserveId).OnDelete(DeleteBehavior.SetNull);
+                e.HasOne(x => x.Reserve).WithMany().HasForeignKey(x => x.ReserveId).OnDelete(DeleteBehavior.SetNull);
+                e.HasOne(x => x.FromDoctor).WithMany().HasForeignKey(x => x.FromDoctorId).OnDelete(DeleteBehavior.SetNull);
+                e.HasOne(x => x.ToDoctor).WithMany().HasForeignKey(x => x.ToDoctorId).OnDelete(DeleteBehavior.SetNull);
+                e.HasOne(x => x.ToDepartment).WithMany().HasForeignKey(x => x.ToDepartmentId).OnDelete(DeleteBehavior.SetNull);
+                e.HasOne(x => x.ExaminationType).WithMany().HasForeignKey(x => x.ExaminationTypeId).OnDelete(DeleteBehavior.SetNull);
+            });
+
             builder.Entity<WaitlistEntry>(e =>
             {
                 e.HasIndex(w => new { w.Status, w.FromDate });
@@ -411,7 +443,7 @@ namespace ClinicReservation.Data
                     builder.Entity(t).ToTable(builder.Model.FindEntityType(t)!.GetTableName(), schema);
             }
             Schema("core", typeof(Patient), typeof(Department), typeof(Room), typeof(Equipment), typeof(Doctor), typeof(DoctorWorkHours), typeof(DoctorLeave), typeof(ExaminationType));
-            Schema("scheduling", typeof(Reserve), typeof(ReserveStatus), typeof(ReserveExaminationType), typeof(CancellationReason), typeof(ReserveSeries), typeof(WaitlistEntry));
+            Schema("scheduling", typeof(Reserve), typeof(ReserveStatus), typeof(ReserveExaminationType), typeof(CancellationReason), typeof(ReserveSeries), typeof(WaitlistEntry), typeof(Referral), typeof(FollowUp));
             Schema("billing", typeof(Payment));
             Schema("emr", typeof(MedicalRecord));
             Schema("lab", typeof(LabTest), typeof(ExaminationTypeLabTest), typeof(LabOrder), typeof(LabResult));

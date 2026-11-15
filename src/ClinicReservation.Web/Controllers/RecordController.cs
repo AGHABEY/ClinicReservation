@@ -2,6 +2,7 @@ using ClinicReservation.Authorization;
 using ClinicReservation.Models;
 using ClinicReservation.Modules;
 using ClinicReservation.Modules.Emr;
+using ClinicReservation.Modules.Scheduling;
 using Microsoft.AspNetCore.Mvc;
 
 namespace ClinicReservation.Controllers
@@ -11,7 +12,13 @@ namespace ClinicReservation.Controllers
     public class RecordController : Controller
     {
         private readonly MedicalRecords _records;
-        public RecordController(MedicalRecords records) => _records = records;
+        private readonly ReferralQueries _referralQueries;
+
+        public RecordController(MedicalRecords records, ReferralQueries referralQueries)
+        {
+            _records = records;
+            _referralQueries = referralQueries;
+        }
 
         private bool IsAdmin => User.IsInRole(AppRoles.Admin);
 
@@ -21,7 +28,34 @@ namespace ClinicReservation.Controllers
             var reserve = await _records.VisitAsync(reserveId, ct);
             if (reserve == null) return NotFound();
             if (await Denied(reserve, ct) is { } denied) return denied;
+            await ReferralBag(reserve.Id, ct);
             return View(await _records.PrepareAsync(MedicalRecords.Form(reserve), reserve, ct));
+        }
+
+        /// <summary>The visit's referrals and the lists for writing one (Scheduling owns referrals).</summary>
+        private async Task ReferralBag(int reserveId, CancellationToken ct)
+        {
+            var q = _referralQueries;
+            ViewBag.Referrals = await q.FromVisitAsync(reserveId, ct);
+            var (departments, doctors, exams) = await q.FormListsAsync(ct);
+            ViewBag.RefDepartments = departments;
+            ViewBag.RefDoctors = doctors;
+            ViewBag.RefExams = exams;
+        }
+
+        /// <summary>The doctor refers the patient to another specialist / department / service.</summary>
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        [HasPermission(Permissions.RecordsEdit)]
+        public async Task<IActionResult> Refer(ReferralFormViewModel model, [FromServices] Referrals referrals, CancellationToken ct)
+        {
+            var reserve = await _records.VisitAsync(model.FromReserveId ?? 0, ct);
+            if (reserve == null) return NotFound();
+            if (await Denied(reserve, ct) is { } denied) return denied;
+            var formErrors = ModelState.SelectMany(kv => kv.Value!.Errors.Select(e => ((string?)kv.Key, e.ErrorMessage))).ToList();
+            var r = await referrals.CreateAsync(model, formErrors, ct);
+            TempData[r.Ok ? "Success" : "Error"] = r.Ok ? r.Message : r.ErrorText;
+            return RedirectToAction(nameof(Edit), new { reserveId = reserve.Id });
         }
 
         [HttpPost]
@@ -40,6 +74,7 @@ namespace ClinicReservation.Controllers
                 foreach (var (field, message) in r.Errors.Where(e => !formErrors.Contains(e)))
                     ModelState.AddModelError(field ?? "", message);
                 model.Exists = reserve.MedicalRecord != null;
+                await ReferralBag(reserve.Id, ct);
                 return View(await _records.PrepareAsync(model, reserve, ct));
             }
             TempData["Success"] = r.Message;

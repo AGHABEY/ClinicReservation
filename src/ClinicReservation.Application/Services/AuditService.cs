@@ -44,6 +44,7 @@ namespace ClinicReservation.Services
         public const string Stock = "Anbar";
         public const string Inpatient = "Stasionar";
         public const string Waitlist = "Gözləmə siyahısı";
+        public const string Referral = "Göndəriş";
         public const string Doctor = "Həkim";
         public const string Catalog = "Sazlama";
         public const string User = "İstifadəçi";

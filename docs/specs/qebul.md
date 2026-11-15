@@ -15,8 +15,8 @@ onlayn yazılış = D mərhələsində. Sıra: A → B → E → C → D → F.
 - [x] A6. Əlavə qəbul (araya salmaq): icazə + həkimə görə gündəlik limit (defolt 2; avadanlıq paylaşılmır)
 
 ## B. Həkim axını
-- [ ] B1. Göndəriş: həkim → başqa mütəxəssis / xidmət; resepsiyada siyahı; icra olunmayanlar
-- [ ] B2. Kontrol qəbulu: «kontrol vaxtı çatanlar», SMS, N gün ərzində pulsuz / endirimli
+- [x] B1. Göndəriş: həkim → başqa mütəxəssis / xidmət; resepsiyada siyahı; icra olunmayanlar (təcili, BXT-10, etibarlılıq, kənar göndəriş, vərəqə çapı; ləğv olunan qəbul → yenidən gözləyir)
+- [x] B2. Kontrol qəbulu: «kontrol vaxtı çatanlar», SMS, N gün ərzində pulsuz / endirimli (Scheduling: FollowUpWindowDays, FollowUpDiscountPercent; xidmətdə «kontrol endirimi»; sətirdə ilkin qiymət / endirim / mənbə)
 
 ## E. Loyallıq və endirimlər
 - [ ] E1. Əl ilə endirim (faiz / məbləğ, səbəb məcburi, rol limiti, audit)

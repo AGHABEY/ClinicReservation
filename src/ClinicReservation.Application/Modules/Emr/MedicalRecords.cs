@@ -154,6 +154,10 @@ namespace ClinicReservation.Modules.Emr
             rec.Treatment = Clean(model.Treatment);
             rec.Prescription = Clean(model.Prescription);
             rec.Recommendations = Clean(model.Recommendations);
+            // The follow-up is Scheduling's to list and remind: tell it when the doctor sets, moves or clears it.
+            if (rec.FollowUpDays != model.FollowUpDays)
+                _outbox.Add(new FollowUpPlanned(reserve.Id, reserve.PatientId, reserve.DoctorId,
+                    model.FollowUpDays == null ? null : rec.CreatedAt.Date.AddDays(model.FollowUpDays.Value), userName));
             rec.FollowUpDays = model.FollowUpDays;
             if (isNew) _db.MedicalRecords.Add(rec);
 
@@ -206,7 +210,7 @@ namespace ClinicReservation.Modules.Emr
             if (toAdd.Count == 0) return Result.Failure("Yeni analiz seçilməyib");
 
             foreach (var e in toAdd)
-                reserve.ReserveExaminationTypes!.Add(new ReserveExaminationType { ExaminationTypeId = e.Id, Price = e.Price });
+                reserve.ReserveExaminationTypes!.Add(new ReserveExaminationType { ExaminationTypeId = e.Id, ListPrice = e.Price, Price = e.Price });
             await _db.SaveChangesAsync(ct);
             _audit.Log("Həkim analiz təyin etdi", AuditEntities.Reservation, reserve.Id,
                 $"{reserve.Patient.FullName}: {string.Join(", ", toAdd.Select(e => e.Name))} (+{Fmt.Money(toAdd.Sum(e => e.Price))})");

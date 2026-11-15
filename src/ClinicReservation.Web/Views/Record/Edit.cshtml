@@ -192,6 +192,36 @@
                 }
             </div>
 
+            <div class="card card-pad" id="referralCard">
+                <h3 class="card-title"><i class="bi bi-signpost-split"></i> Göndəriş</h3>
+                @{ var visitReferrals = ViewBag.Referrals as List<Referral> ?? new(); }
+                @foreach (var rf in visitReferrals)
+                {
+                    var st = ReferralFlow.State(rf, ClinicTime.Today);
+                    <div class="flex-between" style="margin-bottom:8px; gap:8px;">
+                        <span>@ReferralFlow.Target(rf)@if (rf.Priority == ReferralPriority.Urgent) {<span class="badge-soft badge-failed" style="margin-left:6px;">Təcili</span>}
+                            <span class="hint-text" style="display:block;">@rf.Reason</span></span>
+                        <span style="white-space:nowrap;">
+                            <span class="badge-soft @ReferralFlow.Css(st)">@ReferralFlow.Label(st)</span>
+                            <a asp-controller="Referral" asp-action="Print" asp-route-id="@rf.Id" target="_blank" rel="noopener" class="btn btn-ghost btn-sm" title="Vərəqəni çap et" aria-label="Çap et"><i class="bi bi-printer"></i></a>
+                        </span>
+                    </div>
+                }
+                @if (r.Status?.Name is StatusNames.Arrived or StatusNames.InProgress or StatusNames.Completed)
+                {
+                    <details @(visitReferrals.Any() ? "" : "open")>
+                        <summary class="btn btn-light btn-sm" style="list-style:none;"><i class="bi bi-plus-lg"></i> Göndəriş yaz</summary>
+                        <div style="margin-top:12px;">
+                            @* Separate form (forms can't be nested): the fields post to Refer. *@
+                            <partial name="~/Views/Referral/_ReferralFields.cshtml" model="new ReferralFormViewModel()"
+                                     view-data="@(new ViewDataDictionary(ViewData) { ["Departments"] = ViewBag.RefDepartments, ["Doctors"] = ViewBag.RefDoctors, ["Exams"] = ViewBag.RefExams, ["Form"] = "referralForm" })" />
+                            <button type="submit" form="referralForm" class="btn btn-primary btn-sm" style="margin-top:10px;">Göndər</button>
+                            <p class="hint-text" style="margin:8px 0 0;">Resepsiyanın «Göndərişlər» siyahısına düşür; xəstəyə vərəqəni çap edib verə bilərsiniz.</p>
+                        </div>
+                    </details>
+                }
+            </div>
+
             <div class="card card-pad">
                 <h3 class="card-title"><i class="bi bi-clock-history"></i> Əvvəlki qeydlər</h3>
                 @if (Model.History.Any())
@@ -215,6 +245,9 @@
 
 <form id="orderLabForm" asp-action="OrderLab" method="post">
     <input type="hidden" name="reserveId" value="@r.Id" />
+</form>
+<form id="referralForm" asp-action="Refer" method="post">
+    <input type="hidden" name="FromReserveId" value="@r.Id" />
 </form>
 
 @section Scripts {

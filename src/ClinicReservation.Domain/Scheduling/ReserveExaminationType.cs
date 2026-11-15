@@ -15,6 +15,12 @@
         /// </summary>
         public decimal Price { get; set; }
 
+        /// <summary>Catalog price at booking; <see cref="Price"/> = ListPrice − Discount (what the patient pays).</summary>
+        public decimal ListPrice { get; set; }
+        public decimal Discount { get; set; }
+        /// <summary>Why it is cheaper (e.g. «Kontrol qəbulu», a campaign, a card); null = no discount.</summary>
+        public string? DiscountSource { get; set; }
+
         /// <summary>When this line's materials were taken from stock (null = not yet).</summary>
         public DateTime? StockConsumedAt { get; set; }
     }

@@ -17,6 +17,12 @@ namespace ClinicReservation.Events
     /// <summary>A freed time was offered to a waiting patient (Scheduling) — text them if they asked.</summary>
     public record WaitlistOffered(int EntryId, int PatientId, DateTime Slot, string DoctorName, string? User) : IIntegrationEvent;
 
+    /// <summary>The doctor set (or cleared, DueDate null) the follow-up of a visit in its record (Emr → Scheduling).</summary>
+    public record FollowUpPlanned(int ReserveId, int PatientId, int? DoctorId, DateTime? DueDate, string? User) : IIntegrationEvent;
+
+    /// <summary>Reception asked to remind the patient of the follow-up (Scheduling → Notifications).</summary>
+    public record FollowUpReminder(int FollowUpId, int PatientId, DateTime DueDate, string DoctorName, string? User) : IIntegrationEvent;
+
     /// <summary>Reacts to one event type. Returns a warning for the user (e.g. a stock shortage) or null.</summary>
     public interface IEventHandler
     {

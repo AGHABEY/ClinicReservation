@@ -89,6 +89,27 @@ else if (Model.Status?.Name == StatusNames.NoShow)
     </div>
 }
 
+@{
+    var fromReferral = ViewBag.FromReferral as Referral;
+    var issued = ViewBag.IssuedReferrals as List<Referral> ?? new();
+}
+@if (fromReferral != null)
+{
+    <div class="alert alert-info"><i class="bi bi-signpost-split"></i> Göndəriş üzrə yazılıb:
+        <b>@(fromReferral.FromDoctor?.FullName ?? fromReferral.ExternalFrom)</b> → @ReferralFlow.Target(fromReferral) — @fromReferral.Reason
+        <a asp-controller="Referral" asp-action="Print" asp-route-id="@fromReferral.Id" target="_blank" rel="noopener">vərəqə</a></div>
+}
+@if (issued.Any())
+{
+    <div class="alert alert-info"><i class="bi bi-send"></i> Bu vizitdə yazılan göndərişlər:
+        @foreach (var x in issued)
+        {
+            var st = ReferralFlow.State(x, ClinicTime.Today);
+            <span style="margin-left:6px;">@ReferralFlow.Target(x) <span class="badge-soft @ReferralFlow.Css(st)">@ReferralFlow.Label(st)</span></span>
+        }
+    </div>
+}
+
 <div class="detail-grid">
     <div class="stack">
         <div class="card appt-card @(closed ? "cancelled" : "")">
@@ -96,7 +117,7 @@ else if (Model.Status?.Name == StatusNames.NoShow)
             <div style="flex:1;">
                 <div class="appt-label">Qəbul vaxtı</div>
                 <div class="appt-value">@Fmt.Appointment(Model.AppointmentAt)</div>
-                <div class="appt-sub">@Fmt.Long(Model.AppointmentAt) · @Model.DurationMinutes dəq@(Model.Equipment != null ? $" · {Model.Equipment.Name}" : "") · @BookingLabels.Source(Model.Source)@if (Model.Overbooked) { <span class="badge-soft badge-noshow" style="margin-left:6px;">Əlavə qəbul</span> }</div>
+                <div class="appt-sub">@Fmt.Long(Model.AppointmentAt) · @Model.DurationMinutes dəq@(Model.Equipment != null ? $" · {Model.Equipment.Name}" : "") · @BookingLabels.Source(Model.Source)@if (Model.FollowUpOfId != null) { <span class="badge-soft badge-arrived" style="margin-left:6px;">Kontrol qəbulu</span> }@if (Model.Overbooked) { <span class="badge-soft badge-noshow" style="margin-left:6px;">Əlavə qəbul</span> }</div>
             </div>
             @if (Model.Doctor != null)
             {
@@ -309,11 +330,22 @@ else if (Model.Status?.Name == StatusNames.NoShow)
                         @foreach (var examType in Model.ReserveExaminationTypes)
                         {
                             <div class="line-item">
-                                <span style="font-weight:600;">@examType.ExaminationType.Name</span>
-                                <span class="money">@Fmt.Money(examType.Price)</span>
+                                <span>
+                                    <span style="font-weight:600;">@examType.ExaminationType.Name</span>
+                                    @if (examType.Discount > 0) { <span class="hint-text" style="display:block;"><i class="bi bi-tag"></i> @examType.DiscountSource</span> }
+                                </span>
+                                <span class="money" style="text-align:right;">
+                                    @if (examType.Discount > 0) { <s class="hint-text" style="display:block;">@Fmt.Money(examType.ListPrice)</s> }
+                                    @Fmt.Money(examType.Price)
+                                </span>
                             </div>
                         }
                     </div>
+                    var discountTotal = Model.ReserveExaminationTypes.Sum(x => x.Discount);
+                    @if (discountTotal > 0)
+                    {
+                        <div class="line-total" style="font-weight:500;"><span>Endirim</span><span class="money">−@Fmt.Money(discountTotal)</span></div>
+                    }
                     <div class="line-total"><span>Cəmi</span><span class="money">@Fmt.Money(Model.Total)</span></div>
                 }
                 else

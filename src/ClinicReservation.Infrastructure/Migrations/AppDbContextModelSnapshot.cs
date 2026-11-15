@@ -441,6 +441,9 @@ namespace ClinicReservation.Migrations
                     b.Property<int?>("EquipmentId")
                         .HasColumnType("integer");
 
+                    b.Property<bool>("FollowUpDiscount")
+                        .HasColumnType("boolean");
+
                     b.Property<string>("Name")
                         .IsRequired()
                         .HasColumnType("text");
@@ -489,6 +492,61 @@ namespace ClinicReservation.Migrations
                     b.HasIndex("StockItemId");
 
                     b.ToTable("ExaminationTypeStockItems", "stock");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.FollowUp", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<string>("CloseNote")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTime?>("ClosedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int?>("DoctorId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("DueDate")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("FromReserveId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("PatientId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("ReserveId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime?>("SmsSentAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("DoctorId");
+
+                    b.HasIndex("FromReserveId")
+                        .IsUnique();
+
+                    b.HasIndex("PatientId");
+
+                    b.HasIndex("ReserveId");
+
+                    b.HasIndex("Status", "DueDate");
+
+                    b.ToTable("FollowUps", "scheduling");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.LabOrder", b =>
@@ -1020,6 +1078,94 @@ namespace ClinicReservation.Migrations
                     b.ToTable("Payments", "billing");
                 });
 
+            modelBuilder.Entity("ClinicReservation.Models.Referral", b =>
+                {
+                    b.Property<int>("Id")
+                        .ValueGeneratedOnAdd()
+                        .HasColumnType("integer");
+
+                    NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
+
+                    b.Property<DateTime?>("BookedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("CancelReason")
+                        .HasMaxLength(300)
+                        .HasColumnType("character varying(300)");
+
+                    b.Property<DateTime?>("CancelledAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<DateTime>("CreatedAt")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.Property<string>("CreatedBy")
+                        .HasColumnType("text");
+
+                    b.Property<int?>("ExaminationTypeId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("ExternalFrom")
+                        .HasMaxLength(200)
+                        .HasColumnType("character varying(200)");
+
+                    b.Property<int?>("FromDoctorId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("FromReserveId")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("IcdCode")
+                        .HasMaxLength(10)
+                        .HasColumnType("character varying(10)");
+
+                    b.Property<int>("PatientId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Priority")
+                        .HasColumnType("integer");
+
+                    b.Property<string>("Reason")
+                        .IsRequired()
+                        .HasMaxLength(500)
+                        .HasColumnType("character varying(500)");
+
+                    b.Property<int?>("ReserveId")
+                        .HasColumnType("integer");
+
+                    b.Property<int>("Status")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("ToDepartmentId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("ToDoctorId")
+                        .HasColumnType("integer");
+
+                    b.Property<DateTime>("ValidUntil")
+                        .HasColumnType("timestamp without time zone");
+
+                    b.HasKey("Id");
+
+                    b.HasIndex("ExaminationTypeId");
+
+                    b.HasIndex("FromDoctorId");
+
+                    b.HasIndex("FromReserveId");
+
+                    b.HasIndex("PatientId");
+
+                    b.HasIndex("ReserveId");
+
+                    b.HasIndex("ToDepartmentId");
+
+                    b.HasIndex("ToDoctorId");
+
+                    b.HasIndex("Status", "ValidUntil");
+
+                    b.ToTable("Referrals", "scheduling");
+                });
+
             modelBuilder.Entity("ClinicReservation.Models.Reserve", b =>
                 {
                     b.Property<int>("Id")
@@ -1065,6 +1211,9 @@ namespace ClinicReservation.Migrations
                         .HasColumnType("integer");
 
                     b.Property<int?>("EquipmentId")
+                        .HasColumnType("integer");
+
+                    b.Property<int?>("FollowUpOfId")
                         .HasColumnType("integer");
 
                     b.Property<DateTime?>("NoShowAt")
@@ -1143,8 +1292,18 @@ namespace ClinicReservation.Migrations
 
                     NpgsqlPropertyBuilderExtensions.UseIdentityByDefaultColumn(b.Property<int>("Id"));
 
+                    b.Property<decimal>("Discount")
+                        .HasColumnType("numeric");
+
+                    b.Property<string>("DiscountSource")
+                        .HasMaxLength(100)
+                        .HasColumnType("character varying(100)");
+
                     b.Property<int>("ExaminationTypeId")
                         .HasColumnType("integer");
+
+                    b.Property<decimal>("ListPrice")
+                        .HasColumnType("numeric");
 
                     b.Property<decimal>("Price")
                         .HasColumnType("numeric");
@@ -2117,6 +2276,39 @@ namespace ClinicReservation.Migrations
                     b.Navigation("StockItem");
                 });
 
+            modelBuilder.Entity("ClinicReservation.Models.FollowUp", b =>
+                {
+                    b.HasOne("ClinicReservation.Models.Doctor", "Doctor")
+                        .WithMany()
+                        .HasForeignKey("DoctorId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ClinicReservation.Models.Reserve", "FromReserve")
+                        .WithMany()
+                        .HasForeignKey("FromReserveId")
+                        .OnDelete(DeleteBehavior.Cascade)
+                        .IsRequired();
+
+                    b.HasOne("ClinicReservation.Models.Patient", "Patient")
+                        .WithMany()
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ClinicReservation.Models.Reserve", "Reserve")
+                        .WithMany()
+                        .HasForeignKey("ReserveId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("Doctor");
+
+                    b.Navigation("FromReserve");
+
+                    b.Navigation("Patient");
+
+                    b.Navigation("Reserve");
+                });
+
             modelBuilder.Entity("ClinicReservation.Models.LabOrder", b =>
                 {
                     b.HasOne("ClinicReservation.Models.Patient", "Patient")
@@ -2230,6 +2422,59 @@ namespace ClinicReservation.Migrations
                         .IsRequired();
 
                     b.Navigation("Reserve");
+                });
+
+            modelBuilder.Entity("ClinicReservation.Models.Referral", b =>
+                {
+                    b.HasOne("ClinicReservation.Models.ExaminationType", "ExaminationType")
+                        .WithMany()
+                        .HasForeignKey("ExaminationTypeId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ClinicReservation.Models.Doctor", "FromDoctor")
+                        .WithMany()
+                        .HasForeignKey("FromDoctorId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ClinicReservation.Models.Reserve", "FromReserve")
+                        .WithMany()
+                        .HasForeignKey("FromReserveId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ClinicReservation.Models.Patient", "Patient")
+                        .WithMany()
+                        .HasForeignKey("PatientId")
+                        .OnDelete(DeleteBehavior.Restrict)
+                        .IsRequired();
+
+                    b.HasOne("ClinicReservation.Models.Reserve", "Reserve")
+                        .WithMany()
+                        .HasForeignKey("ReserveId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ClinicReservation.Models.Department", "ToDepartment")
+                        .WithMany()
+                        .HasForeignKey("ToDepartmentId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.HasOne("ClinicReservation.Models.Doctor", "ToDoctor")
+                        .WithMany()
+                        .HasForeignKey("ToDoctorId")
+                        .OnDelete(DeleteBehavior.SetNull);
+
+                    b.Navigation("ExaminationType");
+
+                    b.Navigation("FromDoctor");
+
+                    b.Navigation("FromReserve");
+
+                    b.Navigation("Patient");
+
+                    b.Navigation("Reserve");
+
+                    b.Navigation("ToDepartment");
+
+                    b.Navigation("ToDoctor");
                 });
 
             modelBuilder.Entity("ClinicReservation.Models.Reserve", b =>

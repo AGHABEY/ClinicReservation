@@ -16,6 +16,17 @@
     <div asp-validation-summary="ModelOnly" class="alert alert-danger"></div>
     <input type="hidden" asp-for="Id" />
     <input type="hidden" asp-for="WaitlistId" />
+    <input type="hidden" asp-for="ReferralId" />
+    <input type="hidden" asp-for="FollowUpId" />
+    @if (Model.FollowUpId != null)
+    {
+        <div class="alert alert-info"><i class="bi bi-arrow-repeat"></i> Kontrol qəbulu — eyni həkimə qısa müddətdə gəlirsə, işarələnmiş xidmətlərə endirim avtomatik tətbiq olunur.</div>
+    }
+    @if (ViewBag.Referral is Referral referral)
+    {
+        <div class="alert alert-info"><i class="bi bi-signpost-split"></i> Göndəriş üzrə: <b>@ReferralFlow.Target(referral)</b> — @referral.Reason
+            <span class="hint-text">(@(referral.FromDoctor?.FullName ?? referral.ExternalFrom), @Fmt.Date(referral.CreatedAt))</span></div>
+    }
     @if (Model.WaitlistId != null)
     {
         <div class="alert alert-info"><i class="bi bi-hourglass-split"></i> Gözləmə siyahısından rezerv — yaradılanda qeyd «Rezerv edildi» olacaq.</div>

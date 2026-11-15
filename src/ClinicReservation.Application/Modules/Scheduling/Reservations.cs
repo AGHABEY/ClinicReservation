@@ -19,10 +19,16 @@ namespace ClinicReservation.Modules.Scheduling
         private readonly ICurrentUser _user;
         private readonly Waitlist _waitlist;
         private readonly NoShows _noShows;
+        private readonly Referrals _referrals;
+        private readonly FollowUps _followUps;
+        private readonly PriceQueries _prices;
 
         public Reservations(IAppDbContext db, SlotService slots, QueueService queue, Outbox outbox, AuditService audit, ICurrentUser user,
-            Waitlist waitlist, NoShows noShows)
+            Waitlist waitlist, NoShows noShows, Referrals referrals, FollowUps followUps, PriceQueries prices)
         {
+            _followUps = followUps;
+            _prices = prices;
+            _referrals = referrals;
             _noShows = noShows;
             _waitlist = waitlist;
             _db = db;
@@ -47,6 +53,7 @@ namespace ClinicReservation.Modules.Scheduling
 
             var (createdPatient, p) = PatientFor(form, patient);
             patient = p;
+            var quote = await _prices.QuoteAsync(createdPatient ? null : patient.Id, form.DoctorId, start, examTypes, null, ct);
 
             var reserve = new Reserve
             {
@@ -58,20 +65,25 @@ namespace ClinicReservation.Modules.Scheduling
                 EquipmentId = SlotService.Shape(examTypes).EquipmentId,
                 Source = Enum.IsDefined(form.Source) ? form.Source : ReserveSource.Reception,
                 Overbooked = slot.Overbooked,
+                FollowUpOfId = quote.FollowUpOfId,
                 AddedDate = ClinicTime.Now,
                 Status = await _db.ReserveStatuses.FirstAsync(rs => rs.Name == StatusNames.Waiting, ct),
-                ReserveExaminationTypes = examTypes.Select(e => new ReserveExaminationType { ExaminationTypeId = e.Id, Price = e.Price }).ToList()
+                ReserveExaminationTypes = quote.Lines.Select(l => l.ToLine()).ToList()
             };
             _db.Reserves.Add(reserve);
             await _db.SaveChangesAsync(ct);
-            if (await _waitlist.SettleAsync(reserve, form.WaitlistId, ct) > 0) await _db.SaveChangesAsync(ct);
+            var settled = await _waitlist.SettleAsync(reserve, form.WaitlistId, ct) > 0;
+            settled |= await _followUps.SettleAsync(reserve, form.FollowUpId, ct);
+            var referral = await _referrals.SettleAsync(reserve, form.ReferralId, examTypes.Select(e => e.Id).ToList(), ct);
+            if (referral != null && form.ReferralId == referral.Id) reserve.Source = ReserveSource.Referral;
+            if (settled || referral != null) await _db.SaveChangesAsync(ct);
 
             if (createdPatient)
                 _audit.Log("Xəstə kartı yaradıldı", AuditEntities.Patient, patient.Id, $"{patient.FullName} ({patient.PinCode})");
             var doctorName = await _db.Doctors.Where(d => d.Id == reserve.DoctorId).Select(d => d.FullName).FirstOrDefaultAsync(ct);
             _audit.Log("Rezervasiya yaradıldı", AuditEntities.Reservation, reserve.Id,
                 $"{patient.FullName} — {Fmt.DateTime(reserve.AppointmentAt)}, {doctorName}" + (reserve.Overbooked ? " (əlavə qəbul, araya salındı)" : ""));
-            var ok = Result.Success($"{patient.FullName} — {Fmt.DateTime(reserve.AppointmentAt)} üçün rezervasiya yaradıldı", reserve.Id);
+            var ok = Result.Success($"{patient.FullName} — {Fmt.DateTime(reserve.AppointmentAt)} üçün rezervasiya yaradıldı." + quote.Note, reserve.Id);
             if (!createdPatient) ok.Warning = _noShows.Warning(await _noShows.CountAsync(patient.Id, ct));
             return ok;
         }
@@ -170,7 +182,7 @@ namespace ClinicReservation.Modules.Scheduling
                     Patient = p, DoctorId = form.DoctorId, RoomId = slot.RoomId, AppointmentAt = at, DurationMinutes = slot.SlotMinutes,
                     EquipmentId = shape.EquipmentId, Source = Enum.IsDefined(form.Source) ? form.Source : ReserveSource.Reception,
                     AddedDate = ClinicTime.Now, Status = waiting, SeriesNo = ++no,
-                    ReserveExaminationTypes = examTypes.Select(e => new ReserveExaminationType { ExaminationTypeId = e.Id, Price = e.Price }).ToList()
+                    ReserveExaminationTypes = (await _prices.QuoteAsync(createdPatient ? null : p.Id, form.DoctorId, at, examTypes, null, ct)).Lines.Select(l => l.ToLine()).ToList()
                 });
             }
             if (series.Reserves.Count == 0) return Result.Failure("Seçilən vaxtlar artıq doludur — tarixləri yenidən yoxlayın");
@@ -181,7 +193,10 @@ namespace ClinicReservation.Modules.Scheduling
             if (createdPatient)
                 _audit.Log("Xəstə kartı yaradıldı", AuditEntities.Patient, p.Id, $"{p.FullName} ({p.PinCode})");
             var first = series.Reserves.OrderBy(x => x.AppointmentAt).First();
-            if (await _waitlist.SettleAsync(first, form.WaitlistId, ct) > 0) await _db.SaveChangesAsync(ct);
+            var settledW = await _waitlist.SettleAsync(first, form.WaitlistId, ct) > 0;
+            var settledR = await _referrals.SettleAsync(first, form.ReferralId, examTypes.Select(e => e.Id).ToList(), ct) != null;
+            var settledF = await _followUps.SettleAsync(first, form.FollowUpId, ct);
+            if (settledW || settledR || settledF) await _db.SaveChangesAsync(ct);
             _audit.Log("Kurs yaradıldı", AuditEntities.Reservation, first.Id,
                 $"{p.FullName}: {series.Pattern}, {series.Count} seans ({Fmt.Date(first.AppointmentAt)} – {Fmt.Date(series.Reserves.Max(x => x.AppointmentAt))})");
             var skipped = form.SeriesCount - series.Count;
@@ -239,8 +254,9 @@ namespace ClinicReservation.Modules.Scheduling
             _db.ReserveExaminationTypes.RemoveRange(removed);
             var existingIds = items.Select(i => i.ExaminationTypeId).ToHashSet();
             var added = examTypes.Where(e => !existingIds.Contains(e.Id)).ToList();
-            foreach (var e in added)
-                items.Add(new ReserveExaminationType { ExaminationTypeId = e.Id, Price = e.Price });
+            if (added.Count > 0)
+                foreach (var line in (await _prices.QuoteAsync(reserve.PatientId, reserve.DoctorId, reserve.AppointmentAt, added, reserve.Id, ct)).Lines)
+                    items.Add(line.ToLine());
             if (removed.Count > 0) changes.Add("çıxarıldı: " + string.Join(", ", removed.Select(x => x.ExaminationType.Name)));
             if (added.Count > 0) changes.Add("əlavə edildi: " + string.Join(", ", added.Select(a => a.Name)));
 
