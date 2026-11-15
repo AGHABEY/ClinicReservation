@@ -227,7 +227,9 @@ src/
     Authorization/                   User.Can(...) icazə yoxlaması
   ClinicReservation.Application/     Modul servisləri (bazaya yalnız IAppDbContext ilə)
     Abstractions/                    IAppDbContext, ICurrentUser, IDistributedLock
-    Services/                        Slot, Queue, Lab, Stock, Inpatient, Sms, Audit, ReserveFlow …
+    Modules/                         Scheduling, Emr, Lab, Pharmacy, Inpatient, Billing, Patients,
+                                     Catalog, Notifications, Audit — hər biri Queries + use case-lər
+    Events/                          İnteqrasiya hadisələri, outbox, OutboxWorker
   ClinicReservation.Infrastructure/  PostgreSQL (EF Core), miqrasiyalar, Identity, kilidlər, seed
   ClinicReservation.Web/             Controller-lər, Razor view-lar, wwwroot, Program.cs
 tests/
@@ -241,6 +243,14 @@ Modullar bir-birini birbaşa çağırmır. Bir modulda baş verən və başqası
 dəyişikliklə eyni tranzaksiyada `OutboxMessages` cədvəlinə yazılır (itmir), dərhal emal olunur;
 alınmasa, fon prosesi (bir server) onu sonra yenidən işlədir. Sonradan modul ayrıca servisə
 çıxarılsa, yalnız ötürücü (məs. RabbitMQ) dəyişir.
+
+**Sərhəd qaydaları** testlərlə yoxlanılır (`tests/.../Architecture/BoundaryTests.cs`): domen
+heç bir framework-dən asılı deyil; servis qatı ASP.NET-dən və PostgreSQL drayverindən asılı deyil;
+modullar bir-birinin yalnız `*Queries` (oxuma) siniflərini istifadə edir, dəyişiklik isə hadisə
+ilə gedir (istisnalar səbəbi ilə siyahıdadır); anbarı yalnız Aptek modulu dəyişir; controller-lər
+bazaya yalnız modul servisləri ilə çatır (Identity idarəsi istisnadır). Hər modulun cədvəlləri öz
+PostgreSQL sxemindədir: `core`, `scheduling`, `billing`, `emr`, `lab`, `stock`, `inpatient`,
+`notify`, `audit`, `platform`.
 
 Yeni miqrasiya:
 
