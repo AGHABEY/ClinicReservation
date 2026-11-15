@@ -97,7 +97,10 @@ builder.Services.AddScoped<ClinicReservation.Modules.Pharmacy.StockService>();
 builder.Services.AddScoped<ClinicReservation.Modules.Pharmacy.StockQueries>();
 builder.Services.AddScoped<ClinicReservation.Modules.Pharmacy.StockDocuments>();
 builder.Services.AddScoped<ClinicReservation.Modules.Pharmacy.StockSettings>();
-builder.Services.AddScoped<ClinicReservation.Services.InpatientService>();
+builder.Services.AddScoped<ClinicReservation.Modules.Inpatient.InpatientService>();
+builder.Services.AddScoped<ClinicReservation.Modules.Inpatient.InpatientQueries>();
+builder.Services.AddScoped<ClinicReservation.Modules.Inpatient.InpatientCare>();
+builder.Services.AddScoped<ClinicReservation.Modules.Inpatient.WardSettings>();
 
 // SMS: "Log" = test mode (messages only appear in the SMS log), "Http" = real gateway.
 builder.Services.Configure<ClinicReservation.Models.SmsOptions>(builder.Configuration.GetSection("Sms"));

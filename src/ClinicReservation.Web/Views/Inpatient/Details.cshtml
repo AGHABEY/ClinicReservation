@@ -148,7 +148,7 @@
                                 </div>
                                 @if (x.HasVitals)
                                 {
-                                    <div class="obs-vitals">@ClinicReservation.Controllers.InpatientController.Vitals(x)</div>
+                                    <div class="obs-vitals">@InpatientRules.Vitals(x)</div>
                                 }
                                 @if (x.Text != null)
                                 {

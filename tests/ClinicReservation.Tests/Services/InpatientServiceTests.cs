@@ -1,5 +1,6 @@
 using ClinicReservation.Data;
 using ClinicReservation.Models;
+using ClinicReservation.Modules.Inpatient;
 using ClinicReservation.Modules.Pharmacy;
 using ClinicReservation.Services;
 using ClinicReservation.Tests.Infrastructure;
@@ -55,7 +56,7 @@ namespace ClinicReservation.Tests.Services
         }
 
         [Fact]
-        public void Moving_closes_the_old_stay_and_frees_the_bed()
+        public async Task Moving_closes_the_old_stay_and_frees_the_bed()
         {
             var (scope, db, svc) = Open();
             using var scopeLifetime = scope;
@@ -71,7 +72,7 @@ namespace ClinicReservation.Tests.Services
             Assert.NotNull(stays[0].To);
             Assert.Null(stays[1].To);
             Assert.Equal(90, stays[1].DailyPrice);
-            Assert.Contains(svc.FreeBeds(), b => b.Id == cheap.Beds[0].Id);
+            Assert.Contains(await scope.ServiceProvider.GetRequiredService<InpatientQueries>().FreeBedsAsync(), b => b.Id == cheap.Beds[0].Id);
         }
 
         [Fact]
@@ -113,7 +114,7 @@ namespace ClinicReservation.Tests.Services
         }
 
         [Fact]
-        public void Discharge_frees_the_bed_and_stops_orders_and_records_block_cancel()
+        public async Task Discharge_frees_the_bed_and_stops_orders_and_records_block_cancel()
         {
             var (scope, db, svc) = Open();
             using var scopeLifetime = scope;
@@ -131,7 +132,7 @@ namespace ClinicReservation.Tests.Services
             Assert.Equal(AdmissionStatus.Discharged, after.Status);
             Assert.Null(after.BedId);
             Assert.All(db.MedicationOrders.AsNoTracking().Where(o => o.AdmissionId == a.Id), o => Assert.NotNull(o.StoppedAt));
-            Assert.Contains(svc.FreeBeds(), b => b.Id == ward.Beds[0].Id);
+            Assert.Contains(await scope.ServiceProvider.GetRequiredService<InpatientQueries>().FreeBedsAsync(), b => b.Id == ward.Beds[0].Id);
             Assert.False(svc.Discharge(Load(db, a.Id), DischargeOutcome.Recovered, null, "x", null, null, null, "doctor").Ok);
         }
 
