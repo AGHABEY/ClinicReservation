@@ -75,6 +75,9 @@ namespace ClinicReservation.Tests.Infrastructure
             return r;
         }
 
+        /// <summary>Any active cancellation reason (the catalog is seeded).</summary>
+        public static int ReasonId(AppDbContext db) => db.CancellationReasons.Where(r => r.IsActive).OrderBy(r => r.Id).Select(r => r.Id).First();
+
         /// <summary>A doctor working every day 08:00–20:00 in 30-minute slots.</summary>
         public static Doctor Doctor(AppDbContext db, int? departmentId = null)
         {

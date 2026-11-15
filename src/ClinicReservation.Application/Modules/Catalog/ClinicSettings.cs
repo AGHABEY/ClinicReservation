@@ -72,6 +72,48 @@ namespace ClinicReservation.Modules.Catalog
             return Result.Success(isNew ? $"«{name}» kabineti əlavə edildi" : "Kabinet yeniləndi", room.Id);
         }
 
+        // ---------- Equipment and cancellation reasons ----------
+
+        public async Task<(List<Equipment> Equipment, List<CancellationReason> Reasons)> SchedulingCatalogsAsync(CancellationToken ct = default) =>
+            (await _db.Equipment.Include(e => e.Room).OrderByDescending(e => e.IsActive).ThenBy(e => e.Name).ToListAsync(ct),
+             await _db.CancellationReasons.OrderByDescending(r => r.IsActive).ThenBy(r => r.SortOrder).ThenBy(r => r.Name).ToListAsync(ct));
+
+        public async Task<Result> SaveEquipmentAsync(int id, string? name, int? roomId, bool isActive, CancellationToken ct = default)
+        {
+            name = name?.Trim();
+            if (string.IsNullOrEmpty(name) || name.Length > 100) return Result.Failure("Avadanlığın adını yazın (ən çox 100 simvol)");
+            if (await _db.Equipment.AnyAsync(e => e.Id != id && e.Name.ToLower() == name.ToLower(), ct)) return Result.Failure($"«{name}» adlı avadanlıq artıq var");
+            var eq = id > 0 ? await _db.Equipment.FindAsync(new object[] { id }, ct) : new Equipment();
+            if (eq == null) return Result.Failure("Avadanlıq tapılmadı");
+            var isNew = id == 0;
+            eq.Name = name;
+            eq.RoomId = roomId;
+            eq.IsActive = isNew || isActive;
+            if (isNew) _db.Equipment.Add(eq);
+            await _db.SaveChangesAsync(ct);
+            _audit.Log(isNew ? "Avadanlıq əlavə edildi" : "Avadanlıq dəyişdirildi", AuditEntities.Catalog, eq.Id, $"{eq.Name}{(eq.IsActive ? "" : " (deaktiv)")}");
+            return Result.Success(isNew ? $"«{name}» əlavə edildi" : "Avadanlıq yeniləndi", eq.Id);
+        }
+
+        public async Task<Result> SaveCancellationReasonAsync(int id, string? name, CancelledBy party, int sortOrder, bool isActive, CancellationToken ct = default)
+        {
+            name = name?.Trim();
+            if (string.IsNullOrEmpty(name) || name.Length > 150) return Result.Failure("Səbəbin adını yazın (ən çox 150 simvol)");
+            if (!Enum.IsDefined(party)) return Result.Failure("Kim ləğv edir — seçin");
+            if (await _db.CancellationReasons.AnyAsync(r => r.Id != id && r.Name.ToLower() == name.ToLower(), ct)) return Result.Failure($"«{name}» səbəbi artıq var");
+            var reason = id > 0 ? await _db.CancellationReasons.FindAsync(new object[] { id }, ct) : new CancellationReason();
+            if (reason == null) return Result.Failure("Səbəb tapılmadı");
+            var isNew = id == 0;
+            reason.Name = name;
+            reason.Party = party;
+            reason.SortOrder = sortOrder;
+            reason.IsActive = isNew || isActive;
+            if (isNew) _db.CancellationReasons.Add(reason);
+            await _db.SaveChangesAsync(ct);
+            _audit.Log(isNew ? "Ləğv səbəbi əlavə edildi" : "Ləğv səbəbi dəyişdirildi", AuditEntities.Catalog, reason.Id, reason.Name);
+            return Result.Success(isNew ? $"«{name}» əlavə edildi" : "Səbəb yeniləndi", reason.Id);
+        }
+
         // ---------- Examination types ----------
 
         public Task<List<ExaminationType>> ExaminationsAsync(CancellationToken ct = default) =>
@@ -91,7 +133,8 @@ namespace ClinicReservation.Modules.Catalog
                 Departments = await _db.Departments.Where(d => d.IsActive || d.Id == keepDepartmentId).OrderBy(d => d.Name).ToListAsync(ct),
                 LabTests = await _db.LabTests.Where(t => t.IsActive || selectedLabTests.Contains(t.Id)).OrderBy(t => t.Category).ThenBy(t => t.SortOrder).ToListAsync(ct),
                 SelectedLabTests = selectedLabTests,
-                StockItems = await _db.StockItems.Where(i => i.IsActive || itemIds.Contains(i.Id)).OrderBy(i => i.Name).ThenBy(i => i.Form).ToListAsync(ct)
+                StockItems = await _db.StockItems.Where(i => i.IsActive || itemIds.Contains(i.Id)).OrderBy(i => i.Name).ThenBy(i => i.Form).ToListAsync(ct),
+                Equipment = await _db.Equipment.Where(e => e.IsActive).OrderBy(e => e.Name).ToListAsync(ct)
             };
         }
 
@@ -145,6 +188,8 @@ namespace ClinicReservation.Modules.Catalog
             var materialsChanged = oldMaterials.Count != materials.Count || oldMaterials.Any(kv => !materials.TryGetValue(kv.Key, out var q) || q != kv.Value);
 
             var oldPrice = existing.Price;
+            existing.DurationMinutes = model.DurationMinutes;
+            existing.EquipmentId = model.EquipmentId;
             existing.Name = model.Name.Trim();
             existing.Description = model.Description;
             existing.Price = model.Price;

@@ -70,6 +70,8 @@ namespace ClinicReservation.Modules.Scheduling
                 .Include(rs => rs.Patient)
                 .Include(rs => rs.Doctor).ThenInclude(d => d!.Department)
                 .Include(rs => rs.Room)
+                .Include(rs => rs.Equipment)
+                .Include(rs => rs.CancellationReason)
                 .Include(rs => rs.Payments)
                 .Include(rs => rs.MedicalRecord)
                 .Include(rs => rs.ReserveExaminationTypes!).ThenInclude(rs => rs.ExaminationType)
@@ -99,8 +101,9 @@ namespace ClinicReservation.Modules.Scheduling
                     .ToListAsync(ct)
             };
 
+            data.Shape = _slots.ShapeOf(model.ExaminationTypeIds);
             if (model.DoctorId != null && model.AppointmentDate.HasValue)
-                data.Slots = _slots.GetSlots(model.DoctorId.Value, model.AppointmentDate.Value, existing?.Id);
+                data.Slots = _slots.GetSlots(model.DoctorId.Value, model.AppointmentDate.Value, existing?.Id, data.Shape.DurationMinutes, data.Shape.EquipmentId);
 
             // Keep the reservation's own time selectable even if it is off the grid
             // (older reservations, or the doctor's hours changed since booking).
@@ -120,7 +123,14 @@ namespace ClinicReservation.Modules.Scheduling
             return data;
         }
 
-        /// <summary>Free and taken times of a doctor's day (the form's slot picker).</summary>
-        public SlotResult Slots(int doctorId, DateTime date, int? exclude) => _slots.GetSlots(doctorId, date, exclude);
+        /// <summary>Free and taken times of a doctor's day for these services (the form's slot picker).</summary>
+        public (SlotResult Slots, SlotService.BookingShape Shape) Slots(int doctorId, DateTime date, int? exclude, IEnumerable<int>? examTypeIds)
+        {
+            var shape = _slots.ShapeOf(examTypeIds);
+            return (_slots.GetSlots(doctorId, date, exclude, shape.DurationMinutes, shape.EquipmentId), shape);
+        }
+
+        public Task<List<CancellationReason>> CancellationReasonsAsync(CancellationToken ct = default) =>
+            _db.CancellationReasons.Where(r => r.IsActive).OrderBy(r => r.SortOrder).ThenBy(r => r.Name).ToListAsync(ct);
     }
 }

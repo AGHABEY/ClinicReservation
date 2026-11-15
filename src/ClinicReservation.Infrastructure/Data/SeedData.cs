@@ -24,6 +24,7 @@ namespace ClinicReservation.Data
                 await context.Database.MigrateAsync();
                 await SeedStatusesAsync(context);
                 await SeedWarehouseAsync(context);
+                await SeedCancellationReasonsAsync(context);
                 await SeedRolesAndAdminAsync(provider);
             }
 
@@ -57,6 +58,15 @@ namespace ClinicReservation.Data
         {
             if (await context.Warehouses.AnyAsync()) return;
             context.Warehouses.Add(new Warehouse { Name = "Mərkəzi anbar", IsMain = true });
+            await context.SaveChangesAsync();
+        }
+
+        private static async Task SeedCancellationReasonsAsync(AppDbContext context)
+        {
+            if (await context.CancellationReasons.AnyAsync()) return;
+            var order = 0;
+            foreach (var (name, party) in BookingLabels.DefaultReasons)
+                context.CancellationReasons.Add(new CancellationReason { Name = name, Party = party, SortOrder = order += 10 });
             await context.SaveChangesAsync();
         }
 

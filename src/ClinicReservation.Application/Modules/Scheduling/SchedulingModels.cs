@@ -43,6 +43,9 @@ namespace ClinicReservation.Modules.Scheduling
 
         public List<int>? ExaminationTypeIds { get; set; }
 
+        /// <summary>How the booking reached the clinic.</summary>
+        public ReserveSource Source { get; set; } = ReserveSource.Reception;
+
         // ----- Display only -----
         public bool IsEdit => Id > 0;
         public bool HasPayments { get; set; }
@@ -53,6 +56,10 @@ namespace ClinicReservation.Modules.Scheduling
     public class CancelReserveViewModel
     {
         public int Id { get; set; }
+
+        /// <summary>Catalog reason (required when the catalog has any).</summary>
+        public int? ReasonId { get; set; }
+        public CancelledBy? By { get; set; }
 
         [StringLength(250)]
         public string? Reason { get; set; }
@@ -66,5 +73,7 @@ namespace ClinicReservation.Modules.Scheduling
         public SlotResult Slots { get; set; } = new();
         /// <summary>Examination → price locked in on this reservation.</summary>
         public Dictionary<int, decimal> LockedPrices { get; set; } = new();
+        /// <summary>Length and device of the chosen services.</summary>
+        public SlotService.BookingShape Shape { get; set; } = new(0, null, null);
     }
 }

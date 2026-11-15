@@ -36,7 +36,7 @@ namespace ClinicReservation.Tests.Web
             Assert.Equal(20, Db(db => db.Payments.Where(p => p.ReserveId == id).Sum(p => p.Amount)));
 
             // Cancelled after payment: the money is owed back, at most what was paid.
-            var cancel = await reception.PostAsync($"/Reservation/Details/{id}", "/Reservation/Cancel", ("Id", id.ToString()));
+            var cancel = await reception.PostAsync($"/Reservation/Details/{id}", "/Reservation/Cancel", ("Id", id.ToString()), ("ReasonId", Db(TestData.ReasonId).ToString()));
             Assert.Contains("qaytarılmalıdır", await reception.FollowAsync(cancel));
             var over = await cashier.PostAsync(page, "/Kassa/Refund", ("ReserveId", id.ToString()), ("Amount", "21"), ("Method", "Card"));
             Assert.Contains("Ən çox", await WebSession.TextAsync(over));

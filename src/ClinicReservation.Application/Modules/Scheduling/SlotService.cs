@@ -18,7 +18,27 @@ namespace ClinicReservation.Modules.Scheduling
             _context = context;
         }
 
-        public SlotResult GetSlots(int doctorId, DateTime date, int? excludeReserveId = null)
+        /// <summary>What a booking of these services needs: total length and the device (if any).</summary>
+        public record BookingShape(int DurationMinutes, int? EquipmentId, string? EquipmentName);
+
+        /// <summary>Services' durations add up (none set = one doctor slot); the first device needed is booked.</summary>
+        public static BookingShape Shape(IEnumerable<ExaminationType> exams)
+        {
+            var list = exams.ToList();
+            var eq = list.FirstOrDefault(e => e.EquipmentId != null);
+            return new BookingShape(list.Sum(e => e.DurationMinutes ?? 0), eq?.EquipmentId, eq?.Equipment?.Name);
+        }
+
+        public BookingShape ShapeOf(IEnumerable<int>? examTypeIds)
+        {
+            var ids = (examTypeIds ?? Enumerable.Empty<int>()).Distinct().ToList();
+            return ids.Count == 0 ? new BookingShape(0, null, null)
+                : Shape(_context.ExaminationTypes.Include(e => e.Equipment).AsNoTracking().Where(e => ids.Contains(e.Id)).ToList());
+        }
+
+        /// <param name="durationMinutes">Length of the visit; 0 = one slot. Rounded up to whole slots.</param>
+        /// <param name="equipmentId">Device the visit needs: times it is busy elsewhere are taken too.</param>
+        public SlotResult GetSlots(int doctorId, DateTime date, int? excludeReserveId = null, int durationMinutes = 0, int? equipmentId = null)
         {
             var result = new SlotResult();
             var doctor = _context.Doctors
@@ -54,21 +74,26 @@ namespace ClinicReservation.Modules.Scheduling
                 .Where(r => r.AppointmentAt >= day && r.AppointmentAt < next)
                 .Where(r => r.Status == null || (r.Status.Name != StatusNames.Cancelled && r.Status.Name != StatusNames.NoShow))
                 .Where(r => excludeReserveId == null || r.Id != excludeReserveId)
-                .Where(r => r.DoctorId == doctorId || (doctor.RoomId != null && r.RoomId == doctor.RoomId))
+                .Where(r => r.DoctorId == doctorId || (doctor.RoomId != null && r.RoomId == doctor.RoomId)
+                            || (equipmentId != null && r.EquipmentId == equipmentId))
                 .Select(r => new { r.AppointmentAt, r.DurationMinutes })
                 .ToList()
                 .Select(r => (Start: r.AppointmentAt, End: r.AppointmentAt.AddMinutes(Math.Max(1, r.DurationMinutes))))
                 .ToList();
 
             var step = TimeSpan.FromMinutes(Math.Clamp(doctor.SlotMinutes, 5, 240));
+            // A longer visit takes several slots in a row (rounded up to the doctor's grid).
+            var need = durationMinutes > step.TotalMinutes
+                ? TimeSpan.FromMinutes(Math.Ceiling(durationMinutes / step.TotalMinutes) * step.TotalMinutes)
+                : step;
             var now = ClinicTime.Now;
-            for (var t = hours.Start; t + step <= hours.End; t += step)
+            for (var t = hours.Start; t + need <= hours.End; t += step)
             {
                 var start = day + t;
-                var end = start + step;
+                var end = start + need;
 
                 if (hours.BreakStart.HasValue && hours.BreakEnd.HasValue
-                    && t < hours.BreakEnd.Value && t + step > hours.BreakStart.Value)
+                    && t < hours.BreakEnd.Value && t + need > hours.BreakStart.Value)
                     continue;
 
                 result.Slots.Add(new SlotViewModel
@@ -85,16 +110,17 @@ namespace ClinicReservation.Modules.Scheduling
             else if (!result.Slots.Any(s => s.Available))
                 result.Message = "Bu gün üçün boş saat qalmayıb — başqa gün seçin";
 
-            result.SlotMinutes = (int)step.TotalMinutes;
+            result.SlotMinutes = (int)need.TotalMinutes;
             result.RoomId = doctor.RoomId;
             return result;
         }
 
         /// <summary>Returns an error message, or null when the slot can be booked.</summary>
-        public string? Validate(int doctorId, DateTime date, string time, int? excludeReserveId, out DateTime start, out SlotResult slots)
+        public string? Validate(int doctorId, DateTime date, string time, int? excludeReserveId, out DateTime start, out SlotResult slots,
+            BookingShape? shape = null)
         {
             start = default;
-            slots = GetSlots(doctorId, date, excludeReserveId);
+            slots = GetSlots(doctorId, date, excludeReserveId, shape?.DurationMinutes ?? 0, shape?.EquipmentId);
 
             if (!TimeSpan.TryParseExact(time, @"hh\:mm", null, out var tod))
                 return "Qəbul saatı düzgün deyil";
@@ -106,7 +132,9 @@ namespace ClinicReservation.Modules.Scheduling
             if (slot.Past)
                 return "Keçmiş vaxta rezervasiya etmək olmaz";
             if (!slot.Available)
-                return "Bu saat artıq doludur (həkim və ya kabinet məşğuldur)";
+                return shape?.EquipmentId != null
+                    ? $"Bu saat artıq doludur (həkim, kabinet və ya {shape.EquipmentName ?? "avadanlıq"} məşğuldur)"
+                    : "Bu saat artıq doludur (həkim və ya kabinet məşğuldur)";
             return null;
         }
     }

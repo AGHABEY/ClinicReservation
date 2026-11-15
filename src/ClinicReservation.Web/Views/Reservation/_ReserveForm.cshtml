@@ -3,6 +3,8 @@
     var examTypes = (List<ExaminationType>)ViewBag.ExaminationTypes;
     var doctors = (List<Doctor>)ViewBag.Doctors;
     var slotResult = (SlotResult)ViewBag.Slots;
+    var shape = ViewBag.Shape as SlotService.BookingShape ?? new SlotService.BookingShape(0, null, null);
+    string ShapeText(int minutes, string? equipment) => minutes > 0 ? $"Qəbulun müddəti: {minutes} dəq" + (equipment != null ? $" · avadanlıq: {equipment}" : "") : "";
     var locked = (Dictionary<int, decimal>)ViewBag.LockedPrices;
     var selected = Model.ExaminationTypeIds ?? new List<int>();
     var inv = System.Globalization.CultureInfo.InvariantCulture;
@@ -140,6 +142,16 @@
                                 <i class="bi bi-info-circle"></i> <span>@(slotResult.Message ?? (Model.DoctorId == null ? "Saatları görmək üçün həkim seçin" : ""))</span>
                             </p>
                             <span asp-validation-for="AppointmentTime" class="text-danger"></span>
+                            <p class="hint-text" id="shapeInfo" style="margin:6px 0 0;">@ShapeText(slotResult.SlotMinutes, shape.EquipmentName)</p>
+                        </div>
+                    }
+                    @if (!Model.IsEdit)
+                    {
+                        <div class="field mt-3" style="max-width:260px;">
+                            <label asp-for="Source">Yazılış mənbəyi</label>
+                            <select asp-for="Source" class="form-select">
+                                @foreach (var src in Enum.GetValues<ReserveSource>()) { <option value="@src">@BookingLabels.Source(src)</option> }
+                            </select>
                         </div>
                     }
                 </div>
@@ -271,6 +283,8 @@
             if (!dateInput.value) { showMessage('Tarix seçin'); return; }
             const params = new URLSearchParams({ doctorId: doctor.value, date: dateInput.value });
             if (grid.dataset.exclude) params.set('exclude', grid.dataset.exclude);
+            // The visit's length and device follow the chosen services.
+            document.querySelectorAll('input[name="ExaminationTypeIds"]:checked').forEach(c => params.append('examTypeIds', c.value));
             grid.setAttribute('aria-busy', 'true');
             try {
                 const res = await fetch('@Url.Action("Slots", "Reservation")?' + params, { headers: { 'Accept': 'application/json' } });
@@ -298,11 +312,14 @@
                     grid.append(label);
                 }
                 showMessage(data.message);
+                const info = document.getElementById('shapeInfo');
+                if (info) info.textContent = data.minutes ? `Qəbulun müddəti: ${data.minutes} dəq` + (data.equipment ? ` · avadanlıq: ${data.equipment}` : '') : '';
             } finally {
                 grid.removeAttribute('aria-busy');
             }
         }
         doctor.addEventListener('change', loadSlots);
         dateInput.addEventListener('change', loadSlots);
+        document.querySelectorAll('input[name="ExaminationTypeIds"]').forEach(c => c.addEventListener('change', loadSlots));
     })();
 </script>

@@ -32,6 +32,17 @@
                         <option value="">— Ümumi —</option>
                     </select>
                 </div>
+                <div class="field">
+                    <label asp-for="DurationMinutes">Müddət, dəq <span class="hint-text">(boş — həkimin bir slotu)</span></label>
+                    <input asp-for="DurationMinutes" type="number" min="5" max="480" step="5" class="form-control" />
+                    <span asp-validation-for="DurationMinutes" class="text-danger"></span>
+                </div>
+                <div class="field">
+                    <label asp-for="EquipmentId">Avadanlıq <span class="hint-text">(eyni vaxtda yalnız bir qəbul)</span></label>
+                    <select asp-for="EquipmentId" class="form-select" asp-items="@(new SelectList((List<Equipment>)ViewBag.Equipment, "Id", "Name"))">
+                        <option value="">— lazım deyil —</option>
+                    </select>
+                </div>
             </div>
             <div class="field mt-3">
                 <label asp-for="Description">Təsvir</label>

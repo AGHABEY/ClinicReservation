@@ -26,7 +26,18 @@ namespace ClinicReservation.Models
         public DateTime? StartedAt { get; set; }
         public DateTime? CompletedAt { get; set; }
         public DateTime? CancelDate { get; set; }
+        /// <summary>Free-text note on the cancellation (the reason itself is CancellationReason).</summary>
         public string? CancelReason { get; set; }
+        public int? CancellationReasonId { get; set; }
+        public CancellationReason? CancellationReason { get; set; }
+        public CancelledBy? CancelledBy { get; set; }
+
+        /// <summary>How the booking was made.</summary>
+        public ReserveSource Source { get; set; } = ReserveSource.Reception;
+
+        /// <summary>Device booked for this visit (from its services).</summary>
+        public int? EquipmentId { get; set; }
+        public Equipment? Equipment { get; set; }
 
         // ----- Queue (assigned when the patient checks in) -----
         /// <summary>Running number for the day within the ticket prefix.</summary>

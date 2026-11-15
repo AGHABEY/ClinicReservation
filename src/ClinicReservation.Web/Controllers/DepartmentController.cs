@@ -18,6 +18,9 @@ namespace ClinicReservation.Controllers
             var (departments, rooms) = await _settings.DepartmentsPageAsync(ct);
             ViewBag.Departments = departments;
             ViewBag.Rooms = rooms;
+            var (equipment, reasons) = await _settings.SchedulingCatalogsAsync(ct);
+            ViewBag.Equipment = equipment;
+            ViewBag.Reasons = reasons;
             return View();
         }
 
@@ -30,6 +33,16 @@ namespace ClinicReservation.Controllers
         [ValidateAntiForgeryToken]
         public async Task<IActionResult> SaveRoom(int id, string? name, CancellationToken ct, bool isActive = true) =>
             Back(await _settings.SaveRoomAsync(id, name, isActive, ct));
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveEquipment(int id, string? name, int? roomId, CancellationToken ct, bool isActive = true) =>
+            Back(await _settings.SaveEquipmentAsync(id, name, roomId, isActive, ct));
+
+        [HttpPost]
+        [ValidateAntiForgeryToken]
+        public async Task<IActionResult> SaveReason(int id, string? name, CancelledBy party, int sortOrder, CancellationToken ct, bool isActive = true) =>
+            Back(await _settings.SaveCancellationReasonAsync(id, name, party, sortOrder, isActive, ct));
 
         private IActionResult Back(Result r)
         {

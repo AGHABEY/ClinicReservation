@@ -45,6 +45,8 @@ namespace ClinicReservation.Data
         DbSet<MedicationDose> MedicationDoses { get; }
 
         DbSet<OutboxMessage> OutboxMessages { get; }
+        DbSet<Equipment> Equipment { get; }
+        DbSet<CancellationReason> CancellationReasons { get; }
 
         ChangeTracker ChangeTracker { get; }
         int SaveChanges();

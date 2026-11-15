@@ -54,6 +54,7 @@ namespace ClinicReservation.Modules.Scheduling
             res.Status = await _db.ReserveStatuses.FirstAsync(s => s.Name == StatusNames.Cancelled, ct);
             res.CancelDate = ClinicTime.Now;
             res.CancelReason = "Xəstə SMS linki ilə ləğv etdi";
+            res.CancelledBy = CancelledBy.Patient;
             await _db.SaveChangesAsync(ct);
             _audit.Log("Xəstə SMS linki ilə ləğv etdi", AuditEntities.Reservation, res.Id, res.Patient.FullName, userName: Actor);
         }

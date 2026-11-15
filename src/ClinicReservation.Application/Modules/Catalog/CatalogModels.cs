@@ -76,5 +76,6 @@ namespace ClinicReservation.Modules.Catalog
         public List<LabTest> LabTests { get; set; } = new();
         public List<int> SelectedLabTests { get; set; } = new();
         public List<StockItem> StockItems { get; set; } = new();
+        public List<Equipment> Equipment { get; set; } = new();
     }
 }

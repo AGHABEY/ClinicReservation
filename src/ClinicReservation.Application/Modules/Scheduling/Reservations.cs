@@ -67,6 +67,8 @@ namespace ClinicReservation.Modules.Scheduling
                 RoomId = slot!.RoomId,
                 AppointmentAt = start,
                 DurationMinutes = slot.SlotMinutes,
+                EquipmentId = SlotService.Shape(examTypes).EquipmentId,
+                Source = Enum.IsDefined(form.Source) ? form.Source : ReserveSource.Reception,
                 AddedDate = ClinicTime.Now,
                 Status = await _db.ReserveStatuses.FirstAsync(rs => rs.Name == StatusNames.Waiting, ct),
                 ReserveExaminationTypes = examTypes.Select(e => new ReserveExaminationType { ExaminationTypeId = e.Id, Price = e.Price }).ToList()
@@ -99,11 +101,13 @@ namespace ClinicReservation.Modules.Scheduling
                 reserve.AppointmentAt = start;
                 if (reserve.DoctorId != form.DoctorId) changes.Add("həkim dəyişdi");
                 reserve.DoctorId = form.DoctorId;
-                if (slot != null)
-                {
-                    reserve.RoomId = slot.RoomId;
-                    reserve.DurationMinutes = slot.SlotMinutes;
-                }
+            }
+            if (slot != null)
+            {
+                // New time, or the services' length/device changed: the visit takes what was checked.
+                reserve.RoomId = slot.RoomId;
+                reserve.DurationMinutes = slot.SlotMinutes;
+                reserve.EquipmentId = SlotService.Shape(examTypes).EquipmentId;
             }
 
             var selectedIds = examTypes.Select(e => e.Id).ToHashSet();
@@ -159,7 +163,7 @@ namespace ClinicReservation.Modules.Scheduling
             return (result, res.DoctorId);
         }
 
-        public async Task<Result?> CancelAsync(int id, string? reason, CancellationToken ct = default)
+        public async Task<Result?> CancelAsync(int id, int? reasonId, CancelledBy? by, string? note, CancellationToken ct = default)
         {
             var res = await _db.Reserves.Include(r => r.Status).Include(r => r.Patient).Include(r => r.Payments)
                 .FirstOrDefaultAsync(r => r.Id == id, ct);
@@ -167,12 +171,21 @@ namespace ClinicReservation.Modules.Scheduling
             if (!ReserveFlow.CanCancel(res))
                 return Result.Failure($"«{StatusNames.Label(res.Status?.Name)}» statusunda rezervasiyanı ləğv etmək olmaz");
 
+            CancellationReason? reason = null;
+            if (reasonId != null)
+                reason = await _db.CancellationReasons.FirstOrDefaultAsync(x => x.Id == reasonId && x.IsActive, ct);
+            if (reason == null && await _db.CancellationReasons.AnyAsync(x => x.IsActive, ct))
+                return Result.Failure("Ləğv səbəbini seçin");
+
             res.CancelDate = ClinicTime.Now;
-            res.CancelReason = string.IsNullOrWhiteSpace(reason) ? null : reason.Trim();
+            res.CancellationReasonId = reason?.Id;
+            res.CancelledBy = by != null && Enum.IsDefined(by.Value) ? by : reason?.Party ?? CancelledBy.Patient;
+            res.CancelReason = string.IsNullOrWhiteSpace(note) ? null : note.Trim();
             res.Status = await _db.ReserveStatuses.FirstAsync(rs => rs.Name == StatusNames.Cancelled, ct);
             await _db.SaveChangesAsync(ct);
             _audit.Log("Rezervasiya ləğv edildi", AuditEntities.Reservation, res.Id,
-                $"{res.Patient.FullName}" + (res.CancelReason == null ? "" : $" — səbəb: {res.CancelReason}"));
+                $"{res.Patient.FullName} — {reason?.Name ?? "səbəbsiz"} ({BookingLabels.Party(res.CancelledBy)})"
+                + (res.CancelReason == null ? "" : $": {res.CancelReason}"));
             return Result.Success(res.Paid > 0
                 ? $"Rezervasiya ləğv edildi. Xəstəyə {Fmt.Money(res.Paid)} qaytarılmalıdır — Kassada qeyd edin."
                 : "Rezervasiya ləğv edildi", res.Id);
@@ -186,7 +199,8 @@ namespace ClinicReservation.Modules.Scheduling
             SlotResult? slot = null;
 
             var selectedIds = (form.ExaminationTypeIds ?? new()).Distinct().ToList();
-            var examTypes = await _db.ExaminationTypes.Where(e => selectedIds.Contains(e.Id)).ToListAsync(ct);
+            var examTypes = await _db.ExaminationTypes.Include(e => e.Equipment).Where(e => selectedIds.Contains(e.Id)).ToListAsync(ct);
+            var shape = SlotService.Shape(examTypes);
             if (examTypes.Count == 0) r.Fail("Ən azı bir müayinə növü seçin", nameof(form.ExaminationTypeIds));
 
             if (validateBirthday && form.Birthday.HasValue)
@@ -198,11 +212,13 @@ namespace ClinicReservation.Modules.Scheduling
             if (form.DoctorId != null && form.AppointmentDate.HasValue && !string.IsNullOrEmpty(form.AppointmentTime))
             {
                 var requested = form.AppointmentDate.Value.Date + (TimeSpan.TryParse(form.AppointmentTime, out var t) ? t : TimeSpan.Zero);
-                // An unchanged appointment stays valid even if it is in the past or off the grid.
-                var unchanged = existing != null && form.DoctorId == existing.DoctorId && requested == TruncateToMinute(existing.AppointmentAt);
+                // An unchanged appointment stays valid even if it is in the past or off the grid —
+                // as long as its services still fit in the time it holds and need the same device.
+                var unchanged = existing != null && form.DoctorId == existing.DoctorId && requested == TruncateToMinute(existing.AppointmentAt)
+                    && shape.DurationMinutes <= existing.DurationMinutes && shape.EquipmentId == existing.EquipmentId;
                 if (!unchanged)
                 {
-                    var error = _slots.Validate(form.DoctorId.Value, form.AppointmentDate.Value, form.AppointmentTime, existing?.Id, out start, out var s);
+                    var error = _slots.Validate(form.DoctorId.Value, form.AppointmentDate.Value, form.AppointmentTime, existing?.Id, out start, out var s, shape);
                     slot = s;
                     if (error != null) r.Fail(error, nameof(form.AppointmentTime));
                 }

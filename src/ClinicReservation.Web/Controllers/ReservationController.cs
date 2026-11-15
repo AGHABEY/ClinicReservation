@@ -174,7 +174,7 @@ namespace ClinicReservation.Controllers
         [HasPermission(Permissions.ReservationsManage)]
         public async Task<IActionResult> Cancel(CancelReserveViewModel model, CancellationToken ct)
         {
-            var r = await _reservations.CancelAsync(model.Id, model.Reason, ct);
+            var r = await _reservations.CancelAsync(model.Id, model.ReasonId, model.By, model.Reason, ct);
             if (r == null) return NotFound();
             TempData[r.Ok ? "Success" : "Error"] = r.Ok ? r.Message : r.ErrorText;
             return RedirectToAction(nameof(Details), new { id = model.Id });
@@ -184,6 +184,7 @@ namespace ClinicReservation.Controllers
         {
             var res = await _queries.ReserveAsync(id, ct);
             if (res == null) return NotFound();
+            ViewBag.CancelReasons = await _queries.CancellationReasonsAsync(ct);
             if (User.CanAny(Permissions.StockView, Permissions.StockIssue, Permissions.StockManage))
             {
                 ViewBag.StockDocs = await stock.ForReserveAsync(id, ct);
@@ -198,14 +199,16 @@ namespace ClinicReservation.Controllers
             return View(res);
         }
 
-        /// <summary>JSON slots for the reservation form.</summary>
+        /// <summary>JSON slots for the reservation form (length and device follow the chosen services).</summary>
         [HttpGet]
-        public IActionResult Slots(int doctorId, DateTime date, int? exclude)
+        public IActionResult Slots(int doctorId, DateTime date, int? exclude, [FromQuery] List<int>? examTypeIds)
         {
-            var result = _queries.Slots(doctorId, date, exclude);
+            var (result, shape) = _queries.Slots(doctorId, date, exclude, examTypeIds);
             return Json(new
             {
                 message = result.Message,
+                minutes = result.SlotMinutes,
+                equipment = shape.EquipmentName,
                 slots = result.Slots.Select(s => new { time = s.Time, past = s.Past, available = s.Available })
             });
         }
@@ -219,6 +222,7 @@ namespace ClinicReservation.Controllers
             ViewBag.Doctors = data.Doctors;
             ViewBag.Slots = data.Slots;
             ViewBag.LockedPrices = data.LockedPrices;
+            ViewBag.Shape = data.Shape;
             return View(model);
         }
 

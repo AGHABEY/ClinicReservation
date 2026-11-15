@@ -51,10 +51,14 @@
 {
     <div class="alert alert-danger">
         <i class="bi bi-x-circle-fill"></i>
-        Bu rezervasiya @Fmt.DateTime(Model.CancelDate) tarixində ləğv edilib.
+        Bu rezervasiya @Fmt.DateTime(Model.CancelDate) tarixində ləğv edilib@(Model.CancelledBy != null ? $" ({BookingLabels.Party(Model.CancelledBy).ToLower(Fmt.Az)} tərəfindən)" : "").
+        @if (Model.CancellationReason != null)
+        {
+            <br /><strong>Səbəb:</strong> @Model.CancellationReason.Name
+        }
         @if (!string.IsNullOrEmpty(Model.CancelReason))
         {
-            <br /><strong>Səbəb:</strong> @Model.CancelReason
+            <br /><strong>Qeyd:</strong> @Model.CancelReason
         }
         @if (balance < 0)
         {
@@ -80,7 +84,7 @@ else if (Model.Status?.Name == StatusNames.NoShow)
             <div style="flex:1;">
                 <div class="appt-label">Qəbul vaxtı</div>
                 <div class="appt-value">@Fmt.Appointment(Model.AppointmentAt)</div>
-                <div class="appt-sub">@Fmt.Long(Model.AppointmentAt) · @Model.DurationMinutes dəq</div>
+                <div class="appt-sub">@Fmt.Long(Model.AppointmentAt) · @Model.DurationMinutes dəq@(Model.Equipment != null ? $" · {Model.Equipment.Name}" : "") · @BookingLabels.Source(Model.Source)</div>
             </div>
             @if (Model.Doctor != null)
             {
@@ -338,10 +342,34 @@ else if (Model.Status?.Name == StatusNames.NoShow)
             {
                 <div class="alert alert-warning"><i class="bi bi-exclamation-triangle"></i> Xəstə @Fmt.Money(paid) ödəyib. Ləğvdən sonra məbləği Kassada «geri qaytarma» kimi qeyd edin.</div>
             }
+            @{ var reasons = ViewBag.CancelReasons as List<CancellationReason> ?? new(); }
             <div class="field">
-                <label for="cancelReason">Səbəb <span class="hint-text">(istəyə bağlı)</span></label>
+                <label for="cancelReasonId">Səbəb</label>
+                <select id="cancelReasonId" name="ReasonId" class="form-select" required="@(reasons.Any())">
+                    <option value="">— seçin —</option>
+                    @foreach (var r in reasons) { <option value="@r.Id" data-party="@r.Party">@r.Name</option> }
+                </select>
+            </div>
+            <div class="field mt-3">
+                <label>Kim ləğv etdi</label>
+                <div class="chip-group" id="cancelParty">
+                    @foreach (var p in Enum.GetValues<CancelledBy>())
+                    {
+                        <label class="chip"><input type="radio" name="By" value="@p" checked="@(p == CancelledBy.Patient)" /> @BookingLabels.Party(p)</label>
+                    }
+                </div>
+            </div>
+            <div class="field mt-3">
+                <label for="cancelReason">Qeyd <span class="hint-text">(istəyə bağlı)</span></label>
                 <input id="cancelReason" name="Reason" class="form-control" maxlength="250" placeholder="Məs: xəstə zəng edib imtina etdi" />
             </div>
+            <script>
+                // Picking a reason pre-selects who usually cancels for it.
+                document.getElementById('cancelReasonId').addEventListener('change', e => {
+                    const party = e.target.selectedOptions[0]?.dataset.party;
+                    if (party) document.querySelector(`#cancelParty input[value="${party}"]`).checked = true;
+                });
+            </script>
             <div class="form-actions">
                 <button type="submit" class="btn btn-danger-solid"><i class="bi bi-x-circle"></i> Ləğv et</button>
                 <button type="button" class="btn btn-light" onclick="this.closest('dialog').close()">Bağla</button>

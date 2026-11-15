@@ -77,14 +77,21 @@ namespace ClinicReservation.Tests.Web
             Assert.False(string.IsNullOrEmpty(r.QueueTicket));
             var back = await s.PostAsync($"/Reservation/Details/{id}", "/Reservation/Transition", ("id", id.ToString()), ("to", StatusNames.Confirmed), ("returnTo", "details"));
             Assert.Contains("keçmək olmaz", await s.FollowAsync(back));
-            var cancelDone = await s.PostAsync($"/Reservation/Details/{id}", "/Reservation/Cancel", ("Id", id.ToString()), ("Reason", "x"));
+            var cancelDone = await s.PostAsync($"/Reservation/Details/{id}", "/Reservation/Cancel", ("Id", id.ToString()), ("ReasonId", Db(TestData.ReasonId).ToString()), ("Reason", "x"));
             Assert.Contains("ləğv etmək olmaz", await s.FollowAsync(cancelDone));
 
             // The second booking is still waiting and can be cancelled.
             var secondId = int.Parse(second.Headers.Location!.ToString().Split('/').Last());
-            var cancel = await s.PostAsync($"/Reservation/Details/{secondId}", "/Reservation/Cancel", ("Id", secondId.ToString()), ("Reason", "Xəstə zəng etdi"));
+            var noReason = await s.PostAsync($"/Reservation/Details/{secondId}", "/Reservation/Cancel", ("Id", secondId.ToString()), ("Reason", "Xəstə zəng etdi"));
+            Assert.Contains("Ləğv səbəbini seçin", await s.FollowAsync(noReason));
+            var reasonId = Db(TestData.ReasonId);
+            var cancel = await s.PostAsync($"/Reservation/Details/{secondId}", "/Reservation/Cancel", ("Id", secondId.ToString()),
+                ("ReasonId", reasonId.ToString()), ("By", "Clinic"), ("Reason", "Xəstə zəng etdi"));
             Assert.Contains("Rezervasiya ləğv edildi", await s.FollowAsync(cancel));
-            Assert.Equal("Xəstə zəng etdi", Db(db => db.Reserves.Single(x => x.Id == secondId).CancelReason));
+            var cancelled = Db(db => db.Reserves.Single(x => x.Id == secondId));
+            Assert.Equal("Xəstə zəng etdi", cancelled.CancelReason);
+            Assert.Equal(reasonId, cancelled.CancellationReasonId);
+            Assert.Equal(CancelledBy.Clinic, cancelled.CancelledBy);
         }
     }
 }

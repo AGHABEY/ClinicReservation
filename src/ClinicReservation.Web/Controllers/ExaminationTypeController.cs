@@ -90,6 +90,7 @@ namespace ClinicReservation.Controllers
             ViewBag.LabTests = lists.LabTests;
             ViewBag.SelectedLabTests = lists.SelectedLabTests;
             ViewBag.StockItems = lists.StockItems;
+            ViewBag.Equipment = lists.Equipment;
             ViewBag.Materials = materials.Where(m => m.StockItemId != null).ToList();
         }
     }

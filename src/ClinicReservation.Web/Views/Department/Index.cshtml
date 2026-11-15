@@ -2,6 +2,8 @@
     ViewData["Title"] = "Şöbə və kabinetlər";
     var departments = (List<(Department Item, int Doctors)>)ViewBag.Departments;
     var rooms = (List<(Room Item, int Doctors)>)ViewBag.Rooms;
+    var equipment = (List<Equipment>)ViewBag.Equipment;
+    var reasons = (List<CancellationReason>)ViewBag.Reasons;
 }
 
 <div class="page-head">
@@ -63,6 +65,58 @@
                 @if (!rooms.Any())
                 {
                     <p class="hint-text">Hələ kabinet yoxdur.</p>
+                }
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head"><h3 class="card-title"><i class="bi bi-cpu"></i> Avadanlıq</h3></div>
+        <div class="card-pad">
+            <p class="hint-text" style="margin-top:0;">Müayinəyə bağlanan aparat (USM, EKQ …) eyni vaxtda yalnız bir qəbula verilir — həkim boş olsa belə.</p>
+            <form asp-action="SaveEquipment" method="post" class="inline-form">
+                <input type="hidden" name="id" value="0" />
+                <input name="name" class="form-control" placeholder="Yeni avadanlıq, məs: USM aparatı 1" maxlength="100" aria-label="Avadanlığın adı" required />
+                <select name="roomId" class="form-select" aria-label="Kabinet" style="max-width:180px;"><option value="">— kabinet —</option>@foreach (var (r, _) in rooms.Where(x => x.Item.IsActive)) { <option value="@r.Id">@r.Name</option> }</select>
+                <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Əlavə et</button>
+            </form>
+            <div class="line-list mt-3">
+                @foreach (var e in equipment)
+                {
+                    <form asp-action="SaveEquipment" method="post" class="line-item inline-form @(e.IsActive ? "" : "row-muted")">
+                        <input type="hidden" name="id" value="@e.Id" />
+                        <input name="name" value="@e.Name" class="form-control" maxlength="100" aria-label="Avadanlığın adı" />
+                        <select name="roomId" class="form-select" aria-label="Kabinet" style="max-width:180px;"><option value="">— kabinet —</option>@foreach (var (r, _) in rooms) { <option value="@r.Id" selected="@(e.RoomId == r.Id)">@r.Name</option> }</select>
+                        <label class="hint-text" style="display:flex; gap:6px; align-items:center; white-space:nowrap;"><input type="checkbox" name="isActive" value="true" checked="@e.IsActive" /><input type="hidden" name="isActive" value="false" /> Aktiv</label>
+                        <button type="submit" class="btn btn-light btn-sm">Saxla</button>
+                    </form>
+                }
+                @if (!equipment.Any()) { <p class="hint-text">Hələ avadanlıq yoxdur.</p> }
+            </div>
+        </div>
+    </div>
+
+    <div class="card">
+        <div class="card-head"><h3 class="card-title"><i class="bi bi-x-octagon"></i> Ləğv səbəbləri</h3></div>
+        <div class="card-pad">
+            <form asp-action="SaveReason" method="post" class="inline-form">
+                <input type="hidden" name="id" value="0" />
+                <input name="name" class="form-control" placeholder="Yeni səbəb" maxlength="150" aria-label="Səbəb" required style="flex:3; min-width:180px;" />
+                <select name="party" class="form-select" aria-label="Kim ləğv edir" style="max-width:120px;">@foreach (var p in Enum.GetValues<CancelledBy>()) { <option value="@p">@BookingLabels.Party(p)</option> }</select>
+                <input name="sortOrder" type="number" value="@((reasons.Max(r => (int?)r.SortOrder) ?? 0) + 10)" class="form-control" aria-label="Sıra" style="max-width:72px;" />
+                <button type="submit" class="btn btn-primary"><i class="bi bi-plus-lg"></i> Əlavə et</button>
+            </form>
+            <div class="line-list mt-3">
+                @foreach (var r in reasons)
+                {
+                    <form asp-action="SaveReason" method="post" class="line-item inline-form @(r.IsActive ? "" : "row-muted")">
+                        <input type="hidden" name="id" value="@r.Id" />
+                        <input name="name" value="@r.Name" class="form-control" maxlength="150" aria-label="Səbəb" style="flex:3; min-width:180px;" title="@r.Name" />
+                        <select name="party" class="form-select" aria-label="Kim ləğv edir" style="max-width:120px;">@foreach (var p in Enum.GetValues<CancelledBy>()) { <option value="@p" selected="@(r.Party == p)">@BookingLabels.Party(p)</option> }</select>
+                        <input name="sortOrder" type="number" value="@r.SortOrder" class="form-control" aria-label="Sıra" style="max-width:72px;" />
+                        <label class="hint-text" style="display:flex; gap:6px; align-items:center; white-space:nowrap;"><input type="checkbox" name="isActive" value="true" checked="@r.IsActive" /><input type="hidden" name="isActive" value="false" /> Aktiv</label>
+                        <button type="submit" class="btn btn-light btn-sm">Saxla</button>
+                    </form>
                 }
             </div>
         </div>
